@@ -1,0 +1,111 @@
+# ============================================
+# 🎮 COMANDOS PARA CLAUDE CODE
+# ============================================
+# Guarda estos comandos para usar con Claude Code paso a paso
+
+# ============================================
+# SESIÓN 1: SETUP INICIAL BACKEND
+# ============================================
+# En la carpeta /backend, necesito:
+# 1. Crear proyecto Spring Boot 3.2 con Maven
+# 2. Estructura DDD con paquetes:
+#    - shared/domain (clases base)
+#    - shared/infrastructure
+#    - guardian (bounded context)
+#    - walking (bounded context)
+#    - battle (bounded context)
+#    - cards (bounded context)
+# 3. Configurar pom.xml con todas las dependencias
+# 4. Crear application.yml para dev y test
+# 5. Dockerfiles (principal y dev)
+
+# ============================================
+# SESIÓN 2: CLASES BASE DDD
+# ============================================
+# Crear en shared/domain:
+# 1. AggregateRoot.java - clase base para aggregates
+# 2. ValueObject.java - interfaz marker para VOs
+# 3. DomainEvent.java - clase base para eventos
+# 4. Entity.java - clase base para entidades
+# 5. DomainException.java - excepciones de dominio
+# 6. Repository.java - interfaz base para repos
+
+# ============================================
+# SESIÓN 3: PRIMER AGGREGATE (TDD)
+# ============================================
+# En bounded context guardian:
+# 1. PRIMERO escribir GuardianTest.java con tests que fallen
+# 2. Crear Guardian aggregate root
+# 3. Crear value objects: GuardianId, GuardianName, Level
+# 4. Implementar comandos: create, gainExperience, levelUp
+# 5. Implementar eventos: GuardianCreated, GuardianLeveledUp
+# 6. Hacer que pasen TODOS los tests
+
+# ============================================
+# SESIÓN 4: APPLICATION SERVICES
+# ============================================
+# En guardian/application:
+# 1. Crear GuardianCreator con test primero
+# 2. Crear GuardianFinder con test primero
+# 3. Crear DTOs de request/response
+# 4. Implementar repository interface en dominio
+# 5. Mock del repository para tests
+
+# ============================================
+# SESIÓN 5: INFRAESTRUCTURA
+# ============================================
+# En guardian/infrastructure:
+# 1. Implementar MySqlGuardianRepository
+# 2. Crear GuardianController REST
+# 3. Configurar Spring Security con JWT
+# 4. Tests de integración con TestContainers
+# 5. Documentación OpenAPI/Swagger
+
+# ============================================
+# SESIÓN 6: FEATURE TOGGLES
+# ============================================
+# Configurar Togglz:
+# 1. Crear enums de features por contexto
+# 2. Configurar dashboard web de Togglz
+# 3. Escribir tests con toggle ON y OFF
+# 4. Implementar features toggleables
+
+# ============================================
+# SESIÓN 7: MONITOREO
+# ============================================
+# Implementar monitoreo:
+# 1. Configurar Micrometer con Prometheus
+# 2. Crear métricas de negocio custom
+# 3. Health checks por bounded context
+# 4. Logs estructurados con correlation ID
+# 5. Dashboards básicos en Grafana
+
+# ============================================
+# SESIÓN 8: CUCUMBER BDD
+# ============================================
+# Tests de aceptación:
+# 1. Configurar Cucumber con Spring Boot
+# 2. Escribir features para casos de uso principales
+# 3. Implementar step definitions
+# 4. Configurar reporting de Cucumber
+# 5. Integrar con CI/CD
+
+# ============================================
+# SESIÓN 9: FLUTTER SETUP
+# ============================================
+# En la carpeta /mobile:
+# 1. Crear proyecto Flutter con clean architecture
+# 2. Configurar BLoC pattern
+# 3. Integrar Dio para API calls
+# 4. Configurar Firebase Analytics
+# 5. Pantallas base: splash, login, home
+
+# ============================================
+# SESIÓN 10: INTEGRACIÓN COMPLETA
+# ============================================
+# Conectar todo:
+# 1. Flutter app conectando con backend
+# 2. Login/registro funcionando
+# 3. Tracking de pasos básico
+# 4. Docker compose con todos los servicios
+# 5. README con instrucciones completas
