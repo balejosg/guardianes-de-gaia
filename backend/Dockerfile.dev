@@ -14,16 +14,16 @@ COPY pom.xml .
 # Make Maven wrapper executable
 RUN chmod +x mvnw
 
-# Download dependencies (for better caching)
+# Download dependencies (for better caching)  
 RUN ./mvnw dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
 
-# Create application user
-RUN addgroup --system appgroup && adduser --system --group appuser
-RUN chown -R appuser:appgroup /app
-USER appuser
+# Create application user (will switch later when we have persistent volumes)
+# RUN addgroup --system appgroup && adduser --system --group appuser
+# RUN chown -R appuser:appgroup /app
+# USER appuser
 
 # Expose ports
 EXPOSE 8080 5005 9090

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(find:*)",
+      "Bash(mvn test:*)",
+      "Bash(grep:*)",
+      "Bash(make:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker:*)",
+      "Bash(groups)",
+      "Bash(sg docker:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(touch:*)",
+      "Bash(rm:*)",
+      "Bash(sudo docker-compose logs:*)",
+      "Bash(sed:*)",
+      "Bash(ls:*)",
+      "Bash(mvn clean:*)",
+      "Bash(./mvnw test:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

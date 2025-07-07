@@ -75,6 +75,23 @@ test-cucumber: ## Ejecuta tests de Cucumber
 test-watch: ## Ejecuta tests en modo watch
 	cd backend && mvn test -Dtest.watch=true
 
+test-docker-health: ## Ejecuta tests de salud de Docker
+	@echo "${YELLOW}🐳 Ejecutando tests de salud de Docker...${RESET}"
+	cd backend && mvn test -Dtest="**/docker/*Test"
+
+test-production-ready: ## Ejecuta tests de preparación para producción
+	@echo "${YELLOW}🚀 Ejecutando tests de preparación para producción...${RESET}"
+	cd backend && mvn test -Dtest="**/docker/ProductionEnvironmentTest"
+
+test-all: ## Ejecuta todos los tests (unit + integration + docker)
+	@echo "${YELLOW}🧪 Ejecutando batería completa de tests...${RESET}"
+	cd backend && mvn test
+	@echo "${GREEN}✅ Todos los tests completados${RESET}"
+
+test-ci: ## Ejecuta tests optimizados para CI
+	@echo "${YELLOW}⚙️ Ejecutando tests para CI...${RESET}"
+	cd backend && mvn test -Dtest.parallel=true
+
 coverage: ## Genera reporte de cobertura
 	@echo "${YELLOW}📊 Generando reporte de cobertura...${RESET}"
 	cd backend && mvn jacoco:report

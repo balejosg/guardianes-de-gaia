@@ -1,0 +1,1010 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-5678-9012-123456789abc",
+		"name": "Guardianes de Gaia - Walking API (W1 Slice)",
+		"description": "Complete REST API collection for testing the Guardianes de Gaia step tracking and energy management system.\n\n## 🚀 Quick Start\n1. Import the environment file (Guardianes-Local.postman_environment.json)\n2. Set your environment to 'Guardianes - Local Development'\n3. Run the 'Health Check' request first to verify connectivity\n4. Follow the test scenarios in order\n\n## 📋 Test Scenarios\n- **Basic Flow**: Health → Current Steps → Submit Steps → Check Energy\n- **Validation**: Test negative steps, invalid data\n- **Energy Management**: Earn and spend energy\n\n## 🔧 Authentication\nAll requests use Basic Auth with admin/dev123",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "⚡ W1 Quick Test - Basic Step Tracking",
+			"item": [
+				{
+					"name": "1. Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"API is healthy\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/health",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "2. Submit 1000 Steps",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Steps submitted successfully\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Energy earned is correct (100 energy from 1000 steps)\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.energyEarned).to.eql(100);",
+									"});",
+									"",
+									"pm.test(\"Response has all required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('totalDailySteps');",
+									"    pm.expect(jsonData).to.have.property('energyEarned');",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"stepCount\": 1000,\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps"]
+						}
+					}
+				},
+				{
+					"name": "3. Check Current Steps & Energy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Current steps retrieved successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Steps and energy are correct\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.currentSteps).to.be.at.least(1000);",
+									"    pm.expect(jsonData.availableEnergy).to.be.at.least(100);",
+									"});",
+									"",
+									"pm.test(\"Response has all required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('currentSteps');",
+									"    pm.expect(jsonData).to.have.property('availableEnergy');",
+									"    pm.expect(jsonData).to.have.property('date');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps/current",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps", "current"]
+						}
+					}
+				},
+				{
+					"name": "4. Check Energy Balance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Energy balance retrieved successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Energy balance shows earned energy\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.currentBalance).to.be.at.least(100);",
+									"});",
+									"",
+									"pm.test(\"Response has all required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('currentBalance');",
+									"    pm.expect(jsonData).to.have.property('transactionSummary');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/energy/balance",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "energy", "balance"]
+						}
+					}
+				}
+			],
+			"description": "Quick test for W1: Basic Step Tracking - Run these 4 requests in order to verify core functionality"
+		},
+		{
+			"name": "🏥 Health & Status",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has status field\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/health",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "health"]
+						},
+						"description": "Health check endpoint to verify the API is running"
+					}
+				},
+				{
+					"name": "API Metrics",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/metrics",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "metrics"]
+						},
+						"description": "Get application metrics"
+					}
+				}
+			],
+			"description": "Health monitoring and status endpoints"
+		},
+		{
+			"name": "👣 Step Tracking",
+			"item": [
+				{
+					"name": "Get Current Step Count",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('currentSteps');",
+									"    pm.expect(jsonData).to.have.property('availableEnergy');",
+									"    pm.expect(jsonData).to.have.property('date');",
+									"});",
+									"",
+									"pm.test(\"Guardian ID matches request\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.guardianId).to.eql(parseInt(pm.variables.get('guardian_id')));",
+									"});",
+									"",
+									"// Store current steps for later tests",
+									"var response = pm.response.json();",
+									"pm.environment.set('current_steps', response.currentSteps);",
+									"pm.environment.set('current_energy', response.availableEnergy);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps/current",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps", "current"]
+						},
+						"description": "Get the current step count and available energy for a guardian"
+					}
+				},
+				{
+					"name": "Submit Steps - Valid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('totalDailySteps');",
+									"    pm.expect(jsonData).to.have.property('energyEarned');",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});",
+									"",
+									"pm.test(\"Energy calculation is correct (10 steps = 1 energy)\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var requestData = JSON.parse(pm.request.body.raw);",
+									"    var expectedEnergy = Math.floor(requestData.stepCount / 10);",
+									"    pm.expect(jsonData.energyEarned).to.eql(expectedEnergy);",
+									"});",
+									"",
+									"// Update environment variables",
+									"var response = pm.response.json();",
+									"pm.environment.set('current_steps', response.totalDailySteps);",
+									"pm.environment.set('current_energy', parseInt(pm.environment.get('current_energy')) + response.energyEarned);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"stepCount\": 2500,\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps"]
+						},
+						"description": "Submit a valid step count to earn energy"
+					}
+				},
+				{
+					"name": "Submit Steps - Negative (Should Fail)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message about negative steps\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"    pm.expect(jsonData.error.toLowerCase()).to.include('negative');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"stepCount\": -500,\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps"]
+						},
+						"description": "Test validation - negative step count should be rejected"
+					}
+				},
+				{
+					"name": "Submit Steps - Anomalous (Should Fail)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message about anomalous steps\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"    pm.expect(jsonData.error.toLowerCase()).to.include('anomalous');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"stepCount\": 20000,\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps"]
+						},
+						"description": "Test fraud detection - anomalously high step count should be rejected"
+					}
+				},
+				{
+					"name": "Get Step History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('dailySteps');",
+									"    pm.expect(jsonData.dailySteps).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps/history?from=2025-07-01&to=2025-07-10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps", "history"],
+							"query": [
+								{
+									"key": "from",
+									"value": "2025-07-01"
+								},
+								{
+									"key": "to",
+									"value": "2025-07-10"
+								}
+							]
+						},
+						"description": "Get step history for a date range"
+					}
+				}
+			],
+			"description": "Step tracking and validation endpoints"
+		},
+		{
+			"name": "⚡ Energy Management",
+			"item": [
+				{
+					"name": "Get Energy Balance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('currentBalance');",
+									"    pm.expect(jsonData).to.have.property('transactionSummary');",
+									"    pm.expect(jsonData.transactionSummary).to.be.an('array');",
+									"});",
+									"",
+									"// Store current balance for spending tests",
+									"var response = pm.response.json();",
+									"pm.environment.set('current_energy_balance', response.currentBalance);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/energy/balance",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "energy", "balance"]
+						},
+						"description": "Get current energy balance and transaction history"
+					}
+				},
+				{
+					"name": "Spend Energy - Valid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('guardianId');",
+									"    pm.expect(jsonData).to.have.property('newBalance');",
+									"    pm.expect(jsonData).to.have.property('amountSpent');",
+									"    pm.expect(jsonData).to.have.property('source');",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});",
+									"",
+									"pm.test(\"Energy balance decreased correctly\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var requestData = JSON.parse(pm.request.body.raw);",
+									"    var previousBalance = parseInt(pm.environment.get('current_energy_balance') || '0');",
+									"    var expectedNewBalance = previousBalance - requestData.amount;",
+									"    pm.expect(jsonData.newBalance).to.eql(expectedNewBalance);",
+									"});",
+									"",
+									"// Update balance",
+									"var response = pm.response.json();",
+									"pm.environment.set('current_energy_balance', response.newBalance);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 100,\n  \"source\": \"BATTLE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/energy/spend",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "energy", "spend"]
+						},
+						"description": "Spend energy on a battle"
+					}
+				},
+				{
+					"name": "Spend Energy - Insufficient (Should Fail)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message about insufficient energy\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"    pm.expect(jsonData.error.toLowerCase()).to.include('enough');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 999999,\n  \"source\": \"BATTLE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/energy/spend",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "energy", "spend"]
+						},
+						"description": "Test spending more energy than available"
+					}
+				},
+				{
+					"name": "Spend Energy - Invalid Amount (Should Fail)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Validation error for negative amount\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"    pm.expect(jsonData.errors).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{auth_password}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{auth_username}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": -50,\n  \"source\": \"BATTLE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/energy/spend",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "guardians", "{{guardian_id}}", "energy", "spend"]
+						},
+						"description": "Test validation for negative energy amount"
+					}
+				}
+			],
+			"description": "Energy balance and spending management"
+		},
+		{
+			"name": "🧪 Complete Test Scenarios",
+			"item": [
+				{
+					"name": "Scenario 1 - Basic Flow",
+					"item": [
+						{
+							"name": "1.1 Check Initial State",
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "{{auth_password}}",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "{{auth_username}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps/current",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps", "current"]
+								}
+							}
+						},
+						{
+							"name": "1.2 Submit 5000 Steps",
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "{{auth_password}}",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "{{auth_username}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"stepCount\": 5000,\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/steps",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "guardians", "{{guardian_id}}", "steps"]
+								}
+							}
+						},
+						{
+							"name": "1.3 Check Energy Balance",
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "{{auth_password}}",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "{{auth_username}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/energy/balance",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "guardians", "{{guardian_id}}", "energy", "balance"]
+								}
+							}
+						},
+						{
+							"name": "1.4 Spend 300 Energy",
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "{{auth_password}}",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "{{auth_username}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"amount\": 300,\n  \"source\": \"BATTLE\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/guardians/{{guardian_id}}/energy/spend",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "guardians", "{{guardian_id}}", "energy", "spend"]
+								}
+							}
+						}
+					],
+					"description": "Complete happy path flow: check steps → submit steps → earn energy → spend energy"
+				}
+			],
+			"description": "End-to-end test scenarios"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set default guardian ID if not set",
+					"if (!pm.environment.get('guardian_id')) {",
+					"    pm.environment.set('guardian_id', '1');",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "guardian_id",
+			"value": "1",
+			"type": "string"
+		}
+	]
+}
