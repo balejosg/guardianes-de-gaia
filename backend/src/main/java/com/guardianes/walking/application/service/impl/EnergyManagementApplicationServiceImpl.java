@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,6 +33,7 @@ public class EnergyManagementApplicationServiceImpl implements EnergyManagementA
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EnergyBalanceResponse getEnergyBalance(Long guardianId) {
         logger.debug("Getting energy balance for guardian {}", guardianId);
         
@@ -48,6 +50,7 @@ public class EnergyManagementApplicationServiceImpl implements EnergyManagementA
     }
 
     @Override
+    @Transactional
     public EnergySpendingResponse spendEnergy(Long guardianId, EnergySpendingRequest request) {
         logger.info("Processing energy spending for guardian {}: {} energy for {}", 
                    guardianId, request.amount(), request.source());

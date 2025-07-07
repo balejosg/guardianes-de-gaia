@@ -1,6 +1,7 @@
 package com.guardianes.walking.domain;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +20,7 @@ public class EnergyCalculationService {
         return steps / 10;
     }
 
+    @Transactional
     public EnergyTransaction convertDailyStepsToEnergy(Long guardianId, LocalDate date) {
         DailyStepAggregate stepAggregate = stepAggregationService.aggregateDailySteps(guardianId, date);
         int energy = calculateEnergyFromSteps(stepAggregate.getTotalSteps());
@@ -32,6 +34,7 @@ public class EnergyCalculationService {
         return energyRepository.saveTransaction(transaction);
     }
 
+    @Transactional(readOnly = true)
     public int getCurrentEnergyBalance(Long guardianId) {
         List<EnergyTransaction> transactions = energyRepository.findTransactionsByGuardianId(guardianId);
         int balance = transactions.stream()
@@ -46,6 +49,7 @@ public class EnergyCalculationService {
         return Math.max(0, balance);
     }
 
+    @Transactional
     public EnergyTransaction spendEnergy(Long guardianId, int energyToSpend, String source) {
         int currentBalance = getCurrentEnergyBalance(guardianId);
         if (currentBalance < energyToSpend) {
@@ -61,6 +65,7 @@ public class EnergyCalculationService {
         return energyRepository.saveTransaction(transaction);
     }
 
+    @Transactional(readOnly = true)
     public List<EnergyTransaction> getEnergyHistory(Long guardianId, LocalDate fromDate, LocalDate toDate) {
         return energyRepository.findTransactionsByGuardianIdAndDateRange(guardianId, fromDate, toDate);
     }

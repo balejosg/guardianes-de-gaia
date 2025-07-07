@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -49,6 +50,7 @@ public class StepTrackingApplicationServiceImpl implements StepTrackingApplicati
     }
 
     @Override
+    @Transactional
     public StepSubmissionResponse submitSteps(Long guardianId, StepSubmissionRequest request) {
         logger.info("Processing step submission for guardian {}: {} steps at {}", 
                    guardianId, request.stepCount(), request.timestamp());
@@ -112,6 +114,7 @@ public class StepTrackingApplicationServiceImpl implements StepTrackingApplicati
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CurrentStepCountResponse getCurrentStepCount(Long guardianId) {
         logger.debug("Getting current step count for guardian {}", guardianId);
         
@@ -131,6 +134,7 @@ public class StepTrackingApplicationServiceImpl implements StepTrackingApplicati
     }
 
     @Override
+    @Transactional(readOnly = true)
     public StepHistoryResponse getStepHistory(Long guardianId, LocalDate fromDate, LocalDate toDate) {
         logger.debug("Getting step history for guardian {} from {} to {}", guardianId, fromDate, toDate);
         
