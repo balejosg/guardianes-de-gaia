@@ -7,7 +7,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.${SPRING_PROFILES_ACTIVE:-dev}
+      dockerfile: Dockerfile.dev
     container_name: guardianes-backend
     ports:
       - "8080:8080"    # API
@@ -16,18 +16,14 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/guardianes?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${DB_USER}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-guardianes}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-secret}
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
-      - TOGGLZ_CONSOLE_SECURED=true
+      - TOGGLZ_CONSOLE_SECURED=false
       - TZ=Europe/Madrid
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION=${JWT_EXPIRATION}
-      - ADMIN_USERNAME=${ADMIN_USERNAME}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
       - ./backend:/app
       - maven-cache:/root/.m2
@@ -57,19 +53,20 @@ services:
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-rootsecret}
       - MYSQL_DATABASE=guardianes
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_USER=${DB_USER:-guardianes}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-secret}
       - TZ=Europe/Madrid
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     command: 
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -109,8 +106,8 @@ services:
       - "5672:5672"     # AMQP
       - "15672:15672"   # Management UI
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guardianes}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-secret}
       - RABBITMQ_DEFAULT_VHOST=guardianes
       - TZ=Europe/Madrid
     volumes:
@@ -154,8 +151,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/home.json
       - TZ=Europe/Madrid

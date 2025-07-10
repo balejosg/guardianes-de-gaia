@@ -1,33 +1,32 @@
 package com.guardianes.walking.application;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import com.guardianes.shared.domain.model.GuardianId;
-import com.guardianes.testconfig.NoRedisTestConfiguration;
 import com.guardianes.walking.application.dto.StepSubmissionRequest;
 import com.guardianes.walking.application.dto.StepSubmissionResponse;
 import com.guardianes.walking.application.service.StepTrackingApplicationService;
-import com.guardianes.walking.domain.model.EnergyTransaction;
-import com.guardianes.walking.domain.model.EnergyTransactionType;
-import com.guardianes.walking.domain.repository.EnergyRepository;
-import java.time.LocalDateTime;
-import java.util.List;
+import com.guardianes.walking.domain.EnergyRepository;
+import com.guardianes.walking.domain.EnergyTransaction;
+import com.guardianes.walking.domain.EnergyTransactionType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 @SpringBootTest
-@Import(NoRedisTestConfiguration.class)
 @TestPropertySource(locations = "classpath:application-test.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class StepSubmissionEnergyIntegrationTest {
 
-    @Autowired private StepTrackingApplicationService stepTrackingService;
-
-    @Autowired private EnergyRepository energyRepository;
+    @Autowired
+    private StepTrackingApplicationService stepTrackingService;
+    
+    @Autowired
+    private EnergyRepository energyRepository;
 
     @Test
     public void shouldCreateEnergyTransactionWhenStepsAreSubmitted() {
@@ -45,21 +44,19 @@ public class StepSubmissionEnergyIntegrationTest {
         assertThat(response.energyEarned()).isEqualTo(100);
 
         // Verify that an energy transaction was created
-        GuardianId domainGuardianId = GuardianId.of(guardianId);
-        List<EnergyTransaction> transactions =
-                energyRepository.findTransactionsByGuardianId(domainGuardianId);
+        List<EnergyTransaction> transactions = energyRepository.findTransactionsByGuardianId(guardianId);
         assertThat(transactions).hasSize(1);
-
+        
         EnergyTransaction transaction = transactions.get(0);
-        assertThat(transaction.getGuardianId()).isEqualTo(domainGuardianId);
+        assertThat(transaction.getGuardianId()).isEqualTo(guardianId);
         assertThat(transaction.getType()).isEqualTo(EnergyTransactionType.EARNED);
-        assertThat(transaction.getAmount().amount()).isEqualTo(100);
-        assertThat(transaction.getSource().name()).isEqualTo("STEPS");
-        assertThat(transaction.getOccurredAt()).isNotNull();
+        assertThat(transaction.getAmount()).isEqualTo(100);
+        assertThat(transaction.getSource()).isEqualTo("Steps");
+        assertThat(transaction.getTimestamp()).isEqualTo(timestamp);
 
         // Verify energy balance is updated
-        var balance = energyRepository.getEnergyBalance(domainGuardianId);
-        assertThat(balance.amount()).isEqualTo(100);
+        int balance = energyRepository.getEnergyBalance(guardianId);
+        assertThat(balance).isEqualTo(100);
     }
 
     @Test
@@ -68,7 +65,7 @@ public class StepSubmissionEnergyIntegrationTest {
         Long guardianId = 2L;
         LocalDateTime timestamp1 = LocalDateTime.now().minusHours(1);
         LocalDateTime timestamp2 = LocalDateTime.now();
-
+        
         StepSubmissionRequest request1 = new StepSubmissionRequest(500, timestamp1); // 50 energy
         StepSubmissionRequest request2 = new StepSubmissionRequest(750, timestamp2); // 75 energy
 
@@ -77,12 +74,10 @@ public class StepSubmissionEnergyIntegrationTest {
         stepTrackingService.submitSteps(guardianId, request2);
 
         // Then
-        GuardianId domainGuardianId = GuardianId.of(guardianId);
-        List<EnergyTransaction> transactions =
-                energyRepository.findTransactionsByGuardianId(domainGuardianId);
+        List<EnergyTransaction> transactions = energyRepository.findTransactionsByGuardianId(guardianId);
         assertThat(transactions).hasSize(2);
 
-        var totalBalance = energyRepository.getEnergyBalance(domainGuardianId);
-        assertThat(totalBalance.amount()).isEqualTo(125); // 50 + 75 = 125
+        int totalBalance = energyRepository.getEnergyBalance(guardianId);
+        assertThat(totalBalance).isEqualTo(125); // 50 + 75 = 125
     }
 }

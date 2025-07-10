@@ -1,6 +1,6 @@
 package com.guardianes.walking.infrastructure.repository;
 
-import com.guardianes.walking.domain.repository.StepRepository;
+import com.guardianes.walking.domain.StepRepository;
 import com.guardianes.walking.infrastructure.persistence.mapper.DailyStepAggregateMapper;
 import com.guardianes.walking.infrastructure.persistence.mapper.StepRecordMapper;
 import com.guardianes.walking.infrastructure.persistence.repository.DailyStepAggregateJpaRepository;
@@ -21,10 +21,11 @@ public class TestJpaConfiguration {
             StepRecordMapper stepRecordMapper,
             DailyStepAggregateMapper dailyStepAggregateMapper) {
         return new JpaStepRepository(
-                stepRecordJpaRepository,
-                dailyStepAggregateJpaRepository,
-                stepRecordMapper,
-                dailyStepAggregateMapper);
+            stepRecordJpaRepository,
+            dailyStepAggregateJpaRepository,
+            stepRecordMapper,
+            dailyStepAggregateMapper
+        );
     }
 
     @Bean

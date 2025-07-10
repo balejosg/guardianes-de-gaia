@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration for custom business metrics using Micrometer Provides counters, timers, and gauges
- * for tracking business KPIs
+ * Configuration for custom business metrics using Micrometer
+ * Provides counters, timers, and gauges for tracking business KPIs
  */
 @Configuration
 public class MetricsConfig {

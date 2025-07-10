@@ -98,84 +98,21 @@ coverage: ## Genera reporte de cobertura
 	@echo "${GREEN}✅ Reporte disponible en: backend/target/site/jacoco/index.html${RESET}"
 
 ## ============================================================================
-## 🚀 VALIDACIÓN DE DESPLIEGUE
-## ============================================================================
-
-test-deployment: ## Valida configuración de despliegue
-	@echo "${YELLOW}🧪 Validando configuración de despliegue...${RESET}"
-	cd backend && mvn test -Dtest="**/*deployment*Test"
-	@echo "${GREEN}✅ Validación de despliegue completada${RESET}"
-
-test-docker-full: ## Ejecuta tests de integración con Docker completo
-	@echo "${YELLOW}🧪 Ejecutando tests de integración Docker completo...${RESET}"
-	cd backend && mvn test -Ddocker.integration.test=true -Dtest="**/FullStackDockerTest"
-	@echo "${GREEN}✅ Tests Docker completados${RESET}"
-
-validate-env: ## Valida configuración de variables de entorno
-	@echo "${YELLOW}🔍 Validando variables de entorno...${RESET}"
-	@if [ ! -f .env ]; then \
-		echo "${RED}❌ Archivo .env no encontrado${RESET}"; \
-		echo "${YELLOW}💡 Crea tu archivo .env desde .env.template${RESET}"; \
-		exit 1; \
-	fi
-	@if [ ! -f .env.template ]; then \
-		echo "${RED}❌ Archivo .env.template no encontrado${RESET}"; \
-		exit 1; \
-	fi
-	cd backend && mvn test -Dtest="**/EnvConfigurationTest"
-	@echo "${GREEN}✅ Validación de variables de entorno completada${RESET}"
-
-validate-docker-compose: ## Valida configuración de Docker Compose
-	@echo "${YELLOW}🔍 Validando configuración Docker Compose...${RESET}"
-	@if [ ! -f docker-compose.yml ]; then \
-		echo "${RED}❌ Archivo docker-compose.yml no encontrado${RESET}"; \
-		exit 1; \
-	fi
-	cd backend && mvn test -Dtest="**/DockerComposeValidationTest"
-	@echo "${GREEN}✅ Validación Docker Compose completada${RESET}"
-
-validate-database: ## Valida conectividad de base de datos
-	@echo "${YELLOW}🔍 Validando conectividad de base de datos...${RESET}"
-	cd backend && mvn test -Dtest="**/DatabaseConnectivityTest"
-	@echo "${GREEN}✅ Validación de base de datos completada${RESET}"
-
-smoke-test: ## Ejecuta pruebas básicas de funcionamiento
-	@echo "${YELLOW}🔍 Ejecutando smoke tests...${RESET}"
-	@if ! curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then \
-		echo "${RED}❌ Backend no está ejecutándose en localhost:8080${RESET}"; \
-		echo "${YELLOW}💡 Ejecuta 'make up' para iniciar los servicios${RESET}"; \
-		exit 1; \
-	fi
-	@echo "${GREEN}✅ Backend respondiendo correctamente${RESET}"
-	@if ! curl -f http://localhost:3000/api/health > /dev/null 2>&1; then \
-		echo "${YELLOW}⚠️ Grafana no está respondiendo en localhost:3000${RESET}"; \
-	else \
-		echo "${GREEN}✅ Grafana respondiendo correctamente${RESET}"; \
-	fi
-	@echo "${GREEN}✅ Smoke tests completados${RESET}"
-
-validate-deployment: validate-env validate-docker-compose validate-database smoke-test ## Validación completa de despliegue
-	@echo "${GREEN}✅ Validación completa de despliegue finalizada${RESET}"
-
-## ============================================================================
 ## 💾 BASE DE DATOS
 ## ============================================================================
 
 db-console: ## Abre consola MySQL
-	@if [ -z "$$DB_PASSWORD" ]; then echo "ERROR: DB_PASSWORD environment variable required"; exit 1; fi
-	docker-compose exec mysql mysql -u $${DB_USER:-guardianes} -p$$DB_PASSWORD guardianes
+	docker-compose exec mysql mysql -u guardianes -p guardianes
 
 db-backup: ## Backup de la base de datos
 	@echo "${YELLOW}💾 Creando backup...${RESET}"
-	@if [ -z "$$DB_ROOT_PASSWORD" ]; then echo "ERROR: DB_ROOT_PASSWORD environment variable required"; exit 1; fi
-	docker-compose exec mysql mysqldump -u root -p$$DB_ROOT_PASSWORD guardianes > backup_$$(date +%Y%m%d_%H%M%S).sql
+	docker-compose exec mysql mysqldump -u root -prootsecret guardianes > backup_$$(date +%Y%m%d_%H%M%S).sql
 	@echo "${GREEN}✅ Backup creado${RESET}"
 
 db-restore: ## Restaura la base de datos desde backup
 	@echo "${YELLOW}💾 Restaurando backup...${RESET}"
-	@if [ -z "$$DB_ROOT_PASSWORD" ]; then echo "ERROR: DB_ROOT_PASSWORD environment variable required"; exit 1; fi
 	@read -p "Archivo de backup: " file; \
-	docker-compose exec -T mysql mysql -u root -p$$DB_ROOT_PASSWORD guardianes < $$file
+	docker-compose exec -T mysql mysql -u root -prootsecret guardianes < $$file
 
 redis-cli: ## Abre Redis CLI
 	docker-compose exec redis redis-cli
@@ -257,36 +194,6 @@ release-minor: ## Crea release minor (x.+1.0)
 release-major: ## Crea release major (+1.0.0)
 	@echo "${YELLOW}📦 Creando release major...${RESET}"
 	./scripts/release.sh major
-
-## ============================================================================
-## 🔐 SECURITY VALIDATION
-## ============================================================================
-
-security-check: ## Ejecuta validación de seguridad
-	@echo "${YELLOW}🔐 Ejecutando validación de seguridad...${RESET}"
-	./scripts/security_validation.sh
-
-security-test: ## Prueba despliegue seguro
-	@echo "${YELLOW}🧪 Probando despliegue seguro...${RESET}"
-	./scripts/test_secure_deployment.sh
-
-security-validate: security-check security-test ## Validación completa de seguridad
-	@echo "${GREEN}✅ Validación de seguridad completada${RESET}"
-
-## ============================================================================
-## 🧪 DEMO VALIDATION
-## ============================================================================
-
-demo-check: ## Ejecuta validación rápida antes de demos
-	@echo "${YELLOW}🏃 Ejecutando validación rápida de demo...${RESET}"
-	./scripts/quick_demo_check.sh
-
-demo-validate: ## Ejecuta validación completa de demo
-	@echo "${YELLOW}🚀 Ejecutando validación completa de demo...${RESET}"
-	./scripts/run_demo_validation.sh
-
-demo-ready: demo-validate ## Alias para demo-validate
-	@echo "${GREEN}✅ Demo validado y listo${RESET}"
 
 ## ============================================================================
 ## 🏃 ATAJOS
