@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardianes de Gaia - Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #fff;
+        }
+        .logo p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .credentials {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .dashboard {
+            display: none;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .stat {
+            display: inline-block;
+            margin: 0 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+        }
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        #error {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+        #success {
+            color: #4CAF50;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="login-form">
+            <div class="logo">
+                <h1>🌿 Guardianes de Gaia</h1>
+                <p>Walk together, save the world</p>
+            </div>
+            
+            <div class="form-group">
+                <label>👤 Username</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+            
+            <div class="form-group">
+                <label>🔒 Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            
+            <button onclick="login()">LOGIN</button>
+            
+            <div class="credentials">
+                <strong>Demo Credentials:</strong><br>
+                guardian1 / guardian123<br>
+                testuser / test123<br>
+                admin / admin123
+            </div>
+            
+            <div id="error"></div>
+            <div id="success"></div>
+        </div>
+        
+        <div id="dashboard" class="dashboard">
+            <div class="logo">
+                <h1>🌿 Dashboard</h1>
+                <button onclick="logout()" style="width: auto; padding: 8px 16px; float: right;">Logout</button>
+            </div>
+            
+            <div class="card">
+                <h3>Today's Steps</h3>
+                <div class="stat">
+                    <span class="stat-value" id="steps">1,250</span>
+                    <span class="stat-label">Steps</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="energy">125</span>
+                    <span class="stat-label">Energy</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Energy Balance</h3>
+                <div class="stat">
+                    <span class="stat-value" style="color: #4CAF50;" id="current">125</span>
+                    <span class="stat-label">Current</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" style="color: #2196F3;" id="earned">125</span>
+                    <span class="stat-label">Earned</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" style="color: #FF9800;" id="spent">0</span>
+                    <span class="stat-label">Spent</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Submit Steps</h3>
+                <div class="form-group">
+                    <input type="number" id="newSteps" placeholder="Number of steps (e.g., 500)" style="margin-bottom: 10px;" min="1" max="50000">
+                    <button onclick="submitSteps()" style="background: #2196F3;" id="submitBtn">Submit Steps</button>
+                    <small style="opacity: 0.8;">10 steps = 1 energy • Max: 50,000 steps</small>
+                    <div id="submitStatus" style="margin-top: 10px; font-size: 14px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            if (!username || !password) {
+                errorDiv.textContent = 'Please enter both username and password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    successDiv.textContent = 'Login successful!';
+                    successDiv.style.display = 'block';
+                    
+                    // Store token and guardian ID
+                    localStorage.setItem('token', data.token);
+                    let guardianId = '1';
+                    if (username.startsWith('guardian')) {
+                        guardianId = username.replace('guardian', '');
+                    } else if (username === 'testuser') {
+                        guardianId = '999';
+                    }
+                    localStorage.setItem('guardianId', guardianId);
+                    
+                    // Load dashboard data
+                    setTimeout(() => {
+                        document.getElementById('login-form').style.display = 'none';
+                        document.getElementById('dashboard').style.display = 'block';
+                        loadDashboardData();
+                    }, 1000);
+                } else {
+                    errorDiv.textContent = data.message || 'Login failed';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Network error. Make sure backend is running.';
+                errorDiv.style.display = 'block';
+                console.error('Login error:', error);
+            }
+        }
+        
+        async function loadDashboardData() {
+            const token = localStorage.getItem('token');
+            const guardianId = localStorage.getItem('guardianId');
+            
+            try {
+                // Load current steps
+                const stepsResponse = await fetch(`http://localhost:8080/api/v1/guardians/${guardianId}/steps/current`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (stepsResponse.ok) {
+                    const stepsData = await stepsResponse.json();
+                    document.getElementById('steps').textContent = stepsData.currentSteps.toLocaleString();
+                    document.getElementById('energy').textContent = stepsData.availableEnergy;
+                }
+                
+                // Load energy balance
+                const balanceResponse = await fetch(`http://localhost:8080/api/v1/guardians/${guardianId}/energy/balance`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (balanceResponse.ok) {
+                    const balanceData = await balanceResponse.json();
+                    document.getElementById('current').textContent = balanceData.currentBalance.amount;
+                    
+                    let totalEarned = 0;
+                    let totalSpent = 0;
+                    balanceData.transactionSummary.forEach(transaction => {
+                        if (transaction.type === 'EARNED') {
+                            totalEarned += transaction.amount.amount;
+                        } else {
+                            totalSpent += transaction.amount.amount;
+                        }
+                    });
+                    
+                    document.getElementById('earned').textContent = totalEarned;
+                    document.getElementById('spent').textContent = totalSpent;
+                }
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+            }
+        }
+        
+        async function submitSteps() {
+            const token = localStorage.getItem('token');
+            const guardianId = localStorage.getItem('guardianId');
+            const newSteps = parseInt(document.getElementById('newSteps').value);
+            const statusDiv = document.getElementById('submitStatus');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            statusDiv.innerHTML = '';
+            
+            if (!newSteps || newSteps <= 0) {
+                statusDiv.innerHTML = '<span style="color: #ff6b6b;">Please enter a valid number of steps</span>';
+                return;
+            }
+            
+            if (newSteps > 50000) {
+                statusDiv.innerHTML = '<span style="color: #ff6b6b;">Maximum 50,000 steps allowed</span>';
+                return;
+            }
+            
+            console.log('Submitting steps:', { guardianId, newSteps, token: token ? 'present' : 'missing' });
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            statusDiv.innerHTML = '<span style="color: #ffa500;">Submitting steps...</span>';
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/v1/guardians/${guardianId}/steps`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        stepCount: newSteps,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+                
+                if (response.ok) {
+                    const result = JSON.parse(responseText);
+                    statusDiv.innerHTML = `<span style="color: #4CAF50;">✅ Success! Earned ${result.energyEarned} energy. Total: ${result.totalDailySteps} steps</span>`;
+                    document.getElementById('newSteps').value = '';
+                    setTimeout(() => loadDashboardData(), 1000); // Refresh data after 1 second
+                } else {
+                    console.error('Failed response:', responseText);
+                    let errorMsg = 'Failed to submit steps';
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        errorMsg = errorData.message || errorData.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = responseText;
+                    }
+                    statusDiv.innerHTML = `<span style="color: #ff6b6b;">❌ ${errorMsg}</span>`;
+                }
+            } catch (error) {
+                console.error('Submit error:', error);
+                statusDiv.innerHTML = `<span style="color: #ff6b6b;">❌ Network error: ${error.message}</span>`;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Steps';
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('guardianId');
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+    </script>
+</body>
+</html>

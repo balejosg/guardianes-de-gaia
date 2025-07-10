@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flutter App API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .error {
+            color: red;
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            background-color: #e6ffe6;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .flutter-container {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌿 Guardianes de Gaia - Flutter App Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Backend API Test</h2>
+        <button onclick="testBackendAPI()">Test Backend API</button>
+        <div id="backendResults"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Flutter Web App</h2>
+        <p>Flutter app is embedded below. Open browser console (F12) to see any JavaScript errors:</p>
+        <div class="flutter-container">
+            <iframe src="http://localhost:8081" title="Flutter App"></iframe>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Manual API Test (for comparison)</h2>
+        <button onclick="testManualLogin()">Test Manual Login</button>
+        <button onclick="testManualSteps()">Test Manual Steps</button>
+        <div id="manualResults"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let authToken = null;
+        
+        function log(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            container.appendChild(div);
+        }
+        
+        async function testBackendAPI() {
+            const containerId = 'backendResults';
+            document.getElementById(containerId).innerHTML = '';
+            
+            try {
+                // Test health
+                log(containerId, 'Testing backend health...', 'info');
+                const healthResponse = await fetch(`${API_BASE}/actuator/health`);
+                if (healthResponse.ok) {
+                    log(containerId, '✅ Backend health OK', 'success');
+                } else {
+                    log(containerId, '❌ Backend health failed', 'error');
+                    return;
+                }
+                
+                // Test login
+                log(containerId, 'Testing authentication...', 'info');
+                const loginResponse = await fetch(`${API_BASE}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'guardian1',
+                        password: 'guardian123'
+                    })
+                });
+                
+                if (loginResponse.ok) {
+                    const loginData = await loginResponse.json();
+                    authToken = loginData.token;
+                    log(containerId, '✅ Login successful', 'success');
+                    log(containerId, `Token: ${authToken.substring(0, 20)}...`, 'info');
+                } else {
+                    const errorData = await loginResponse.json();
+                    log(containerId, `❌ Login failed: ${JSON.stringify(errorData)}`, 'error');
+                    return;
+                }
+                
+                // Test current steps
+                log(containerId, 'Testing current steps endpoint...', 'info');
+                const stepsResponse = await fetch(`${API_BASE}/api/v1/guardians/1/steps/current`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (stepsResponse.ok) {
+                    const stepsData = await stepsResponse.json();
+                    log(containerId, '✅ Current steps OK', 'success');
+                    log(containerId, `Steps: ${stepsData.currentSteps}, Energy: ${stepsData.availableEnergy}`, 'info');
+                } else {
+                    const errorData = await stepsResponse.json();
+                    log(containerId, `❌ Current steps failed: ${JSON.stringify(errorData)}`, 'error');
+                }
+                
+            } catch (error) {
+                log(containerId, `❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testManualLogin() {
+            const containerId = 'manualResults';
+            document.getElementById(containerId).innerHTML = '';
+            
+            try {
+                log(containerId, 'Manual login test...', 'info');
+                const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'guardian1',
+                        password: 'guardian123'
+                    })
+                });
+                
+                const data = await response.json();
+                log(containerId, `Response: <pre>${JSON.stringify(data, null, 2)}</pre>`, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    authToken = data.token;
+                }
+            } catch (error) {
+                log(containerId, `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testManualSteps() {
+            const containerId = 'manualResults';
+            
+            if (!authToken) {
+                log(containerId, 'Please run manual login first', 'error');
+                return;
+            }
+            
+            try {
+                log(containerId, 'Manual steps test...', 'info');
+                const response = await fetch(`${API_BASE}/api/v1/guardians/1/steps/current`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                log(containerId, `Response: <pre>${JSON.stringify(data, null, 2)}</pre>`, response.ok ? 'success' : 'error');
+            } catch (error) {
+                log(containerId, `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Monitor iframe for errors
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'flutter-error') {
+                console.error('Flutter Error:', event.data.error);
+            }
+        });
+        
+        // Auto-test backend on load
+        window.addEventListener('load', function() {
+            setTimeout(testBackendAPI, 1000);
+        });
+    </script>
+</body>
+</html>

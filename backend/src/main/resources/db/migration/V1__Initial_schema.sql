@@ -9,11 +9,12 @@ CREATE TABLE guardians (
     email VARCHAR(255) NOT NULL UNIQUE,
     age INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    INDEX idx_guardians_username (username),
-    INDEX idx_guardians_email (email)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Indexes for guardians table
+CREATE INDEX idx_guardians_username ON guardians(username);
+CREATE INDEX idx_guardians_email ON guardians(email);
 
 -- Step records table (event store pattern)
 CREATE TABLE step_records (
@@ -25,13 +26,14 @@ CREATE TABLE step_records (
     
     FOREIGN KEY (guardian_id) REFERENCES guardians(id) ON DELETE CASCADE,
     
-    INDEX idx_step_records_guardian_date (guardian_id, DATE(timestamp)),
-    INDEX idx_step_records_timestamp (timestamp),
-    INDEX idx_step_records_submitted_at (submitted_at),
-    
     CONSTRAINT chk_step_count_positive CHECK (step_count >= 0),
     CONSTRAINT chk_step_count_reasonable CHECK (step_count <= 100000)
 );
+
+-- Indexes for step_records table
+CREATE INDEX idx_step_records_guardian_date ON step_records(guardian_id, timestamp);
+CREATE INDEX idx_step_records_timestamp ON step_records(timestamp);
+CREATE INDEX idx_step_records_submitted_at ON step_records(submitted_at);
 
 -- Daily step aggregates table (materialized view pattern)
 CREATE TABLE daily_step_aggregates (
@@ -45,18 +47,19 @@ CREATE TABLE daily_step_aggregates (
     
     FOREIGN KEY (guardian_id) REFERENCES guardians(id) ON DELETE CASCADE,
     
-    UNIQUE KEY uk_guardian_date (guardian_id, date),
-    INDEX idx_daily_aggregates_date (date),
-    
     CONSTRAINT chk_total_steps_non_negative CHECK (total_steps >= 0),
     CONSTRAINT chk_energy_earned_non_negative CHECK (energy_earned >= 0)
 );
+
+-- Indexes for daily_step_aggregates table
+CREATE UNIQUE INDEX uk_guardian_date ON daily_step_aggregates(guardian_id, date);
+CREATE INDEX idx_daily_aggregates_date ON daily_step_aggregates(date);
 
 -- Energy transactions table (event sourcing for energy)
 CREATE TABLE energy_transactions (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     guardian_id BIGINT NOT NULL,
-    transaction_type ENUM('EARNED', 'SPENT') NOT NULL,
+    transaction_type VARCHAR(10) NOT NULL,
     amount INTEGER NOT NULL,
     source VARCHAR(50) NOT NULL,
     timestamp TIMESTAMP NOT NULL,
@@ -64,13 +67,15 @@ CREATE TABLE energy_transactions (
     
     FOREIGN KEY (guardian_id) REFERENCES guardians(id) ON DELETE CASCADE,
     
-    INDEX idx_energy_transactions_guardian_id (guardian_id),
-    INDEX idx_energy_transactions_timestamp (timestamp),
-    INDEX idx_energy_transactions_type (transaction_type),
-    INDEX idx_energy_transactions_source (source),
-    
-    CONSTRAINT chk_amount_positive CHECK (amount > 0)
+    CONSTRAINT chk_amount_positive CHECK (amount > 0),
+    CONSTRAINT chk_transaction_type CHECK (transaction_type IN ('EARNED', 'SPENT'))
 );
+
+-- Indexes for energy_transactions table
+CREATE INDEX idx_energy_transactions_guardian_id ON energy_transactions(guardian_id);
+CREATE INDEX idx_energy_transactions_timestamp ON energy_transactions(timestamp);
+CREATE INDEX idx_energy_transactions_type ON energy_transactions(transaction_type);
+CREATE INDEX idx_energy_transactions_source ON energy_transactions(source);
 
 -- Energy balances table (current state projection)
 CREATE TABLE energy_balances (
@@ -94,11 +99,12 @@ CREATE TABLE submission_rate_limits (
     
     FOREIGN KEY (guardian_id) REFERENCES guardians(id) ON DELETE CASCADE,
     
-    INDEX idx_rate_limits_guardian_window (guardian_id, window_start, window_end),
-    INDEX idx_rate_limits_window_end (window_end),
-    
     CONSTRAINT chk_submission_count_positive CHECK (submission_count > 0)
 );
+
+-- Indexes for submission_rate_limits table
+CREATE INDEX idx_rate_limits_guardian_window ON submission_rate_limits(guardian_id, window_start, window_end);
+CREATE INDEX idx_rate_limits_window_end ON submission_rate_limits(window_end);
 
 -- Anomaly detection events table (audit trail)
 CREATE TABLE anomaly_events (
@@ -111,12 +117,13 @@ CREATE TABLE anomaly_events (
     resolved BOOLEAN DEFAULT FALSE,
     resolved_at TIMESTAMP NULL,
     
-    FOREIGN KEY (guardian_id) REFERENCES guardians(id) ON DELETE CASCADE,
-    
-    INDEX idx_anomaly_events_guardian_id (guardian_id),
-    INDEX idx_anomaly_events_detected_at (detected_at),
-    INDEX idx_anomaly_events_resolved (resolved)
+    FOREIGN KEY (guardian_id) REFERENCES guardians(id) ON DELETE CASCADE
 );
+
+-- Indexes for anomaly_events table
+CREATE INDEX idx_anomaly_events_guardian_id ON anomaly_events(guardian_id);
+CREATE INDEX idx_anomaly_events_detected_at ON anomaly_events(detected_at);
+CREATE INDEX idx_anomaly_events_resolved ON anomaly_events(resolved);
 
 -- Insert default test guardian for development
 INSERT INTO guardians (username, display_name, email, age) VALUES

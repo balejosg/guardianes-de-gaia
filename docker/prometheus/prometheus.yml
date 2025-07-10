@@ -15,9 +15,8 @@ scrape_configs:
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['backend:8080']
-    basic_auth:
-      username: 'admin'
-      password: 'dev123'
+    # SECURITY NOTE: Basic auth removed - configure proper authentication at the backend level
+    # Consider using service mesh or reverse proxy for secure metrics collection
 
   - job_name: 'mysql-exporter'
     static_configs:

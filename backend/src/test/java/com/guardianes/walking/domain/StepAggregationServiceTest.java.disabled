@@ -1,0 +1,150 @@
+package com.guardianes.walking.domain;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import com.guardianes.walking.domain.model.DailyStepAggregate;
+import com.guardianes.walking.domain.model.StepRecord;
+import com.guardianes.walking.domain.repository.StepRepository;
+import com.guardianes.walking.domain.service.StepAggregationService;
+import com.guardianes.shared.domain.model.GuardianId;
+import com.guardianes.shared.domain.model.Timestamp;
+import com.guardianes.walking.domain.model.StepCount;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+@DisplayName("Step Aggregation Service Tests")
+class StepAggregationServiceTest {
+
+    @Mock private StepRepository stepRepository;
+
+    private StepAggregationService stepAggregationService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        stepAggregationService = new StepAggregationService(stepRepository);
+    }
+
+    @Test
+    @DisplayName("Should aggregate daily steps for a guardian")
+    void shouldAggregateDailyStepsForGuardian() {
+        // Given
+        GuardianId guardianId = GuardianId.of(1L);
+        LocalDate date = LocalDate.now();
+        List<StepRecord> stepRecords =
+                Arrays.asList(
+                        StepRecord.createWithTimestamp(guardianId, StepCount.of(1000), Timestamp.of(date.atTime(9, 0))),
+                        StepRecord.createWithTimestamp(guardianId, StepCount.of(2000), Timestamp.of(date.atTime(12, 0))),
+                        StepRecord.createWithTimestamp(guardianId, StepCount.of(1500), Timestamp.of(date.atTime(15, 0))));
+        when(stepRepository.findByGuardianIdAndDate(guardianId, date)).thenReturn(stepRecords);
+
+        // When
+        DailyStepAggregate result = stepAggregationService.aggregateDailySteps(guardianId, date);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(4500, result.getTotalSteps().value());
+        assertEquals(guardianId, result.getGuardianId());
+        assertEquals(date, result.getDate());
+        verify(stepRepository, times(1)).findByGuardianIdAndDate(guardianId, date);
+    }
+
+    @Test
+    @DisplayName("Should return zero steps when no records exist")
+    void shouldReturnZeroStepsWhenNoRecordsExist() {
+        // Given
+        GuardianId guardianId = GuardianId.of(1L);
+        LocalDate date = LocalDate.now();
+        when(stepRepository.findByGuardianIdAndDate(guardianId, date)).thenReturn(Arrays.asList());
+
+        // When
+        DailyStepAggregate result = stepAggregationService.aggregateDailySteps(guardianId, date);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(0, result.getTotalSteps().value());
+        assertEquals(guardianId, result.getGuardianId());
+        assertEquals(date, result.getDate());
+    }
+
+    @Test
+    @DisplayName("Should get current step count for guardian")
+    void shouldGetCurrentStepCountForGuardian() {
+        // Given
+        GuardianId guardianId = GuardianId.of(1L);
+        LocalDate today = LocalDate.now();
+        DailyStepAggregate todayAggregate = DailyStepAggregate.create(guardianId, today, StepCount.of(5000));
+        when(stepRepository.findByGuardianIdAndDate(guardianId, today))
+                .thenReturn(Arrays.asList(StepRecord.createWithTimestamp(guardianId, StepCount.of(5000), Timestamp.of(today.atTime(10, 0)))));
+
+        // When
+        StepCount currentSteps = stepAggregationService.getCurrentStepCount(guardianId);
+
+        // Then
+        assertEquals(5000, currentSteps.value());
+        verify(stepRepository, times(1)).findByGuardianIdAndDate(guardianId, today);
+    }
+
+    @Test
+    @DisplayName("Should save daily step aggregate")
+    void shouldSaveDailyStepAggregate() {
+        // Given
+        GuardianId guardianId = GuardianId.of(1L);
+        LocalDate date = LocalDate.now();
+        DailyStepAggregate aggregate = DailyStepAggregate.create(guardianId, date, StepCount.of(3000));
+
+        when(stepRepository.saveDailyAggregate(any(DailyStepAggregate.class)))
+                .thenReturn(aggregate);
+
+        // When
+        DailyStepAggregate result = stepAggregationService.saveDailyAggregate(aggregate);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(3000, result.getTotalSteps().value());
+        assertEquals(guardianId, result.getGuardianId());
+        assertEquals(date, result.getDate());
+        verify(stepRepository, times(1)).saveDailyAggregate(aggregate);
+    }
+
+    @Test
+    @DisplayName("Should get step history for guardian")
+    void shouldGetStepHistoryForGuardian() {
+        // Given
+        GuardianId guardianId = GuardianId.of(1L);
+        LocalDate fromDate = LocalDate.now().minusDays(7);
+        LocalDate toDate = LocalDate.now();
+
+        List<DailyStepAggregate> expectedHistory =
+                Arrays.asList(
+                        DailyStepAggregate.create(guardianId, fromDate, StepCount.of(2000)),
+                        DailyStepAggregate.create(guardianId, fromDate.plusDays(1), StepCount.of(3000)),
+                        DailyStepAggregate.create(guardianId, fromDate.plusDays(2), StepCount.of(4000)));
+
+        when(stepRepository.findDailyAggregatesByGuardianIdAndDateRange(
+                        guardianId, fromDate, toDate))
+                .thenReturn(expectedHistory);
+
+        // When
+        List<DailyStepAggregate> result =
+                stepAggregationService.getStepHistory(guardianId, fromDate, toDate);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals(2000, result.get(0).getTotalSteps().value());
+        assertEquals(3000, result.get(1).getTotalSteps().value());
+        assertEquals(4000, result.get(2).getTotalSteps().value());
+        verify(stepRepository, times(1))
+                .findDailyAggregatesByGuardianIdAndDateRange(guardianId, fromDate, toDate);
+    }
+}

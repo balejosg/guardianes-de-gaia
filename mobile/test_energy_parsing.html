@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Energy Balance API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Energy Balance API Test</h1>
+    <button onclick="testEnergyBalance()">Test Energy Balance Parsing</button>
+    <div id="results"></div>
+
+    <script>
+        async function testEnergyBalance() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            try {
+                // Login first
+                const loginResponse = await fetch('http://localhost:8080/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'guardian1', password: 'guardian123' })
+                });
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.token;
+                
+                resultsDiv.innerHTML += '<div class="result success">✅ Login successful</div>';
+                
+                // Test energy balance
+                const energyResponse = await fetch('http://localhost:8080/api/v1/guardians/1/energy/balance', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const energyData = await energyResponse.json();
+                
+                resultsDiv.innerHTML += '<div class="result">Raw API Response:</div>';
+                resultsDiv.innerHTML += `<pre class="result">${JSON.stringify(energyData, null, 2)}</pre>`;
+                
+                // Test parsing logic (simulating Flutter model)
+                const currentBalance = energyData.currentBalance;
+                resultsDiv.innerHTML += `<div class="result">currentBalance type: ${typeof currentBalance}</div>`;
+                resultsDiv.innerHTML += `<div class="result">currentBalance value: ${JSON.stringify(currentBalance)}</div>`;
+                
+                // Extract amount (like Flutter model should do)
+                let extractedAmount;
+                if (typeof currentBalance === 'object' && currentBalance.amount !== undefined) {
+                    extractedAmount = currentBalance.amount;
+                    resultsDiv.innerHTML += `<div class="result success">✅ Extracted amount: ${extractedAmount}</div>`;
+                } else {
+                    extractedAmount = currentBalance;
+                    resultsDiv.innerHTML += `<div class="result error">❌ Direct value: ${extractedAmount}</div>`;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

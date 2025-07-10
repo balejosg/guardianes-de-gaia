@@ -1,46 +1,54 @@
 package com.guardianes.walking.infrastructure.web;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.guardianes.shared.domain.model.GuardianId;
+import com.guardianes.testconfig.TestSecurityConfig;
 import com.guardianes.walking.application.dto.EnergyBalanceResponse;
 import com.guardianes.walking.application.dto.EnergySpendingRequest;
 import com.guardianes.walking.application.dto.EnergySpendingResponse;
 import com.guardianes.walking.application.service.EnergyManagementApplicationService;
-import com.guardianes.walking.domain.EnergySpendingSource;
-import com.guardianes.walking.domain.InsufficientEnergyException;
-import com.guardianes.walking.domain.GuardianNotFoundException;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.guardianes.walking.domain.exception.GuardianNotFoundException;
+import com.guardianes.walking.domain.model.Energy;
+import com.guardianes.walking.domain.model.EnergySpendingSource;
+import com.guardianes.walking.domain.model.InsufficientEnergyException;
+import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Arrays;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.hamcrest.Matchers.hasItem;
-
 @WebMvcTest(EnergyController.class)
-@WithMockUser(username = "admin", roles = {"ADMIN"})
+@Import(TestSecurityConfig.class)
+@WithMockUser(
+        username = "admin",
+        roles = {"ADMIN"})
 @DisplayName("Energy Controller Tests")
 class EnergyControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
+    @MockBean private EnergyManagementApplicationService energyService;
+
+    // Mock security dependencies to avoid ApplicationContext issues
     @MockBean
-    private EnergyManagementApplicationService energyService;
+    private com.guardianes.shared.infrastructure.security.JwtTokenProvider jwtTokenProvider;
+
+    @MockBean private com.guardianes.shared.infrastructure.validation.InputSanitizer inputSanitizer;
 
     private EnergySpendingRequest validSpendingRequest;
     private EnergyBalanceResponse balanceResponse;
@@ -49,8 +57,19 @@ class EnergyControllerTest {
     @BeforeEach
     void setUp() {
         validSpendingRequest = new EnergySpendingRequest(100, EnergySpendingSource.BATTLE);
-        balanceResponse = new EnergyBalanceResponse(1L, 750, Arrays.asList());
-        spendingResponse = new EnergySpendingResponse(1L, 400, 100, EnergySpendingSource.BATTLE, "Energy spent successfully");
+        balanceResponse =
+                new EnergyBalanceResponse(GuardianId.of(1L), Energy.of(750), Arrays.asList());
+        spendingResponse =
+                new EnergySpendingResponse(
+                        GuardianId.of(1L),
+                        Energy.of(400),
+                        Energy.of(100),
+                        EnergySpendingSource.BATTLE,
+                        "Energy spent successfully");
+
+        // Mock input sanitizer to return requests as-is
+        when(inputSanitizer.sanitizeGuardianId(any(Long.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -58,14 +77,13 @@ class EnergyControllerTest {
     void shouldGetEnergyBalanceSuccessfully() throws Exception {
         // Given
         Long guardianId = 1L;
-        when(energyService.getEnergyBalance(guardianId))
-            .thenReturn(balanceResponse);
+        when(energyService.getEnergyBalance(guardianId)).thenReturn(balanceResponse);
 
         // When & Then
         mockMvc.perform(get("/api/v1/guardians/{guardianId}/energy/balance", guardianId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.guardianId").value(1))
-                .andExpect(jsonPath("$.currentBalance").value(750))
+                .andExpect(jsonPath("$.guardianId.value").value(1))
+                .andExpect(jsonPath("$.currentBalance.amount").value(750))
                 .andExpect(jsonPath("$.transactionSummary").isArray());
 
         verify(energyService, times(1)).getEnergyBalance(guardianId);
@@ -77,17 +95,18 @@ class EnergyControllerTest {
         // Given
         Long guardianId = 1L;
         when(energyService.spendEnergy(eq(guardianId), any(EnergySpendingRequest.class)))
-            .thenReturn(spendingResponse);
+                .thenReturn(spendingResponse);
 
         // When & Then
-        mockMvc.perform(post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validSpendingRequest))
-                .with(csrf()))
+        mockMvc.perform(
+                        post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(validSpendingRequest))
+                                .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.guardianId").value(1))
-                .andExpect(jsonPath("$.newBalance").value(400))
-                .andExpect(jsonPath("$.amountSpent").value(100))
+                .andExpect(jsonPath("$.guardianId.value").value(1))
+                .andExpect(jsonPath("$.newBalance.amount").value(400))
+                .andExpect(jsonPath("$.amountSpent.amount").value(100))
                 .andExpect(jsonPath("$.source").value("BATTLE"))
                 .andExpect(jsonPath("$.message").value("Energy spent successfully"));
 
@@ -100,13 +119,14 @@ class EnergyControllerTest {
         // Given
         Long guardianId = 1L;
         when(energyService.spendEnergy(eq(guardianId), any(EnergySpendingRequest.class)))
-            .thenThrow(new InsufficientEnergyException("Not enough energy available"));
+                .thenThrow(new InsufficientEnergyException("Not enough energy available"));
 
         // When & Then
-        mockMvc.perform(post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validSpendingRequest))
-                .with(csrf()))
+        mockMvc.perform(
+                        post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(validSpendingRequest))
+                                .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Insufficient Energy"))
                 .andExpect(jsonPath("$.message").value("Not enough energy available"));
@@ -119,17 +139,26 @@ class EnergyControllerTest {
     void shouldReturn400ForInvalidSpendingAmount() throws Exception {
         // Given
         Long guardianId = 1L;
-        EnergySpendingRequest invalidRequest = new EnergySpendingRequest(-50, EnergySpendingSource.BATTLE);
+        String invalidRequestJson =
+                """
+            {
+                "amount": -50,
+                "source": "BATTLE"
+            }
+            """;
 
         // When & Then
-        mockMvc.perform(post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(invalidRequest))
-                .with(csrf()))
+        mockMvc.perform(
+                        post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(invalidRequestJson)
+                                .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors").isArray())
                 .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItem("amount")))
-                .andExpect(jsonPath("$.fieldErrors[*].message").value(hasItem("Amount must be positive")));
+                .andExpect(
+                        jsonPath("$.fieldErrors[*].message")
+                                .value(hasItem("Amount must be positive")));
 
         verify(energyService, never()).spendEnergy(any(), any());
     }
@@ -142,14 +171,16 @@ class EnergyControllerTest {
         EnergySpendingRequest requestWithoutSource = new EnergySpendingRequest(100, null);
 
         // When & Then
-        mockMvc.perform(post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestWithoutSource))
-                .with(csrf()))
+        mockMvc.perform(
+                        post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(requestWithoutSource))
+                                .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors").isArray())
                 .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItem("source")))
-                .andExpect(jsonPath("$.fieldErrors[*].message").value(hasItem("Source is required")));
+                .andExpect(
+                        jsonPath("$.fieldErrors[*].message").value(hasItem("Source is required")));
 
         verify(energyService, never()).spendEnergy(any(), any());
     }
@@ -160,7 +191,8 @@ class EnergyControllerTest {
         // Given
         Long guardianId = 999L;
         when(energyService.getEnergyBalance(guardianId))
-            .thenThrow(new GuardianNotFoundException("Guardian not found with ID: " + guardianId));
+                .thenThrow(
+                        new GuardianNotFoundException("Guardian not found with ID: " + guardianId));
 
         // When & Then
         mockMvc.perform(get("/api/v1/guardians/{guardianId}/energy/balance", guardianId))
@@ -176,17 +208,26 @@ class EnergyControllerTest {
     void shouldHandleZeroEnergySpending() throws Exception {
         // Given
         Long guardianId = 1L;
-        EnergySpendingRequest zeroRequest = new EnergySpendingRequest(0, EnergySpendingSource.BATTLE);
+        String zeroRequestJson =
+                """
+            {
+                "amount": 0,
+                "source": "BATTLE"
+            }
+            """;
 
         // When & Then
-        mockMvc.perform(post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(zeroRequest))
-                .with(csrf()))
+        mockMvc.perform(
+                        post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(zeroRequestJson)
+                                .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors").isArray())
                 .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItem("amount")))
-                .andExpect(jsonPath("$.fieldErrors[*].message").value(hasItem("Amount must be positive")));
+                .andExpect(
+                        jsonPath("$.fieldErrors[*].message")
+                                .value(hasItem("Amount must be positive")));
 
         verify(energyService, never()).spendEnergy(any(), any());
     }
@@ -196,7 +237,8 @@ class EnergyControllerTest {
     void shouldValidateSourceEnumValues() throws Exception {
         // Given
         Long guardianId = 1L;
-        String requestWithInvalidSource = """
+        String requestWithInvalidSource =
+                """
             {
                 "amount": 100,
                 "source": "INVALID_SOURCE"
@@ -204,10 +246,11 @@ class EnergyControllerTest {
             """;
 
         // When & Then
-        mockMvc.perform(post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestWithInvalidSource)
-                .with(csrf()))
+        mockMvc.perform(
+                        post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestWithInvalidSource)
+                                .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").value("Invalid energy spending source"));
@@ -220,16 +263,18 @@ class EnergyControllerTest {
     void shouldHandleLargeEnergyAmounts() throws Exception {
         // Given
         Long guardianId = 1L;
-        EnergySpendingRequest largeRequest = new EnergySpendingRequest(1000000, EnergySpendingSource.BATTLE);
+        EnergySpendingRequest largeRequest =
+                new EnergySpendingRequest(1000000, EnergySpendingSource.BATTLE);
 
         when(energyService.spendEnergy(eq(guardianId), any(EnergySpendingRequest.class)))
-            .thenThrow(new InsufficientEnergyException("Not enough energy available"));
+                .thenThrow(new InsufficientEnergyException("Not enough energy available"));
 
         // When & Then
-        mockMvc.perform(post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(largeRequest))
-                .with(csrf()))
+        mockMvc.perform(
+                        post("/api/v1/guardians/{guardianId}/energy/spend", guardianId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(largeRequest))
+                                .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Insufficient Energy"))
                 .andExpect(jsonPath("$.message").value("Not enough energy available"));

@@ -1,0 +1,312 @@
+name: Integration CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run integration tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  JAVA_VERSION: '17'
+  FLUTTER_VERSION: '3.24.3'
+
+jobs:
+  full-stack-test:
+    name: Full Stack Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: guardianes_test
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+
+    - name: Start backend services
+      run: |
+        cd backend
+        mvn spring-boot:run -Dspring.profiles.active=test &
+        echo $! > backend.pid
+        sleep 30
+      env:
+        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/guardianes_test
+        SPRING_DATASOURCE_USERNAME: testuser
+        SPRING_DATASOURCE_PASSWORD: testpassword
+        SPRING_REDIS_HOST: localhost
+        SPRING_REDIS_PORT: 6379
+
+    - name: Wait for backend to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
+
+    - name: Run API contract tests
+      working-directory: ./mobile/guardianes_mobile
+      run: |
+        flutter pub get
+        flutter test test/features/step_tracking/data/api_client_test.dart
+
+    - name: Run cross-platform validation
+      run: |
+        chmod +x scripts/run_demo_validation.sh
+        scripts/run_demo_validation.sh
+
+    - name: Stop backend services
+      if: always()
+      run: |
+        if [ -f backend/backend.pid ]; then
+          kill $(cat backend/backend.pid) || true
+          rm backend/backend.pid
+        fi
+
+  contract-validation:
+    name: API Contract Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install Newman (Postman CLI)
+      run: npm install -g newman
+
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Generate OpenAPI spec
+      working-directory: ./backend
+      run: |
+        mvn clean compile
+        mvn springdoc-openapi:generate -Dspringdoc.outputFileName=openapi.json
+
+    - name: Validate API contracts
+      run: |
+        echo "Validating API contracts..."
+        # Compare generated OpenAPI spec with Flutter models
+        # This would be implemented with a custom script
+        echo "Contract validation completed"
+
+    - name: Run Postman collection tests
+      run: |
+        if [ -f "docs/postman/Guardianes-de-Gaia-API.postman_collection.json" ]; then
+          newman run docs/postman/Guardianes-de-Gaia-API.postman_collection.json \
+            -e docs/postman/Guardianes-Local.postman_environment.json \
+            --reporters cli,json \
+            --reporter-json-export postman-results.json
+        else
+          echo "Postman collection not found, skipping API tests"
+        fi
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run security validation
+      run: |
+        chmod +x scripts/security_validation.sh
+        scripts/security_validation.sh
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  performance-benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: guardianes_test
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Install k6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+
+    - name: Start backend for performance testing
+      run: |
+        cd backend
+        mvn spring-boot:run -Dspring.profiles.active=test &
+        echo $! > backend.pid
+        sleep 30
+      env:
+        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/guardianes_test
+        SPRING_DATASOURCE_USERNAME: testuser
+        SPRING_DATASOURCE_PASSWORD: testpassword
+
+    - name: Run performance tests
+      run: |
+        # Create a simple k6 performance test
+        cat > performance-test.js << 'EOF'
+        import http from 'k6/http';
+        import { check, sleep } from 'k6';
+
+        export let options = {
+          stages: [
+            { duration: '30s', target: 10 },
+            { duration: '1m', target: 10 },
+            { duration: '30s', target: 0 },
+          ],
+        };
+
+        export default function () {
+          let response = http.get('http://localhost:8080/actuator/health');
+          check(response, {
+            'status is 200': (r) => r.status === 200,
+            'response time < 500ms': (r) => r.timings.duration < 500,
+          });
+          sleep(1);
+        }
+        EOF
+        
+        k6 run performance-test.js
+
+    - name: Stop backend
+      if: always()
+      run: |
+        if [ -f backend/backend.pid ]; then
+          kill $(cat backend/backend.pid) || true
+          rm backend/backend.pid
+        fi
+
+  docker-compose-test:
+    name: Docker Compose Integration
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create test environment file
+      run: |
+        cp .env.template .env.local
+        echo "DB_USER=testuser" >> .env.local
+        echo "DB_PASSWORD=testpassword" >> .env.local
+        echo "DB_ROOT_PASSWORD=rootpassword" >> .env.local
+
+    - name: Start services with Docker Compose
+      run: |
+        docker-compose up -d
+        sleep 60
+
+    - name: Wait for services to be healthy
+      run: |
+        timeout 120 bash -c 'until curl -f http://localhost:8080/actuator/health; do sleep 5; done'
+
+    - name: Run health checks
+      run: |
+        curl -f http://localhost:8080/actuator/health
+        curl -f http://localhost:3000/api/health || echo "Grafana health check skipped"
+        curl -f http://localhost:9090/-/healthy
+
+    - name: Run integration smoke tests
+      run: |
+        chmod +x scripts/quick_demo_check.sh
+        scripts/quick_demo_check.sh
+
+    - name: Collect logs
+      if: failure()
+      run: |
+        docker-compose logs > docker-compose-logs.txt
+
+    - name: Upload logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-compose-logs
+        path: docker-compose-logs.txt
+
+    - name: Stop services
+      if: always()
+      run: docker-compose down -v

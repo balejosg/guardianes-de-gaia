@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardianes de Gaia - E2E Web Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-results {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .iframe-container {
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌿 Guardianes de Gaia - E2E Web Test</h1>
+        <p>This page tests the complete end-to-end functionality of the Flutter web app with the Spring Boot backend.</p>
+        
+        <div class="status info">
+            <strong>Test Status:</strong> <span id="testStatus">Ready to start</span>
+        </div>
+        
+        <div>
+            <h3>Backend API Tests</h3>
+            <button onclick="testBackendHealth()">Test Backend Health</button>
+            <button onclick="testAuthentication()">Test Authentication</button>
+            <button onclick="testStepTracking()">Test Step Tracking</button>
+            <button onclick="testEnergyBalance()">Test Energy Balance</button>
+            <button onclick="runAllTests()">Run All Tests</button>
+        </div>
+        
+        <div class="test-results">
+            <h3>Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Flutter Web App</h2>
+        <p>The Flutter web app is running below. Try logging in with these credentials:</p>
+        <ul>
+            <li><strong>guardian1</strong> / guardian123</li>
+            <li><strong>testuser</strong> / test123</li>
+            <li><strong>admin</strong> / admin123</li>
+        </ul>
+        
+        <div class="iframe-container">
+            <iframe src="http://localhost:8081" title="Guardianes de Gaia Flutter App"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let authToken = null;
+        
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            resultsDiv.appendChild(logEntry);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('testStatus').textContent = message;
+        }
+        
+        async function testBackendHealth() {
+            updateStatus('Testing backend health...');
+            try {
+                const response = await fetch(`${API_BASE}/actuator/health`);
+                const data = await response.json();
+                
+                if (data.status === 'UP') {
+                    log('✅ Backend health check passed', 'success');
+                    return true;
+                } else {
+                    log('❌ Backend health check failed', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Backend health check error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testAuthentication() {
+            updateStatus('Testing authentication...');
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'guardian1',
+                        password: 'guardian123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    authToken = data.token;
+                    log('✅ Authentication successful', 'success');
+                    log(`Token: ${data.token.substring(0, 20)}...`, 'info');
+                    return true;
+                } else {
+                    log('❌ Authentication failed', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Authentication error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testStepTracking() {
+            updateStatus('Testing step tracking...');
+            if (!authToken) {
+                log('❌ No auth token available. Run authentication test first.', 'error');
+                return false;
+            }
+            
+            try {
+                // Test current steps
+                const response = await fetch(`${API_BASE}/api/v1/guardians/1/steps/current`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Step tracking test passed', 'success');
+                    log(`Current steps: ${data.currentSteps}, Available energy: ${data.availableEnergy}`, 'info');
+                    return true;
+                } else {
+                    log('❌ Step tracking test failed', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Step tracking error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testEnergyBalance() {
+            updateStatus('Testing energy balance...');
+            if (!authToken) {
+                log('❌ No auth token available. Run authentication test first.', 'error');
+                return false;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/guardians/1/energy/balance`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Energy balance test passed', 'success');
+                    log(`Current balance: ${data.currentBalance.amount}`, 'info');
+                    log(`Transaction count: ${data.transactionSummary.length}`, 'info');
+                    return true;
+                } else {
+                    log('❌ Energy balance test failed', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Energy balance error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function runAllTests() {
+            updateStatus('Running all tests...');
+            log('🚀 Starting comprehensive E2E tests', 'info');
+            
+            const results = [];
+            results.push(await testBackendHealth());
+            results.push(await testAuthentication());
+            results.push(await testStepTracking());
+            results.push(await testEnergyBalance());
+            
+            const passed = results.filter(r => r).length;
+            const total = results.length;
+            
+            if (passed === total) {
+                log(`🎉 All tests passed! (${passed}/${total})`, 'success');
+                updateStatus('All tests passed!');
+            } else {
+                log(`⚠️ Some tests failed (${passed}/${total})`, 'error');
+                updateStatus(`Tests completed: ${passed}/${total} passed`);
+            }
+        }
+        
+        // Run initial health check
+        window.addEventListener('load', () => {
+            setTimeout(testBackendHealth, 1000);
+        });
+    </script>
+</body>
+</html>

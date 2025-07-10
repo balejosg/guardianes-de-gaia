@@ -5,92 +5,245 @@
 CREATE INDEX idx_step_records_guardian_timestamp ON step_records(guardian_id, timestamp DESC);
 CREATE INDEX idx_energy_transactions_guardian_timestamp ON energy_transactions(guardian_id, timestamp DESC);
 
--- Add composite index for common query patterns
-CREATE INDEX idx_step_records_date_range ON step_records(guardian_id, DATE(timestamp), timestamp);
-
--- Cleanup job for old rate limiting records (older than 24 hours)
--- This can be run as a scheduled job in production
-CREATE EVENT IF NOT EXISTS cleanup_old_rate_limits
-ON SCHEDULE EVERY 1 HOUR
-DO
-  DELETE FROM submission_rate_limits 
-  WHERE window_end < DATE_SUB(NOW(), INTERVAL 24 HOUR);
+-- Add composite index for common query patterns (H2 compatible)
+-- Note: Removed DATE(timestamp) index as it's not supported in H2
 
 -- Sample development data (only insert if not exists)
-INSERT IGNORE INTO guardians (id, username, display_name, email, age) VALUES
-(1, 'test_guardian', 'Test Guardian', 'test@guardianes.com', 10),
-(2, 'demo_guardian', 'Demo Guardian', 'demo@guardianes.com', 8),
-(3, 'sample_guardian', 'Sample Guardian', 'sample@guardianes.com', 12);
+-- H2 compatible: conditional INSERT statements
+INSERT INTO guardians (username, display_name, email, age)
+SELECT 'test_guardian', 'Test Guardian', 'test@guardianes.com', 10
+WHERE NOT EXISTS (SELECT 1 FROM guardians WHERE username = 'test_guardian');
+
+INSERT INTO guardians (username, display_name, email, age)
+SELECT 'demo_guardian', 'Demo Guardian', 'demo@guardianes.com', 8
+WHERE NOT EXISTS (SELECT 1 FROM guardians WHERE username = 'demo_guardian');
+
+INSERT INTO guardians (username, display_name, email, age)
+SELECT 'sample_guardian', 'Sample Guardian', 'sample@guardianes.com', 12
+WHERE NOT EXISTS (SELECT 1 FROM guardians WHERE username = 'sample_guardian');
 
 -- Initialize energy balances for all guardians
-INSERT IGNORE INTO energy_balances (guardian_id, current_balance) VALUES
-(1, 0),
-(2, 500),
-(3, 1000);
+-- Use guardian IDs from the inserted test data
+INSERT INTO energy_balances (guardian_id, current_balance)
+SELECT g.id, 0
+FROM guardians g
+WHERE g.username = 'test_guardian'
+AND NOT EXISTS (SELECT 1 FROM energy_balances eb WHERE eb.guardian_id = g.id);
+
+INSERT INTO energy_balances (guardian_id, current_balance)
+SELECT g.id, 500
+FROM guardians g
+WHERE g.username = 'demo_guardian'
+AND NOT EXISTS (SELECT 1 FROM energy_balances eb WHERE eb.guardian_id = g.id);
+
+INSERT INTO energy_balances (guardian_id, current_balance)
+SELECT g.id, 1000
+FROM guardians g
+WHERE g.username = 'sample_guardian'
+AND NOT EXISTS (SELECT 1 FROM energy_balances eb WHERE eb.guardian_id = g.id);
 
 -- Sample step records for testing (last 7 days)
-INSERT IGNORE INTO step_records (guardian_id, step_count, timestamp) VALUES
--- Test Guardian data (Guardian ID 1)
-(1, 3000, DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(1, 4500, DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(1, 2800, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(1, 5200, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(1, 3700, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(1, 4100, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(1, 2900, NOW()),
+-- H2 compatible: using conditional INSERT with guardian lookups
+-- Test Guardian data
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 3000, DATEADD('DAY', -6, NOW())
+FROM guardians g
+WHERE g.username = 'test_guardian';
 
--- Demo Guardian data (Guardian ID 2)
-(2, 2500, DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(2, 3800, DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(2, 4200, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 3100, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(2, 4700, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(2, 3300, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(2, 3900, NOW()),
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4500, DATEADD('DAY', -5, NOW())
+FROM guardians g
+WHERE g.username = 'test_guardian';
 
--- Sample Guardian data (Guardian ID 3)
-(3, 4800, DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(3, 5500, DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(3, 3200, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(3, 4900, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(3, 5100, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(3, 4600, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(3, 4300, NOW());
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 2800, DATEADD('DAY', -4, NOW())
+FROM guardians g
+WHERE g.username = 'test_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 5200, DATEADD('DAY', -3, NOW())
+FROM guardians g
+WHERE g.username = 'test_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 3700, DATEADD('DAY', -2, NOW())
+FROM guardians g
+WHERE g.username = 'test_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4100, DATEADD('DAY', -1, NOW())
+FROM guardians g
+WHERE g.username = 'test_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 2900, NOW()
+FROM guardians g
+WHERE g.username = 'test_guardian';
+
+-- Demo Guardian data
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 2500, DATEADD('DAY', -6, NOW())
+FROM guardians g
+WHERE g.username = 'demo_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 3800, DATEADD('DAY', -5, NOW())
+FROM guardians g
+WHERE g.username = 'demo_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4200, DATEADD('DAY', -4, NOW())
+FROM guardians g
+WHERE g.username = 'demo_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 3100, DATEADD('DAY', -3, NOW())
+FROM guardians g
+WHERE g.username = 'demo_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4700, DATEADD('DAY', -2, NOW())
+FROM guardians g
+WHERE g.username = 'demo_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 3300, DATEADD('DAY', -1, NOW())
+FROM guardians g
+WHERE g.username = 'demo_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 3900, NOW()
+FROM guardians g
+WHERE g.username = 'demo_guardian';
+
+-- Sample Guardian data
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4800, DATEADD('DAY', -6, NOW())
+FROM guardians g
+WHERE g.username = 'sample_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 5500, DATEADD('DAY', -5, NOW())
+FROM guardians g
+WHERE g.username = 'sample_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 3200, DATEADD('DAY', -4, NOW())
+FROM guardians g
+WHERE g.username = 'sample_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4900, DATEADD('DAY', -3, NOW())
+FROM guardians g
+WHERE g.username = 'sample_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 5100, DATEADD('DAY', -2, NOW())
+FROM guardians g
+WHERE g.username = 'sample_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4600, DATEADD('DAY', -1, NOW())
+FROM guardians g
+WHERE g.username = 'sample_guardian';
+
+INSERT INTO step_records (guardian_id, step_count, timestamp)
+SELECT g.id, 4300, NOW()
+FROM guardians g
+WHERE g.username = 'sample_guardian';
 
 -- Build daily aggregates for the sample data
-INSERT IGNORE INTO daily_step_aggregates (guardian_id, date, total_steps, energy_earned)
+-- H2 compatible: conditional INSERT for aggregates
+INSERT INTO daily_step_aggregates (guardian_id, date, total_steps, energy_earned)
 SELECT 
     guardian_id,
-    DATE(timestamp) as date,
+    CAST(timestamp AS DATE) as date,
     SUM(step_count) as total_steps,
     FLOOR(SUM(step_count) / 10) as energy_earned
 FROM step_records
-WHERE DATE(timestamp) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-GROUP BY guardian_id, DATE(timestamp);
+WHERE CAST(timestamp AS DATE) >= DATEADD('DAY', -7, CURRENT_DATE)
+GROUP BY guardian_id, CAST(timestamp AS DATE)
+HAVING NOT EXISTS (
+    SELECT 1 FROM daily_step_aggregates dsa 
+    WHERE dsa.guardian_id = step_records.guardian_id 
+    AND dsa.date = CAST(step_records.timestamp AS DATE)
+);
 
 -- Sample energy transactions
-INSERT IGNORE INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp) VALUES
--- Energy earned from steps
-(1, 'EARNED', 300, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(1, 'EARNED', 450, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(1, 'EARNED', 280, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(1, 'EARNED', 520, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(1, 'SPENT', 100, 'BATTLE', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(1, 'EARNED', 370, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(1, 'SPENT', 50, 'CHALLENGE', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(1, 'EARNED', 410, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(1, 'EARNED', 290, 'DAILY_STEPS', NOW()),
+-- H2 compatible: conditional INSERT for transactions
+-- Test Guardian transactions
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 300, 'DAILY_STEPS', DATEADD('DAY', -6, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 450, 'DAILY_STEPS', DATEADD('DAY', -5, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 280, 'DAILY_STEPS', DATEADD('DAY', -4, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 520, 'DAILY_STEPS', DATEADD('DAY', -3, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'SPENT', 100, 'BATTLE', DATEADD('DAY', -3, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 370, 'DAILY_STEPS', DATEADD('DAY', -2, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'SPENT', 50, 'CHALLENGE', DATEADD('DAY', -2, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 410, 'DAILY_STEPS', DATEADD('DAY', -1, NOW())
+FROM guardians g WHERE g.username = 'test_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 290, 'DAILY_STEPS', NOW()
+FROM guardians g WHERE g.username = 'test_guardian';
 
 -- Demo Guardian transactions
-(2, 'EARNED', 250, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(2, 'EARNED', 380, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(2, 'EARNED', 420, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 'SPENT', 75, 'SHOP', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 'EARNED', 310, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(2, 'EARNED', 470, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(2, 'SPENT', 125, 'BATTLE', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(2, 'EARNED', 330, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(2, 'EARNED', 390, 'DAILY_STEPS', NOW());
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 250, 'DAILY_STEPS', DATEADD('DAY', -6, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 380, 'DAILY_STEPS', DATEADD('DAY', -5, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 420, 'DAILY_STEPS', DATEADD('DAY', -4, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'SPENT', 75, 'SHOP', DATEADD('DAY', -4, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 310, 'DAILY_STEPS', DATEADD('DAY', -3, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 470, 'DAILY_STEPS', DATEADD('DAY', -2, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'SPENT', 125, 'BATTLE', DATEADD('DAY', -1, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 330, 'DAILY_STEPS', DATEADD('DAY', -1, NOW())
+FROM guardians g WHERE g.username = 'demo_guardian';
+
+INSERT INTO energy_transactions (guardian_id, transaction_type, amount, source, timestamp)
+SELECT g.id, 'EARNED', 390, 'DAILY_STEPS', NOW()
+FROM guardians g WHERE g.username = 'demo_guardian';
 
 -- Update energy balances based on transactions
 UPDATE energy_balances eb
@@ -106,8 +259,8 @@ SET current_balance = (
     WHERE et.guardian_id = eb.guardian_id
 );
 
--- Add database performance monitoring views
-CREATE OR REPLACE VIEW v_guardian_stats AS
+-- Add database performance monitoring views (H2 compatible)
+CREATE VIEW IF NOT EXISTS v_guardian_stats AS
 SELECT 
     g.id,
     g.username,
@@ -115,17 +268,17 @@ SELECT
     eb.current_balance,
     COALESCE(das.total_steps_today, 0) as steps_today,
     COALESCE(das.energy_earned_today, 0) as energy_earned_today,
-    (SELECT COUNT(*) FROM step_records sr WHERE sr.guardian_id = g.id AND DATE(sr.timestamp) = CURDATE()) as submissions_today
+    (SELECT COUNT(*) FROM step_records sr WHERE sr.guardian_id = g.id AND CAST(sr.timestamp AS DATE) = CURRENT_DATE) as submissions_today
 FROM guardians g
 LEFT JOIN energy_balances eb ON g.id = eb.guardian_id
 LEFT JOIN (
     SELECT guardian_id, total_steps as total_steps_today, energy_earned as energy_earned_today
     FROM daily_step_aggregates
-    WHERE date = CURDATE()
+    WHERE date = CURRENT_DATE
 ) das ON g.id = das.guardian_id;
 
--- Database health monitoring view
-CREATE OR REPLACE VIEW v_database_health AS
+-- Database health monitoring view (H2 compatible)
+CREATE VIEW IF NOT EXISTS v_database_health AS
 SELECT 
     'guardians' as table_name,
     COUNT(*) as record_count,

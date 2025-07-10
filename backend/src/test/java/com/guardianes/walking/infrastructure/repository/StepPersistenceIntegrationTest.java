@@ -1,34 +1,39 @@
 package com.guardianes.walking.infrastructure.repository;
 
-import com.guardianes.walking.domain.StepRecord;
-import com.guardianes.walking.domain.StepRepository;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.TestPropertySource;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.guardianes.shared.domain.model.GuardianId;
+import com.guardianes.shared.domain.model.Timestamp;
+import com.guardianes.testconfig.NoRedisTestConfiguration;
+import com.guardianes.walking.domain.model.StepCount;
+import com.guardianes.walking.domain.model.StepRecord;
+import com.guardianes.walking.domain.repository.StepRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
+@Import(NoRedisTestConfiguration.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class StepPersistenceIntegrationTest {
 
-    @Autowired
-    private StepRepository stepRepository;
+    @Autowired private StepRepository stepRepository;
 
     @Test
     public void shouldPersistStepRecordToDatabase() {
         // Given
-        Long guardianId = 1L;
-        int stepCount = 1000;
-        LocalDateTime timestamp = LocalDateTime.now();
-        StepRecord stepRecord = new StepRecord(guardianId, stepCount, timestamp);
+        GuardianId guardianId = GuardianId.of(1L);
+        StepCount stepCount = StepCount.of(1000);
+        LocalDateTime timestamp = LocalDateTime.now().minusMinutes(10);
+        StepRecord stepRecord =
+                StepRecord.createWithTimestamp(guardianId, stepCount, Timestamp.of(timestamp));
 
         // When
         StepRecord savedStepRecord = stepRepository.save(stepRecord);
@@ -37,10 +42,11 @@ public class StepPersistenceIntegrationTest {
         assertThat(savedStepRecord).isNotNull();
         assertThat(savedStepRecord.getGuardianId()).isEqualTo(guardianId);
         assertThat(savedStepRecord.getStepCount()).isEqualTo(stepCount);
-        assertThat(savedStepRecord.getTimestamp()).isEqualTo(timestamp);
+        assertThat(savedStepRecord.getRecordedAt().value()).isEqualTo(timestamp);
 
         // Verify persistence by retrieving from database
-        List<StepRecord> retrievedRecords = stepRepository.findByGuardianIdAndDate(guardianId, timestamp.toLocalDate());
+        List<StepRecord> retrievedRecords =
+                stepRepository.findByGuardianIdAndDate(guardianId, timestamp.toLocalDate());
         assertThat(retrievedRecords).hasSize(1);
         assertThat(retrievedRecords.get(0)).isEqualTo(stepRecord);
     }
@@ -48,20 +54,25 @@ public class StepPersistenceIntegrationTest {
     @Test
     public void shouldRetrieveStepRecordsFromDatabase() {
         // Given
-        Long guardianId = 2L;
-        LocalDate today = LocalDate.now();
-        LocalDateTime timestamp1 = today.atTime(9, 0);
-        LocalDateTime timestamp2 = today.atTime(15, 30);
-        
-        StepRecord record1 = new StepRecord(guardianId, 500, timestamp1);
-        StepRecord record2 = new StepRecord(guardianId, 750, timestamp2);
+        GuardianId guardianId = GuardianId.of(2L);
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDateTime timestamp1 = yesterday.atTime(9, 0);
+        LocalDateTime timestamp2 = yesterday.atTime(15, 30);
+
+        StepRecord record1 =
+                StepRecord.createWithTimestamp(
+                        guardianId, StepCount.of(500), Timestamp.of(timestamp1));
+        StepRecord record2 =
+                StepRecord.createWithTimestamp(
+                        guardianId, StepCount.of(750), Timestamp.of(timestamp2));
 
         // When
         stepRepository.save(record1);
         stepRepository.save(record2);
 
         // Then
-        List<StepRecord> retrievedRecords = stepRepository.findByGuardianIdAndDate(guardianId, today);
+        List<StepRecord> retrievedRecords =
+                stepRepository.findByGuardianIdAndDate(guardianId, yesterday);
         assertThat(retrievedRecords).hasSize(2);
         assertThat(retrievedRecords).containsExactlyInAnyOrder(record1, record2);
     }

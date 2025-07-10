@@ -71,7 +71,8 @@
       "Bash(npm:*)",
       "Bash(npx:*)",
       "Bash(git rm:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   },

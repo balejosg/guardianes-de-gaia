@@ -1,28 +1,25 @@
 package com.guardianes.testutils;
 
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.utility.DockerImageName;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Base64;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.utility.DockerImageName;
 
 /**
  * Docker Test Utilities
- * 
- * Provides common utilities for Docker-based integration tests,
- * including container setup, health checks, and HTTP utilities.
+ *
+ * <p>Provides common utilities for Docker-based integration tests, including container setup,
+ * health checks, and HTTP utilities.
  */
 public class DockerTestUtils {
 
-    /**
-     * Creates a standard MySQL test container with guardianes database
-     */
+    /** Creates a standard MySQL test container with guardianes database */
     public static MySQLContainer<?> createMySQLContainer(Network network) {
         return new MySQLContainer<>("mysql:8.0")
                 .withNetwork(network)
@@ -33,9 +30,7 @@ public class DockerTestUtils {
                 .withEnv("MYSQL_ROOT_PASSWORD", "rootsecret");
     }
 
-    /**
-     * Creates a standard Redis test container
-     */
+    /** Creates a standard Redis test container */
     public static GenericContainer<?> createRedisContainer(Network network) {
         return new GenericContainer<>("redis:7-alpine")
                 .withNetwork(network)
@@ -43,9 +38,7 @@ public class DockerTestUtils {
                 .withExposedPorts(6379);
     }
 
-    /**
-     * Creates a RabbitMQ test container with management interface
-     */
+    /** Creates a RabbitMQ test container with management interface */
     public static GenericContainer<?> createRabbitMQContainer(Network network) {
         return new GenericContainer<>("rabbitmq:3.12-management-alpine")
                 .withNetwork(network)
@@ -55,20 +48,19 @@ public class DockerTestUtils {
                 .withEnv("RABBITMQ_DEFAULT_PASS", "secret");
     }
 
-    /**
-     * Creates the backend application container with standard configuration
-     */
-    public static GenericContainer<?> createBackendContainer(Network network, 
-                                                           GenericContainer<?> mysql, 
-                                                           GenericContainer<?> redis) {
+    /** Creates the backend application container with standard configuration */
+    public static GenericContainer<?> createBackendContainer(
+            Network network, GenericContainer<?> mysql, GenericContainer<?> redis) {
         return new GenericContainer<>(
-                DockerImageName.parse("guardianes-de-gaia-backend:latest")
-                        .asCompatibleSubstituteFor("openjdk"))
+                        DockerImageName.parse("guardianes-de-gaia-backend:latest")
+                                .asCompatibleSubstituteFor("openjdk"))
                 .withNetwork(network)
                 .withNetworkAliases("backend")
                 .withExposedPorts(8080)
                 .withEnv("SPRING_PROFILES_ACTIVE", "dev")
-                .withEnv("SPRING_DATASOURCE_URL", "jdbc:mysql://mysql:3306/guardianes?useSSL=false&allowPublicKeyRetrieval=true")
+                .withEnv(
+                        "SPRING_DATASOURCE_URL",
+                        "jdbc:mysql://mysql:3306/guardianes?useSSL=false&allowPublicKeyRetrieval=true")
                 .withEnv("SPRING_DATASOURCE_USERNAME", "guardianes")
                 .withEnv("SPRING_DATASOURCE_PASSWORD", "secret")
                 .withEnv("SPRING_REDIS_HOST", "redis")
@@ -76,87 +68,74 @@ public class DockerTestUtils {
                 .dependsOn(mysql, redis);
     }
 
-    /**
-     * Creates an HTTP client configured for testing
-     */
+    /** Creates an HTTP client configured for testing */
     public static HttpClient createTestHttpClient() {
-        return HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        return HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     }
 
-    /**
-     * Creates basic authentication header value
-     */
+    /** Creates basic authentication header value */
     public static String createBasicAuth(String username, String password) {
         return Base64.getEncoder().encodeToString((username + ":" + password).getBytes());
     }
 
-    /**
-     * Makes an authenticated HTTP request to a container endpoint
-     */
+    /** Makes an authenticated HTTP request to a container endpoint */
     public static HttpResponse<String> makeAuthenticatedRequest(
-            HttpClient client,
-            GenericContainer<?> container,
-            String endpoint,
-            String basicAuth) throws Exception {
-        
+            HttpClient client, GenericContainer<?> container, String endpoint, String basicAuth)
+            throws Exception {
+
         String baseUrl = "http://localhost:" + container.getMappedPort(8080);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + endpoint))
-                .header("Authorization", "Basic " + basicAuth)
-                .timeout(Duration.ofSeconds(10))
-                .build();
-                
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(baseUrl + endpoint))
+                        .header("Authorization", "Basic " + basicAuth)
+                        .timeout(Duration.ofSeconds(10))
+                        .build();
+
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-    /**
-     * Makes an unauthenticated HTTP request to a container endpoint
-     */
+    /** Makes an unauthenticated HTTP request to a container endpoint */
     public static HttpResponse<String> makeUnauthenticatedRequest(
-            HttpClient client,
-            GenericContainer<?> container,
-            String endpoint) throws Exception {
-        
+            HttpClient client, GenericContainer<?> container, String endpoint) throws Exception {
+
         String baseUrl = "http://localhost:" + container.getMappedPort(8080);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + endpoint))
-                .timeout(Duration.ofSeconds(10))
-                .build();
-                
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(baseUrl + endpoint))
+                        .timeout(Duration.ofSeconds(10))
+                        .build();
+
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-    /**
-     * Makes a POST request with JSON body
-     */
+    /** Makes a POST request with JSON body */
     public static HttpResponse<String> makePostRequest(
             HttpClient client,
             GenericContainer<?> container,
             String endpoint,
             String jsonBody,
-            String basicAuth) throws Exception {
-        
+            String basicAuth)
+            throws Exception {
+
         String baseUrl = "http://localhost:" + container.getMappedPort(8080);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + endpoint))
-                .header("Authorization", "Basic " + basicAuth)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                .timeout(Duration.ofSeconds(10))
-                .build();
-                
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(baseUrl + endpoint))
+                        .header("Authorization", "Basic " + basicAuth)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                        .timeout(Duration.ofSeconds(10))
+                        .build();
+
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-    /**
-     * Waits for a container to be healthy with timeout
-     */
-    public static boolean waitForContainerHealth(GenericContainer<?> container, int timeoutSeconds) {
+    /** Waits for a container to be healthy with timeout */
+    public static boolean waitForContainerHealth(
+            GenericContainer<?> container, int timeoutSeconds) {
         long startTime = System.currentTimeMillis();
         long timeoutMs = timeoutSeconds * 1000L;
-        
+
         while (System.currentTimeMillis() - startTime < timeoutMs) {
             if (container.isHealthy()) {
                 return true;
@@ -171,10 +150,9 @@ public class DockerTestUtils {
         return false;
     }
 
-    /**
-     * Checks if logs contain any of the specified error patterns
-     */
-    public static boolean logsContainErrors(GenericContainer<?> container, String... errorPatterns) {
+    /** Checks if logs contain any of the specified error patterns */
+    public static boolean logsContainErrors(
+            GenericContainer<?> container, String... errorPatterns) {
         String logs = container.getLogs();
         for (String pattern : errorPatterns) {
             if (logs.contains(pattern)) {
@@ -184,26 +162,22 @@ public class DockerTestUtils {
         return false;
     }
 
-    /**
-     * Extracts specific log lines that match a pattern
-     */
+    /** Extracts specific log lines that match a pattern */
     public static String extractLogLines(GenericContainer<?> container, String pattern) {
         String logs = container.getLogs();
         StringBuilder result = new StringBuilder();
         String[] lines = logs.split("\n");
-        
+
         for (String line : lines) {
             if (line.contains(pattern)) {
                 result.append(line).append("\n");
             }
         }
-        
+
         return result.toString();
     }
 
-    /**
-     * Validates that a JSON response contains expected fields
-     */
+    /** Validates that a JSON response contains expected fields */
     public static boolean validateJsonResponse(String jsonResponse, String... expectedFields) {
         for (String field : expectedFields) {
             if (!jsonResponse.contains("\"" + field + "\"")) {
@@ -213,9 +187,7 @@ public class DockerTestUtils {
         return true;
     }
 
-    /**
-     * Standard assertions for Docker health tests
-     */
+    /** Standard assertions for Docker health tests */
     public static void assertContainerHealthy(GenericContainer<?> container, String containerName) {
         if (!container.isRunning()) {
             throw new AssertionError(containerName + " container should be running");
@@ -225,12 +197,10 @@ public class DockerTestUtils {
         }
     }
 
-    /**
-     * Standard assertions for backend startup without cgroup issues
-     */
+    /** Standard assertions for backend startup without cgroup issues */
     public static void assertNoCgroupIssues(GenericContainer<?> backend) {
         String logs = backend.getLogs();
-        
+
         if (logs.contains("Cannot invoke \"jdk.internal.platform.CgroupInfo.getMountPoint()\"")) {
             throw new AssertionError("Container has cgroup access issues");
         }
@@ -248,12 +218,10 @@ public class DockerTestUtils {
         }
     }
 
-    /**
-     * Standard assertions for successful Spring Boot startup
-     */
+    /** Standard assertions for successful Spring Boot startup */
     public static void assertSuccessfulSpringBootStartup(GenericContainer<?> backend) {
         String logs = backend.getLogs();
-        
+
         if (!logs.contains("Started GuardianesApplication")) {
             throw new AssertionError("Spring Boot application did not start successfully");
         }
