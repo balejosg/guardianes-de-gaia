@@ -68,6 +68,18 @@ make lint
 make install
 ```
 
+### Security Validation
+```bash
+# Run security validation
+make security-check
+
+# Test secure deployment
+make security-test
+
+# Complete security validation
+make security-validate
+```
+
 ### Database Operations
 ```bash
 # Access MySQL console
