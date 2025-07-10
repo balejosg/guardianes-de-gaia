@@ -177,3 +177,5 @@ secrets/
 !.claude-instructions.md
 !.claude-context/flutter/
 node_modules/
+flutter.tar.xz
+node_modules/
