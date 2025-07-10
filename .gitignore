@@ -175,4 +175,4 @@ secrets/
 # Claude AI specific files (keep these)
 !.claude-project.md
 !.claude-instructions.md
-!.claude-context/
+!.claude-context/flutter/

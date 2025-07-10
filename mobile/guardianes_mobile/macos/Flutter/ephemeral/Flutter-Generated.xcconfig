@@ -1,5 +1,5 @@
 // This is a generated file; do not edit or check into version control.
-FLUTTER_ROOT=/home/run0/guardianes-de-gaia/flutter
+FLUTTER_ROOT=/home/run0/.cache/flutter_sdk
 FLUTTER_APPLICATION_PATH=/home/run0/guardianes-de-gaia/mobile/guardianes_mobile
 COCOAPODS_PARALLEL_CODE_SIGN=true
 FLUTTER_BUILD_DIR=build

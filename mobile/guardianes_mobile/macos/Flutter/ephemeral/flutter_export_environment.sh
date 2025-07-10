@@ -1,6 +1,6 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/home/run0/guardianes-de-gaia/flutter"
+export "FLUTTER_ROOT=/home/run0/.cache/flutter_sdk"
 export "FLUTTER_APPLICATION_PATH=/home/run0/guardianes-de-gaia/mobile/guardianes_mobile"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_BUILD_DIR=build"
