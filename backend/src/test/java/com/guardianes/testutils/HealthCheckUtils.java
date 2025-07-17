@@ -4,8 +4,6 @@ import org.testcontainers.containers.GenericContainer;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 

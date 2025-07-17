@@ -1,0 +1,859 @@
+name: 🚀 Advanced Deployment Strategies
+
+on:
+  workflow_dispatch:
+    inputs:
+      strategy:
+        description: 'Deployment strategy'
+        required: true
+        type: choice
+        options:
+          - blue-green
+          - canary
+          - rolling
+          - a-b-testing
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        type: string
+      rollback_on_failure:
+        description: 'Automatically rollback on failure'
+        required: false
+        default: true
+        type: boolean
+      traffic_percentage:
+        description: 'Traffic percentage for canary/A-B testing (1-100)'
+        required: false
+        default: '10'
+        type: string
+      monitoring_duration:
+        description: 'Monitoring duration in minutes'
+        required: false
+        default: '15'
+        type: string
+
+env:
+  KUBECTL_VERSION: "1.28.0"
+  HELM_VERSION: "3.13.0"
+  ISTIO_VERSION: "1.19.0"
+
+jobs:
+  # ============================================
+  # Pre-deployment Validation
+  # ============================================
+  validate-deployment:
+    name: 🔍 Validate Deployment Strategy
+    runs-on: ubuntu-latest
+    
+    outputs:
+      strategy: ${{ steps.validate.outputs.strategy }}
+      environment: ${{ steps.validate.outputs.environment }}
+      image-tag: ${{ steps.validate.outputs.image-tag }}
+      traffic-percentage: ${{ steps.validate.outputs.traffic-percentage }}
+      monitoring-duration: ${{ steps.validate.outputs.monitoring-duration }}
+      baseline-metrics: ${{ steps.baseline.outputs.metrics }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+      
+      - name: 🔍 Validate deployment parameters
+        id: validate
+        env:
+          STRATEGY: ${{ github.event.inputs.strategy }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+          TRAFFIC_PERCENTAGE: ${{ github.event.inputs.traffic_percentage }}
+          MONITORING_DURATION: ${{ github.event.inputs.monitoring_duration }}
+        run: |
+          echo "🔍 Validating deployment parameters..."
+          
+          # Validate strategy
+          if [[ ! "$STRATEGY" =~ ^(blue-green|canary|rolling|a-b-testing)$ ]]; then
+            echo "❌ Invalid deployment strategy: $STRATEGY"
+            exit 1
+          fi
+          
+          # Validate environment
+          if [[ ! "$ENVIRONMENT" =~ ^(staging|production)$ ]]; then
+            echo "❌ Invalid environment: $ENVIRONMENT"
+            exit 1
+          fi
+          
+          # Validate image tag
+          if [[ -z "$IMAGE_TAG" ]]; then
+            echo "❌ Image tag is required"
+            exit 1
+          fi
+          
+          # Validate traffic percentage
+          if [[ "$STRATEGY" =~ ^(canary|a-b-testing)$ ]]; then
+            if [[ ! "$TRAFFIC_PERCENTAGE" =~ ^[1-9][0-9]?$|^100$ ]]; then
+              echo "❌ Invalid traffic percentage: $TRAFFIC_PERCENTAGE"
+              exit 1
+            fi
+          fi
+          
+          # Validate monitoring duration
+          if [[ ! "$MONITORING_DURATION" =~ ^[1-9][0-9]*$ ]]; then
+            echo "❌ Invalid monitoring duration: $MONITORING_DURATION"
+            exit 1
+          fi
+          
+          echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "traffic-percentage=$TRAFFIC_PERCENTAGE" >> $GITHUB_OUTPUT
+          echo "monitoring-duration=$MONITORING_DURATION" >> $GITHUB_OUTPUT
+          
+          echo "## 🎯 Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Strategy**: $STRATEGY" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: $ENVIRONMENT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "- **Traffic %**: $TRAFFIC_PERCENTAGE%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Monitoring**: $MONITORING_DURATION minutes" >> $GITHUB_STEP_SUMMARY
+          
+          echo "✅ Deployment parameters validated"
+      
+      - name: 🔐 Configure Kubernetes access
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          if [ "$ENVIRONMENT" = "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+          else
+            echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          fi
+          
+          kubectl config use-context $ENVIRONMENT
+          kubectl get nodes
+      
+      - name: 📊 Collect baseline metrics
+        id: baseline
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          echo "📊 Collecting baseline metrics..."
+          
+          # Get current deployment status
+          CURRENT_REPLICAS=$(kubectl get deployment guardianes-$ENVIRONMENT-backend -n guardianes-$ENVIRONMENT -o jsonpath='{.status.replicas}' || echo "0")
+          READY_REPLICAS=$(kubectl get deployment guardianes-$ENVIRONMENT-backend -n guardianes-$ENVIRONMENT -o jsonpath='{.status.readyReplicas}' || echo "0")
+          
+          # Get current resource usage
+          CPU_USAGE=$(kubectl top pod -l app.kubernetes.io/component=backend -n guardianes-$ENVIRONMENT --no-headers | awk '{sum+=$2} END {print sum}' || echo "0")
+          MEMORY_USAGE=$(kubectl top pod -l app.kubernetes.io/component=backend -n guardianes-$ENVIRONMENT --no-headers | awk '{sum+=$3} END {print sum}' || echo "0")
+          
+          # Create metrics JSON
+          METRICS=$(cat <<EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "replicas": {
+              "current": $CURRENT_REPLICAS,
+              "ready": $READY_REPLICAS
+            },
+            "resources": {
+              "cpu": "$CPU_USAGE",
+              "memory": "$MEMORY_USAGE"
+            }
+          }
+          EOF
+          )
+          
+          echo "metrics<<EOF" >> $GITHUB_OUTPUT
+          echo "$METRICS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "✅ Baseline metrics collected"
+
+  # ============================================
+  # Blue-Green Deployment
+  # ============================================
+  blue-green-deployment:
+    name: 🔵🟢 Blue-Green Deployment
+    runs-on: ubuntu-latest
+    needs: [validate-deployment]
+    if: needs.validate-deployment.outputs.strategy == 'blue-green'
+    environment: ${{ needs.validate-deployment.outputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+      
+      - name: ⚓ Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+      
+      - name: 🔐 Configure Kubernetes access
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          if [ "$ENVIRONMENT" = "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+          else
+            echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          fi
+          
+          kubectl config use-context $ENVIRONMENT
+      
+      - name: 🔵 Deploy Green Environment
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          IMAGE_TAG: ${{ needs.validate-deployment.outputs.image-tag }}
+        run: |
+          echo "🔵 Deploying Green environment..."
+          
+          # Create green deployment
+          helm upgrade --install guardianes-$ENVIRONMENT-green helm/ \
+            -f helm/values-$ENVIRONMENT.yaml \
+            --set backend.image.tag=$IMAGE_TAG \
+            --set fullnameOverride=guardianes-$ENVIRONMENT-green \
+            --set backend.service.type=ClusterIP \
+            --set ingress.enabled=false \
+            --namespace guardianes-$ENVIRONMENT \
+            --wait --timeout=600s
+          
+          echo "✅ Green environment deployed"
+      
+      - name: 🧪 Test Green Environment
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          echo "🧪 Testing Green environment..."
+          
+          # Port forward to green service
+          kubectl port-forward svc/guardianes-$ENVIRONMENT-green-backend 8080:8080 \
+            --namespace guardianes-$ENVIRONMENT &
+          
+          # Wait for port forward
+          sleep 10
+          
+          # Run health checks
+          timeout 300 bash -c 'until curl -f http://localhost:8080/actuator/health; do sleep 5; done'
+          
+          # Test critical endpoints
+          curl -f http://localhost:8080/actuator/info
+          curl -f http://localhost:8080/api/v1/guardians/health
+          curl -f http://localhost:8080/api/v1/walking/health
+          
+          echo "✅ Green environment tests passed"
+      
+      - name: 🔄 Switch Traffic to Green
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          echo "🔄 Switching traffic to Green environment..."
+          
+          # Update ingress to point to green service
+          kubectl patch ingress guardianes-$ENVIRONMENT \
+            --namespace guardianes-$ENVIRONMENT \
+            --type='merge' \
+            --patch='{"spec":{"rules":[{"host":"'$ENVIRONMENT'.guardianes-de-gaia.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"guardianes-'$ENVIRONMENT'-green-backend","port":{"number":8080}}}}]}}]}}'
+          
+          echo "✅ Traffic switched to Green environment"
+      
+      - name: 📊 Monitor Green Environment
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          MONITORING_DURATION: ${{ needs.validate-deployment.outputs.monitoring-duration }}
+        run: |
+          echo "📊 Monitoring Green environment for $MONITORING_DURATION minutes..."
+          
+          # Monitor for specified duration
+          END_TIME=$(($(date +%s) + $MONITORING_DURATION * 60))
+          
+          while [ $(date +%s) -lt $END_TIME ]; do
+            # Check health
+            if ! curl -f http://$ENVIRONMENT.guardianes-de-gaia.com/actuator/health; then
+              echo "❌ Health check failed during monitoring"
+              exit 1
+            fi
+            
+            # Check error rate
+            ERROR_COUNT=$(kubectl logs -l app.kubernetes.io/name=guardianes-$ENVIRONMENT-green \
+              --namespace guardianes-$ENVIRONMENT \
+              --since=1m | grep -c "ERROR" || echo "0")
+            
+            if [ "$ERROR_COUNT" -gt 5 ]; then
+              echo "❌ High error rate detected: $ERROR_COUNT errors"
+              exit 1
+            fi
+            
+            echo "📊 Monitoring... $(date)"
+            sleep 30
+          done
+          
+          echo "✅ Green environment monitoring completed successfully"
+      
+      - name: 🗑️ Cleanup Blue Environment
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          echo "🗑️ Cleaning up Blue environment..."
+          
+          # Delete old deployment
+          helm uninstall guardianes-$ENVIRONMENT --namespace guardianes-$ENVIRONMENT || true
+          
+          # Rename green to main
+          kubectl patch deployment guardianes-$ENVIRONMENT-green-backend \
+            --namespace guardianes-$ENVIRONMENT \
+            --type='merge' \
+            --patch='{"metadata":{"name":"guardianes-'$ENVIRONMENT'-backend"}}'
+          
+          echo "✅ Blue environment cleaned up"
+
+  # ============================================
+  # Canary Deployment
+  # ============================================
+  canary-deployment:
+    name: 🐤 Canary Deployment
+    runs-on: ubuntu-latest
+    needs: [validate-deployment]
+    if: needs.validate-deployment.outputs.strategy == 'canary'
+    environment: ${{ needs.validate-deployment.outputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+      
+      - name: ⚓ Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+      
+      - name: 🔐 Configure Kubernetes access
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          if [ "$ENVIRONMENT" = "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+          else
+            echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          fi
+          
+          kubectl config use-context $ENVIRONMENT
+      
+      - name: 🐤 Deploy Canary Version
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          IMAGE_TAG: ${{ needs.validate-deployment.outputs.image-tag }}
+          TRAFFIC_PERCENTAGE: ${{ needs.validate-deployment.outputs.traffic-percentage }}
+        run: |
+          echo "🐤 Deploying Canary version with $TRAFFIC_PERCENTAGE% traffic..."
+          
+          # Calculate replica count based on traffic percentage
+          STABLE_REPLICAS=$(kubectl get deployment guardianes-$ENVIRONMENT-backend -n guardianes-$ENVIRONMENT -o jsonpath='{.spec.replicas}')
+          CANARY_REPLICAS=$(echo "scale=0; $STABLE_REPLICAS * $TRAFFIC_PERCENTAGE / 100" | bc)
+          
+          if [ "$CANARY_REPLICAS" -lt 1 ]; then
+            CANARY_REPLICAS=1
+          fi
+          
+          echo "Stable replicas: $STABLE_REPLICAS, Canary replicas: $CANARY_REPLICAS"
+          
+          # Deploy canary
+          helm upgrade --install guardianes-$ENVIRONMENT-canary helm/ \
+            -f helm/values-$ENVIRONMENT.yaml \
+            --set backend.image.tag=$IMAGE_TAG \
+            --set backend.replicaCount=$CANARY_REPLICAS \
+            --set fullnameOverride=guardianes-$ENVIRONMENT-canary \
+            --set backend.service.type=ClusterIP \
+            --set ingress.enabled=false \
+            --namespace guardianes-$ENVIRONMENT \
+            --wait --timeout=600s
+          
+          echo "✅ Canary deployment created"
+      
+      - name: 🔄 Configure Traffic Split
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          TRAFFIC_PERCENTAGE: ${{ needs.validate-deployment.outputs.traffic-percentage }}
+        run: |
+          echo "🔄 Configuring traffic split..."
+          
+          # Create Istio VirtualService for traffic splitting
+          cat > canary-virtualservice.yaml << EOF
+          apiVersion: networking.istio.io/v1beta1
+          kind: VirtualService
+          metadata:
+            name: guardianes-$ENVIRONMENT-canary
+            namespace: guardianes-$ENVIRONMENT
+          spec:
+            hosts:
+            - $ENVIRONMENT.guardianes-de-gaia.com
+            http:
+            - match:
+              - headers:
+                  x-canary:
+                    exact: "true"
+              route:
+              - destination:
+                  host: guardianes-$ENVIRONMENT-canary-backend
+                  port:
+                    number: 8080
+            - route:
+              - destination:
+                  host: guardianes-$ENVIRONMENT-backend
+                  port:
+                    number: 8080
+                weight: $((100 - $TRAFFIC_PERCENTAGE))
+              - destination:
+                  host: guardianes-$ENVIRONMENT-canary-backend
+                  port:
+                    number: 8080
+                weight: $TRAFFIC_PERCENTAGE
+          EOF
+          
+          kubectl apply -f canary-virtualservice.yaml
+          
+          echo "✅ Traffic split configured: $TRAFFIC_PERCENTAGE% to canary"
+      
+      - name: 📊 Monitor Canary Deployment
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          MONITORING_DURATION: ${{ needs.validate-deployment.outputs.monitoring-duration }}
+          TRAFFIC_PERCENTAGE: ${{ needs.validate-deployment.outputs.traffic-percentage }}
+        run: |
+          echo "📊 Monitoring canary deployment for $MONITORING_DURATION minutes..."
+          
+          END_TIME=$(($(date +%s) + $MONITORING_DURATION * 60))
+          
+          while [ $(date +%s) -lt $END_TIME ]; do
+            # Check canary health
+            CANARY_READY=$(kubectl get deployment guardianes-$ENVIRONMENT-canary-backend -n guardianes-$ENVIRONMENT -o jsonpath='{.status.readyReplicas}')
+            CANARY_DESIRED=$(kubectl get deployment guardianes-$ENVIRONMENT-canary-backend -n guardianes-$ENVIRONMENT -o jsonpath='{.spec.replicas}')
+            
+            if [ "$CANARY_READY" != "$CANARY_DESIRED" ]; then
+              echo "❌ Canary deployment not ready: $CANARY_READY/$CANARY_DESIRED"
+              exit 1
+            fi
+            
+            # Check error rates
+            CANARY_ERRORS=$(kubectl logs -l app.kubernetes.io/name=guardianes-$ENVIRONMENT-canary \
+              --namespace guardianes-$ENVIRONMENT \
+              --since=1m | grep -c "ERROR" || echo "0")
+            
+            STABLE_ERRORS=$(kubectl logs -l app.kubernetes.io/name=guardianes-$ENVIRONMENT,app.kubernetes.io/instance!=guardianes-$ENVIRONMENT-canary \
+              --namespace guardianes-$ENVIRONMENT \
+              --since=1m | grep -c "ERROR" || echo "0")
+            
+            echo "📊 Canary errors: $CANARY_ERRORS, Stable errors: $STABLE_ERRORS"
+            
+            # Compare error rates
+            if [ "$CANARY_ERRORS" -gt $((STABLE_ERRORS * 2)) ]; then
+              echo "❌ Canary error rate significantly higher than stable"
+              exit 1
+            fi
+            
+            echo "📊 Monitoring... $(date)"
+            sleep 30
+          done
+          
+          echo "✅ Canary monitoring completed successfully"
+      
+      - name: 🚀 Promote Canary to Stable
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          IMAGE_TAG: ${{ needs.validate-deployment.outputs.image-tag }}
+        run: |
+          echo "🚀 Promoting canary to stable..."
+          
+          # Update stable deployment with canary image
+          helm upgrade guardianes-$ENVIRONMENT helm/ \
+            -f helm/values-$ENVIRONMENT.yaml \
+            --set backend.image.tag=$IMAGE_TAG \
+            --namespace guardianes-$ENVIRONMENT \
+            --wait --timeout=600s
+          
+          # Remove canary deployment
+          helm uninstall guardianes-$ENVIRONMENT-canary --namespace guardianes-$ENVIRONMENT
+          
+          # Remove traffic split
+          kubectl delete virtualservice guardianes-$ENVIRONMENT-canary --namespace guardianes-$ENVIRONMENT
+          
+          echo "✅ Canary promoted to stable"
+
+  # ============================================
+  # A/B Testing Deployment
+  # ============================================
+  ab-testing-deployment:
+    name: 🅰️🅱️ A/B Testing Deployment
+    runs-on: ubuntu-latest
+    needs: [validate-deployment]
+    if: needs.validate-deployment.outputs.strategy == 'a-b-testing'
+    environment: ${{ needs.validate-deployment.outputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+      
+      - name: ⚓ Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+      
+      - name: 🔐 Configure Kubernetes access
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          if [ "$ENVIRONMENT" = "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+          else
+            echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          fi
+          
+          kubectl config use-context $ENVIRONMENT
+      
+      - name: 🅱️ Deploy B Version
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          IMAGE_TAG: ${{ needs.validate-deployment.outputs.image-tag }}
+          TRAFFIC_PERCENTAGE: ${{ needs.validate-deployment.outputs.traffic-percentage }}
+        run: |
+          echo "🅱️ Deploying B version for A/B testing..."
+          
+          # Deploy B version
+          helm upgrade --install guardianes-$ENVIRONMENT-b helm/ \
+            -f helm/values-$ENVIRONMENT.yaml \
+            --set backend.image.tag=$IMAGE_TAG \
+            --set backend.replicaCount=2 \
+            --set fullnameOverride=guardianes-$ENVIRONMENT-b \
+            --set backend.service.type=ClusterIP \
+            --set ingress.enabled=false \
+            --namespace guardianes-$ENVIRONMENT \
+            --wait --timeout=600s
+          
+          echo "✅ B version deployed"
+      
+      - name: 🔄 Configure A/B Traffic Routing
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          TRAFFIC_PERCENTAGE: ${{ needs.validate-deployment.outputs.traffic-percentage }}
+        run: |
+          echo "🔄 Configuring A/B traffic routing..."
+          
+          # Create A/B testing VirtualService
+          cat > ab-testing-virtualservice.yaml << EOF
+          apiVersion: networking.istio.io/v1beta1
+          kind: VirtualService
+          metadata:
+            name: guardianes-$ENVIRONMENT-ab
+            namespace: guardianes-$ENVIRONMENT
+          spec:
+            hosts:
+            - $ENVIRONMENT.guardianes-de-gaia.com
+            http:
+            - match:
+              - headers:
+                  x-ab-group:
+                    exact: "b"
+              route:
+              - destination:
+                  host: guardianes-$ENVIRONMENT-b-backend
+                  port:
+                    number: 8080
+            - match:
+              - headers:
+                  user-agent:
+                    regex: ".*Mobile.*"
+              route:
+              - destination:
+                  host: guardianes-$ENVIRONMENT-backend
+                  port:
+                    number: 8080
+                weight: $((100 - $TRAFFIC_PERCENTAGE))
+              - destination:
+                  host: guardianes-$ENVIRONMENT-b-backend
+                  port:
+                    number: 8080
+                weight: $TRAFFIC_PERCENTAGE
+            - route:
+              - destination:
+                  host: guardianes-$ENVIRONMENT-backend
+                  port:
+                    number: 8080
+                weight: $((100 - $TRAFFIC_PERCENTAGE))
+              - destination:
+                  host: guardianes-$ENVIRONMENT-b-backend
+                  port:
+                    number: 8080
+                weight: $TRAFFIC_PERCENTAGE
+          EOF
+          
+          kubectl apply -f ab-testing-virtualservice.yaml
+          
+          echo "✅ A/B traffic routing configured"
+      
+      - name: 📊 Monitor A/B Test
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          MONITORING_DURATION: ${{ needs.validate-deployment.outputs.monitoring-duration }}
+        run: |
+          echo "📊 Monitoring A/B test for $MONITORING_DURATION minutes..."
+          
+          END_TIME=$(($(date +%s) + $MONITORING_DURATION * 60))
+          
+          while [ $(date +%s) -lt $END_TIME ]; do
+            # Collect metrics from both versions
+            A_REQUESTS=$(kubectl logs -l app.kubernetes.io/name=guardianes-$ENVIRONMENT,app.kubernetes.io/instance!=guardianes-$ENVIRONMENT-b \
+              --namespace guardianes-$ENVIRONMENT \
+              --since=1m | grep -c "GET\|POST" || echo "0")
+            
+            B_REQUESTS=$(kubectl logs -l app.kubernetes.io/name=guardianes-$ENVIRONMENT-b \
+              --namespace guardianes-$ENVIRONMENT \
+              --since=1m | grep -c "GET\|POST" || echo "0")
+            
+            A_ERRORS=$(kubectl logs -l app.kubernetes.io/name=guardianes-$ENVIRONMENT,app.kubernetes.io/instance!=guardianes-$ENVIRONMENT-b \
+              --namespace guardianes-$ENVIRONMENT \
+              --since=1m | grep -c "ERROR" || echo "0")
+            
+            B_ERRORS=$(kubectl logs -l app.kubernetes.io/name=guardianes-$ENVIRONMENT-b \
+              --namespace guardianes-$ENVIRONMENT \
+              --since=1m | grep -c "ERROR" || echo "0")
+            
+            echo "📊 A: $A_REQUESTS requests, $A_ERRORS errors"
+            echo "📊 B: $B_REQUESTS requests, $B_ERRORS errors"
+            
+            # Calculate error rates
+            if [ "$A_REQUESTS" -gt 0 ]; then
+              A_ERROR_RATE=$(echo "scale=4; $A_ERRORS / $A_REQUESTS" | bc)
+            else
+              A_ERROR_RATE="0"
+            fi
+            
+            if [ "$B_REQUESTS" -gt 0 ]; then
+              B_ERROR_RATE=$(echo "scale=4; $B_ERRORS / $B_REQUESTS" | bc)
+            else
+              B_ERROR_RATE="0"
+            fi
+            
+            echo "📊 Error rates - A: $A_ERROR_RATE, B: $B_ERROR_RATE"
+            
+            sleep 60
+          done
+          
+          echo "✅ A/B test monitoring completed"
+      
+      - name: 📈 Generate A/B Test Report
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          echo "📈 Generating A/B test report..."
+          
+          # Create report
+          echo "## 🅰️🅱️ A/B Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Configuration:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: $ENVIRONMENT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Traffic Split**: ${{ needs.validate-deployment.outputs.traffic-percentage }}% to B" >> $GITHUB_STEP_SUMMARY
+          echo "- **Duration**: ${{ needs.validate-deployment.outputs.monitoring-duration }} minutes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Test completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Recommendation**: Manual analysis required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note**: Keep both versions running for extended testing period" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # Rollback on Failure
+  # ============================================
+  rollback-on-failure:
+    name: ⏪ Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, blue-green-deployment, canary-deployment, ab-testing-deployment]
+    if: |
+      always() && 
+      needs.validate-deployment.outputs.strategy != 'a-b-testing' &&
+      github.event.inputs.rollback_on_failure == 'true' &&
+      (needs.blue-green-deployment.result == 'failure' || needs.canary-deployment.result == 'failure')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+      
+      - name: ⚓ Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+      
+      - name: 🔐 Configure Kubernetes access
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+        run: |
+          if [ "$ENVIRONMENT" = "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+          else
+            echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          fi
+          
+          kubectl config use-context $ENVIRONMENT
+      
+      - name: ⏪ Execute Rollback
+        env:
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          STRATEGY: ${{ needs.validate-deployment.outputs.strategy }}
+        run: |
+          echo "⏪ Executing rollback for failed $STRATEGY deployment..."
+          
+          case "$STRATEGY" in
+            "blue-green")
+              # Revert ingress back to original service
+              kubectl patch ingress guardianes-$ENVIRONMENT \
+                --namespace guardianes-$ENVIRONMENT \
+                --type='merge' \
+                --patch='{"spec":{"rules":[{"host":"'$ENVIRONMENT'.guardianes-de-gaia.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"guardianes-'$ENVIRONMENT'-backend","port":{"number":8080}}}}]}}]}}'
+              
+              # Clean up green deployment
+              helm uninstall guardianes-$ENVIRONMENT-green --namespace guardianes-$ENVIRONMENT || true
+              ;;
+            "canary")
+              # Remove canary deployment
+              helm uninstall guardianes-$ENVIRONMENT-canary --namespace guardianes-$ENVIRONMENT || true
+              
+              # Remove traffic split
+              kubectl delete virtualservice guardianes-$ENVIRONMENT-canary --namespace guardianes-$ENVIRONMENT || true
+              ;;
+          esac
+          
+          echo "✅ Rollback completed successfully"
+
+  # ============================================
+  # Deployment Summary
+  # ============================================
+  deployment-summary:
+    name: 📋 Advanced Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, blue-green-deployment, canary-deployment, ab-testing-deployment, rollback-on-failure]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate deployment summary
+        env:
+          STRATEGY: ${{ needs.validate-deployment.outputs.strategy }}
+          ENVIRONMENT: ${{ needs.validate-deployment.outputs.environment }}
+          IMAGE_TAG: ${{ needs.validate-deployment.outputs.image-tag }}
+        run: |
+          echo "## 🚀 Advanced Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Deployment Details:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Strategy**: $STRATEGY" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: $ENVIRONMENT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "- **Traffic %**: ${{ needs.validate-deployment.outputs.traffic-percentage }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Monitoring**: ${{ needs.validate-deployment.outputs.monitoring-duration }} minutes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🎯 Execution Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validation**: ${{ needs.validate-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+          
+          case "$STRATEGY" in
+            "blue-green")
+              echo "- **Blue-Green**: ${{ needs.blue-green-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "canary")
+              echo "- **Canary**: ${{ needs.canary-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "a-b-testing")
+              echo "- **A/B Testing**: ${{ needs.ab-testing-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
+          
+          if [ "${{ needs.rollback-on-failure.result }}" = "success" ]; then
+            echo "- **Rollback**: ${{ needs.rollback-on-failure.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          MAIN_JOB_RESULT=""
+          case "$STRATEGY" in
+            "blue-green")
+              MAIN_JOB_RESULT="${{ needs.blue-green-deployment.result }}"
+              ;;
+            "canary")
+              MAIN_JOB_RESULT="${{ needs.canary-deployment.result }}"
+              ;;
+            "a-b-testing")
+              MAIN_JOB_RESULT="${{ needs.ab-testing-deployment.result }}"
+              ;;
+          esac
+          
+          if [ "$MAIN_JOB_RESULT" = "success" ]; then
+            echo "✅ **Deployment completed successfully using $STRATEGY strategy!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Deployment failed.**" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ needs.rollback-on-failure.result }}" = "success" ]; then
+              echo "✅ **Rollback completed successfully.**" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+      
+      - name: 🚨 Notify deployment result
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#guardianes-deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_DEPLOYMENTS }}
+          custom_payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅' || '❌' }} Advanced deployment ${{ job.status }}",
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "fields": [
+                    {
+                      "title": "Strategy",
+                      "value": "${{ needs.validate-deployment.outputs.strategy }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Environment",
+                      "value": "${{ needs.validate-deployment.outputs.environment }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Image Tag",
+                      "value": "${{ needs.validate-deployment.outputs.image-tag }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Traffic %",
+                      "value": "${{ needs.validate-deployment.outputs.traffic-percentage }}%",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }

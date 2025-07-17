@@ -1,10 +1,12 @@
 package com.guardianes.integration.docker;
 
+import com.guardianes.testconfig.GuardianTestConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.AfterAll;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
@@ -30,13 +32,15 @@ import static org.junit.jupiter.api.Assertions.*;
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
+@Import(GuardianTestConfiguration.class)
 @DisplayName("Metrics Configuration Validation Tests")
 class MetricsConfigurationTest {
 
     private static final Network network = Network.newNetwork();
     
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+    @SuppressWarnings("resource")
+    static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withNetwork(network)
             .withNetworkAliases("mysql")
             .withDatabaseName("guardianes")
@@ -44,13 +48,15 @@ class MetricsConfigurationTest {
             .withPassword("secret");
 
     @Container
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
+    @SuppressWarnings("resource")
+    static final GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
             .withNetwork(network)
             .withNetworkAliases("redis")
             .withExposedPorts(6379);
 
     @Container
-    static GenericContainer<?> backend = new GenericContainer<>(
+    @SuppressWarnings("resource")
+    static final GenericContainer<?> backend = new GenericContainer<>(
             DockerImageName.parse("guardianes-de-gaia-backend:latest")
                     .asCompatibleSubstituteFor("openjdk"))
             .withNetwork(network)
@@ -63,6 +69,18 @@ class MetricsConfigurationTest {
             .withEnv("SPRING_REDIS_HOST", "redis")
             .withEnv("SPRING_REDIS_PORT", "6379")
             .dependsOn(mysql, redis);
+
+    @AfterAll
+    static void cleanupResources() {
+        // Cleanup network resources
+        if (network != null) {
+            try {
+                network.close();
+            } catch (Exception e) {
+                // Ignore cleanup errors
+            }
+        }
+    }
 
     @Test
     @DisplayName("Should start without SystemMetricsAutoConfiguration failures")

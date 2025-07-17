@@ -9,11 +9,9 @@ import org.mockito.MockitoAnnotations;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @DisplayName("Step Aggregation Service Tests")
@@ -80,7 +78,6 @@ class StepAggregationServiceTest {
         // Given
         Long guardianId = 1L;
         LocalDate today = LocalDate.now();
-        DailyStepAggregate todayAggregate = new DailyStepAggregate(guardianId, today, 5000);
         when(stepRepository.findByGuardianIdAndDate(guardianId, today))
             .thenReturn(Arrays.asList(
                 new StepRecord(guardianId, 5000, today.atTime(10, 0))

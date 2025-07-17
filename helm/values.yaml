@@ -1,0 +1,340 @@
+# Default values for guardianes-de-gaia.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global configuration
+global:
+  # Image registry
+  imageRegistry: "ghcr.io"
+  imagePullSecrets: []
+  storageClass: ""
+
+# Application configuration
+app:
+  name: guardianes-de-gaia
+  version: "1.0.0"
+  
+# Backend service configuration
+backend:
+  name: backend
+  image:
+    registry: ghcr.io
+    repository: guardianes-de-gaia/backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 2
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Auto-scaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+    annotations: {}
+  
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  # Environment variables
+  env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: "kubernetes"
+    - name: JAVA_OPTS
+      value: "-Xmx768m -Xms512m"
+    - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+      value: "health,info,prometheus,metrics"
+  
+  # ConfigMap and Secret references
+  configMapRef: guardianes-config
+  secretRef: guardianes-secrets
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  
+  hosts:
+    - host: api.guardianes-de-gaia.com
+      paths:
+        - path: /
+          pathType: Prefix
+  
+  tls:
+    - secretName: guardianes-tls
+      hosts:
+        - api.guardianes-de-gaia.com
+
+# MySQL database configuration
+mysql:
+  enabled: true
+  auth:
+    rootPassword: ""  # Will be set via secret
+    database: guardianes
+    username: guardianes
+    password: ""  # Will be set via secret
+  
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "gp2"
+      size: 20Gi
+    
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    
+    configuration: |-
+      [mysqld]
+      default_authentication_plugin=mysql_native_password
+      skip-name-resolve
+      explicit_defaults_for_timestamp
+      basedir=/opt/bitnami/mysql
+      plugin_dir=/opt/bitnami/mysql/lib/plugin
+      port=3306
+      socket=/opt/bitnami/mysql/tmp/mysql.sock
+      datadir=/bitnami/mysql/data
+      tmpdir=/opt/bitnami/mysql/tmp
+      max_allowed_packet=16M
+      bind-address=*
+      pid-file=/opt/bitnami/mysql/tmp/mysqld.pid
+      log-error=/opt/bitnami/mysql/logs/mysqld.log
+      character-set-server=UTF8
+      collation-server=utf8_general_ci
+      slow_query_log=0
+      slow_query_log_file=/opt/bitnami/mysql/logs/mysqld.log
+      long_query_time=10.0
+      
+      # Performance optimization
+      innodb_buffer_pool_size=512M
+      innodb_log_file_size=128M
+      innodb_flush_log_at_trx_commit=1
+      innodb_lock_wait_timeout=50
+      max_connections=100
+
+# Redis cache configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""  # Will be set via secret
+  
+  master:
+    persistence:
+      enabled: true
+      storageClass: "gp2"
+      size: 5Gi
+    
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  
+  replica:
+    replicaCount: 1
+    persistence:
+      enabled: true
+      storageClass: "gp2"
+      size: 5Gi
+
+# RabbitMQ message queue configuration
+rabbitmq:
+  enabled: true
+  auth:
+    username: guardianes
+    password: ""  # Will be set via secret
+    erlangCookie: ""  # Will be set via secret
+  
+  persistence:
+    enabled: true
+    storageClass: "gp2"
+    size: 5Gi
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Monitoring configuration
+monitoring:
+  # Prometheus monitoring
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+      path: /actuator/prometheus
+      labels:
+        app: guardianes-de-gaia
+  
+  # Grafana dashboards
+  grafana:
+    enabled: true
+    adminPassword: ""  # Will be set via secret
+    
+    dashboards:
+      enabled: true
+      configMapName: guardianes-dashboards
+    
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://prometheus-server:80
+            access: proxy
+            isDefault: true
+
+# Configuration management
+config:
+  # Application configuration
+  application:
+    name: "Guardianes de Gaia"
+    version: "1.0.0"
+    environment: "production"
+    
+    # Game configuration
+    game:
+      energyPerSteps: 10
+      maxDailyEnergy: 1000
+      xpPerBattle: 50
+      
+    # Battle configuration  
+    battle:
+      maxBattleDuration: 300  # 5 minutes
+      maxCardsPerDeck: 10
+      
+    # Walking configuration
+    walking:
+      minStepsForReward: 100
+      maxStepsPerDay: 20000
+  
+  # Logging configuration
+  logging:
+    level:
+      root: INFO
+      com.guardianes: DEBUG
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+      file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Security configuration
+security:
+  # Pod Security Standards
+  podSecurityStandards:
+    enforce: "restricted"
+    audit: "restricted"
+    warn: "restricted"
+  
+  # Network policies
+  networkPolicy:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: nginx-ingress
+        ports:
+          - protocol: TCP
+            port: 8080
+      - from:
+          - podSelector:
+              matchLabels:
+                app: prometheus
+        ports:
+          - protocol: TCP
+            port: 8080
+
+# Backup configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: "30d"
+  
+  mysql:
+    enabled: true
+    storageClass: "gp2"
+    size: 10Gi
+
+# Node affinity and tolerations
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - guardianes-de-gaia
+          topologyKey: kubernetes.io/hostname

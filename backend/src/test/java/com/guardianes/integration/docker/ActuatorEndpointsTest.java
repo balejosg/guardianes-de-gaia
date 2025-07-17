@@ -1,11 +1,13 @@
 package com.guardianes.integration.docker;
 
+import com.guardianes.testconfig.GuardianTestConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
@@ -34,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
+@Import(GuardianTestConfiguration.class)
 @DisplayName("Actuator Endpoints Integration Tests")
 class ActuatorEndpointsTest {
 
@@ -42,7 +45,8 @@ class ActuatorEndpointsTest {
     private static String basicAuth;
     
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+    @SuppressWarnings("resource")
+    static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withNetwork(network)
             .withNetworkAliases("mysql")
             .withDatabaseName("guardianes")
@@ -50,13 +54,15 @@ class ActuatorEndpointsTest {
             .withPassword("secret");
 
     @Container
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
+    @SuppressWarnings("resource")
+    static final GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
             .withNetwork(network)
             .withNetworkAliases("redis")
             .withExposedPorts(6379);
 
     @Container
-    static GenericContainer<?> backend = new GenericContainer<>(
+    @SuppressWarnings("resource")
+    static final GenericContainer<?> backend = new GenericContainer<>(
             DockerImageName.parse("guardianes-de-gaia-backend:latest")
                     .asCompatibleSubstituteFor("openjdk"))
             .withNetwork(network)
@@ -76,6 +82,18 @@ class ActuatorEndpointsTest {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         basicAuth = Base64.getEncoder().encodeToString("admin:dev123".getBytes());
+    }
+
+    @AfterAll
+    static void cleanupResources() {
+        // Cleanup network resources
+        if (network != null) {
+            try {
+                network.close();
+            } catch (Exception e) {
+                // Ignore cleanup errors
+            }
+        }
     }
 
     @Test

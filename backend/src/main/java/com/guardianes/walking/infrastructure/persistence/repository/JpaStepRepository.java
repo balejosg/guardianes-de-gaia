@@ -8,7 +8,6 @@ import com.guardianes.walking.infrastructure.persistence.entity.StepRecordEntity
 import com.guardianes.walking.infrastructure.persistence.mapper.DailyStepAggregateMapper;
 import com.guardianes.walking.infrastructure.persistence.mapper.StepRecordMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Repository
 @Transactional
 public class JpaStepRepository implements StepRepository {
     

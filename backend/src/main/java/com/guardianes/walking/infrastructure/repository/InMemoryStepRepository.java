@@ -3,6 +3,7 @@ package com.guardianes.walking.infrastructure.repository;
 import com.guardianes.walking.domain.StepRepository;
 import com.guardianes.walking.domain.StepRecord;
 import com.guardianes.walking.domain.DailyStepAggregate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -13,11 +14,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Repository
+@ConditionalOnProperty(name = "guardianes.test.memory-repository", havingValue = "true", matchIfMissing = false)
 public class InMemoryStepRepository implements StepRepository {
     
     private final Map<String, StepRecord> stepRecords = new ConcurrentHashMap<>();
     private final Map<String, DailyStepAggregate> dailyAggregates = new ConcurrentHashMap<>();
-    private final Map<String, Integer> submissionCounts = new ConcurrentHashMap<>();
     
     @Override
     public StepRecord save(StepRecord stepRecord) {

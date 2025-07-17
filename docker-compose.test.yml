@@ -1,0 +1,122 @@
+version: '3.9'
+
+services:
+  # ============================================
+  # Backend Test Service
+  # ============================================
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: guardianes-backend-test
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-test:3306/guardianes_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-guardianes_test}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-test_secret}
+      - SPRING_REDIS_HOST=redis-test
+      - SPRING_REDIS_PORT=6379
+      - SPRING_RABBITMQ_HOST=rabbitmq-test
+      - SPRING_RABBITMQ_PORT=5672
+      - TZ=Europe/Madrid
+    volumes:
+      - ./backend:/app
+      - maven-cache:/root/.m2
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      rabbitmq-test:
+        condition: service_healthy
+    networks:
+      - test-network
+    command: ["mvn", "test"]
+
+  # ============================================
+  # MySQL Database for Testing
+  # ============================================
+  mysql-test:
+    image: mysql:8.0
+    container_name: guardianes-mysql-test
+    environment:
+      MYSQL_ROOT_PASSWORD: root_test_secret
+      MYSQL_DATABASE: guardianes_test
+      MYSQL_USER: guardianes_test
+      MYSQL_PASSWORD: test_secret
+      TZ: Europe/Madrid
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-test-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_test_secret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ============================================
+  # Redis Cache for Testing
+  # ============================================
+  redis-test:
+    image: redis:7-alpine
+    container_name: guardianes-redis-test
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-test-data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # RabbitMQ Message Queue for Testing
+  # ============================================
+  rabbitmq-test:
+    image: rabbitmq:3.12-management-alpine
+    container_name: guardianes-rabbitmq-test
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guardian_test}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-rabbit_test_secret}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/test}
+    ports:
+      - "5673:5672"    # AMQP
+      - "15673:15672"  # Management UI
+    volumes:
+      - rabbitmq-test-data:/var/lib/rabbitmq
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  test-network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  mysql-test-data:
+    driver: local
+  redis-test-data:
+    driver: local
+  rabbitmq-test-data:
+    driver: local
+  maven-cache:
+    external: true

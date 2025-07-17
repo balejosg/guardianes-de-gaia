@@ -1,0 +1,322 @@
+name: 🔄 Backend CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'docker-compose*.yml'
+      - 'makefile'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'docker-compose*.yml'
+      - 'makefile'
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_OPTS: '-Xmx2048m -XX:MaxPermSize=512m'
+  TESTCONTAINERS_RYUK_DISABLED: 'true'
+
+jobs:
+  # ============================================
+  # Code Quality Analysis
+  # ============================================
+  code-quality:
+    name: 🔍 Code Quality & Security
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for SonarQube
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🔍 Run SpotBugs
+        working-directory: ./backend
+        run: mvn compile spotbugs:check
+      
+      - name: 🛡️ OWASP Dependency Check
+        working-directory: ./backend
+        run: mvn org.owasp:dependency-check-maven:check
+      
+      - name: 📊 SonarQube Analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        working-directory: ./backend
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            mvn sonar:sonar \
+              -Dsonar.projectKey=guardianes-de-gaia-backend \
+              -Dsonar.organization=${{ github.repository_owner }} \
+              -Dsonar.host.url=https://sonarcloud.io
+          else
+            echo "⚠️ SonarQube analysis skipped - no token provided"
+          fi
+
+  # ============================================
+  # Unit Tests with Matrix Strategy
+  # ============================================
+  unit-tests:
+    name: 🧪 Unit Tests (Java ${{ matrix.java-version }})
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        java-version: ['17', '21']
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🧪 Run Unit Tests
+        working-directory: ./backend
+        run: |
+          mvn test \
+            -Dtest.parallel=true \
+            -Dmaven.test.failure.ignore=false \
+            -Djacoco.execution.data.file=target/jacoco-unit.exec
+      
+      - name: 📊 Generate Coverage Report
+        working-directory: ./backend
+        run: mvn jacoco:report
+      
+      - name: 📤 Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/target/site/jacoco/jacoco.xml
+          flags: backend-unit-tests
+          name: Backend Coverage
+      
+      - name: 💾 Archive Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results-java-${{ matrix.java-version }}
+          path: |
+            backend/target/surefire-reports/
+            backend/target/site/jacoco/
+
+  # ============================================
+  # Integration Tests with Docker
+  # ============================================
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: guardianes_test
+          MYSQL_USER: guardianes_test
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      
+      rabbitmq:
+        image: rabbitmq:3.12-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: test_user
+          RABBITMQ_DEFAULT_PASS: test_password
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: >-
+          --health-cmd="rabbitmq-diagnostics ping"
+          --health-interval=30s
+          --health-timeout=10s
+          --health-retries=5
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: ⏳ Wait for Services
+        run: |
+          echo "🔄 Waiting for MySQL..."
+          timeout 60 sh -c 'until nc -z localhost 3306; do sleep 1; done'
+          echo "🔄 Waiting for Redis..."
+          timeout 30 sh -c 'until nc -z localhost 6379; do sleep 1; done'
+          echo "🔄 Waiting for RabbitMQ..."
+          timeout 60 sh -c 'until nc -z localhost 5672; do sleep 1; done'
+          echo "✅ All services ready!"
+      
+      - name: 🗄️ Setup Test Database
+        run: |
+          mysql -h 127.0.0.1 -u root -ptest_root_password -e "
+            CREATE DATABASE IF NOT EXISTS guardianes_test;
+            GRANT ALL PRIVILEGES ON guardianes_test.* TO 'guardianes_test'@'%';
+            FLUSH PRIVILEGES;
+          "
+      
+      - name: 🔗 Run Integration Tests
+        working-directory: ./backend
+        env:
+          SPRING_PROFILES_ACTIVE: integration-test
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/guardianes_test
+          SPRING_DATASOURCE_USERNAME: guardianes_test
+          SPRING_DATASOURCE_PASSWORD: test_password
+          SPRING_REDIS_HOST: localhost
+          SPRING_REDIS_PORT: 6379
+          SPRING_RABBITMQ_HOST: localhost
+          SPRING_RABBITMQ_PORT: 5672
+          SPRING_RABBITMQ_USERNAME: test_user
+          SPRING_RABBITMQ_PASSWORD: test_password
+        run: |
+          mvn test \
+            -Dtest="**/integration/**Test" \
+            -Dmaven.test.failure.ignore=false
+      
+      - name: 🥒 Run Cucumber BDD Tests
+        working-directory: ./backend
+        env:
+          SPRING_PROFILES_ACTIVE: integration-test
+        run: mvn verify -Pcucumber
+      
+      - name: 💾 Archive Integration Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            backend/target/surefire-reports/
+            backend/target/cucumber-reports/
+
+  # ============================================
+  # Performance Tests
+  # ============================================
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🏗️ Build Application
+        working-directory: ./backend
+        run: mvn clean package -DskipTests
+      
+      - name: 🐳 Start Test Environment
+        run: |
+          docker-compose -f docker-compose.test.yml up -d
+          sleep 30  # Wait for services to start
+      
+      - name: ⚡ Run Load Tests with JMeter
+        run: |
+          # Install JMeter
+          wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.2.tgz
+          tar -xzf apache-jmeter-5.6.2.tgz
+          
+          # Run performance tests (if JMeter test plans exist)
+          if [ -f "backend/src/test/jmeter/load-test.jmx" ]; then
+            ./apache-jmeter-5.6.2/bin/jmeter -n \
+              -t backend/src/test/jmeter/load-test.jmx \
+              -l performance-results.jtl \
+              -e -o performance-report/
+          else
+            echo "📊 Creating basic performance test..."
+            curl -f http://localhost:8080/actuator/health || exit 1
+            echo "✅ Basic health check passed"
+          fi
+      
+      - name: 🛑 Stop Test Environment
+        if: always()
+        run: docker-compose -f docker-compose.test.yml down
+      
+      - name: 📤 Upload Performance Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: performance-report/
+
+  # ============================================
+  # Build Summary
+  # ============================================
+  build-summary:
+    name: 📋 Build Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests, integration-tests, performance-tests]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Build Summary
+        run: |
+          echo "## 🎯 Backend CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Job Status:" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance Tests: ${{ needs.performance-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.code-quality.result }}" == "success" && 
+                "${{ needs.unit-tests.result }}" == "success" && 
+                "${{ needs.integration-tests.result }}" == "success" ]]; then
+            echo "✅ **All critical tests passed!** Ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Some tests failed.** Please review before merging." >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🚨 Notify on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#guardianes-ci'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

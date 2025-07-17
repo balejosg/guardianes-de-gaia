@@ -1,0 +1,205 @@
+# Development environment values for guardianes-de-gaia
+# This file overrides default values for development environment
+
+# Global configuration
+global:
+  imageRegistry: "ghcr.io"
+  environment: "development"
+
+# Backend configuration for development
+backend:
+  replicaCount: 1
+  
+  image:
+    tag: "develop"
+    pullPolicy: Always
+  
+  # Lower resource requirements for development
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Disable auto-scaling in development
+  autoscaling:
+    enabled: false
+  
+  # Development-specific environment variables
+  env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: "development,kubernetes"
+    - name: JAVA_OPTS
+      value: "-Xmx400m -Xms256m -XX:+UseG1GC"
+    - name: LOG_LEVEL
+      value: "DEBUG"
+    - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+      value: "health,info,prometheus,metrics,env,beans,mappings"
+
+# Ingress configuration for development
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: dev.guardianes-de-gaia.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []  # No TLS for development
+
+# MySQL configuration for development
+mysql:
+  enabled: true
+  auth:
+    database: guardianes_dev
+    username: guardianes_dev
+    password: "dev_password_123"
+    rootPassword: "dev_root_password"
+  
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+    
+    resources:
+      limits:
+        cpu: 250m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    
+    # Development-specific MySQL configuration
+    configuration: |-
+      [mysqld]
+      default_authentication_plugin=mysql_native_password
+      skip-name-resolve
+      explicit_defaults_for_timestamp
+      basedir=/opt/bitnami/mysql
+      port=3306
+      bind-address=*
+      max_allowed_packet=16M
+      character-set-server=UTF8
+      collation-server=utf8_general_ci
+      
+      # Development optimizations
+      innodb_buffer_pool_size=128M
+      innodb_log_file_size=32M
+      innodb_flush_log_at_trx_commit=2
+      max_connections=50
+      query_cache_size=32M
+      query_cache_type=1
+
+# Redis configuration for development
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "dev_redis_password"
+  
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+    
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+  
+  replica:
+    replicaCount: 0  # No replica for development
+
+# RabbitMQ configuration for development
+rabbitmq:
+  enabled: true
+  auth:
+    username: guardianes_dev
+    password: "dev_rabbitmq_password"
+    erlangCookie: "dev_erlang_cookie"
+  
+  persistence:
+    enabled: true
+    size: 2Gi
+  
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Monitoring configuration for development
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 60s
+  
+  grafana:
+    enabled: true
+    adminPassword: "dev_grafana_admin"
+
+# Configuration for development
+config:
+  application:
+    name: "Guardianes de Gaia Dev"
+    environment: "development"
+    
+    # Development game configuration
+    game:
+      energyPerSteps: 5  # Easier progression for testing
+      maxDailyEnergy: 500
+      xpPerBattle: 100   # Higher XP for faster testing
+    
+    battle:
+      maxBattleDuration: 60  # Shorter battles for testing
+      maxCardsPerDeck: 5
+    
+    walking:
+      minStepsForReward: 10   # Lower threshold for testing
+      maxStepsPerDay: 5000
+  
+  logging:
+    level:
+      root: INFO
+      com.guardianes: DEBUG
+      org.springframework.web: DEBUG
+      org.hibernate.SQL: DEBUG
+      org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Security configuration for development
+security:
+  networkPolicy:
+    enabled: false  # Disable network policies for easier development
+  
+  podSecurityStandards:
+    enforce: "baseline"  # Relaxed security for development
+
+# Backup configuration for development
+backup:
+  enabled: false  # Disable backups for development
+
+# Node affinity - prefer development nodes
+nodeSelector:
+  environment: development
+
+# Tolerations for development nodes
+tolerations:
+  - key: "development"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+# No anti-affinity for development
+affinity: {}

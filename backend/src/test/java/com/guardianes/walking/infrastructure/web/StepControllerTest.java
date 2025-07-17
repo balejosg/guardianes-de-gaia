@@ -18,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -31,7 +32,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.hamcrest.Matchers.hasItem;
 
-@WebMvcTest(StepController.class)
+@WebMvcTest(value = StepController.class, excludeAutoConfiguration = {
+    org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.data.web.SpringDataWebAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration.class
+})
+@TestPropertySource(properties = {"guardianes.jwt.enabled=false", "guardianes.jpa.enabled=false"})
 @WithMockUser(username = "admin", roles = {"ADMIN"})
 @DisplayName("Step Controller Tests")
 class StepControllerTest {

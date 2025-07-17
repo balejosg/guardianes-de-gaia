@@ -71,17 +71,12 @@
       "Bash(npm:*)",
       "Bash(npx:*)",
       "Bash(git rm:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git commit:*)",
+      "Bash(gradle:*)",
+      "Bash(cat:*)",
+      "Bash(./gradlew:*)"
     ],
     "deny": []
-  },
-  "mcpServers": {
-    "puppeteer": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ]
-    }
   }
 }

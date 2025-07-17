@@ -18,8 +18,9 @@ dependencies:
   http: ^1.1.0
   shared_preferences: ^2.2.2
   pedometer: ^4.0.2
-  qr_code_scanner: ^1.0.1
+  mobile_scanner: ^5.0.0
   permission_handler: ^11.0.1
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
@@ -28,15 +29,11 @@ dev_dependencies:
   injectable_generator: ^2.4.1
   build_runner: ^2.4.7
   json_serializable: ^6.7.1
+  mockito: ^5.4.4
+  bloc_test: ^9.1.5
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/cards/
-  fonts:
-    - family: Roboto
-      fonts:
-        - asset: fonts/Roboto-Regular.ttf
-        - asset: fonts/Roboto-Bold.ttf
-          weight: 700

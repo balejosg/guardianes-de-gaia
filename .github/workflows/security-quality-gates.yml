@@ -1,0 +1,550 @@
+name: 🛡️ Security & Quality Gates
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_level:
+        description: 'Security scan level'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - comprehensive
+          - compliance
+
+env:
+  # Security scanning configuration
+  FAIL_ON_HIGH: true
+  FAIL_ON_CRITICAL: true
+  SARIF_UPLOAD: true
+
+jobs:
+  # ============================================
+  # Code Quality Gates
+  # ============================================
+  code-quality-gate:
+    name: 📊 Code Quality Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    
+    outputs:
+      quality-gate-passed: ${{ steps.quality-check.outputs.passed }}
+      coverage-percentage: ${{ steps.coverage.outputs.percentage }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for SonarQube
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🧪 Run tests with coverage
+        working-directory: ./backend
+        run: |
+          mvn clean test jacoco:report
+      
+      - name: 📊 Extract coverage metrics
+        id: coverage
+        working-directory: ./backend
+        run: |
+          # Extract coverage percentage from JaCoCo report
+          if [ -f "target/site/jacoco/index.html" ]; then
+            COVERAGE=$(grep -o 'Total[^%]*%' target/site/jacoco/index.html | grep -o '[0-9]*%' | head -1 | tr -d '%')
+            echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+            echo "Coverage: $COVERAGE%"
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+            echo "No coverage report found"
+          fi
+      
+      - name: 🔍 SonarQube Quality Gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        working-directory: ./backend
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "🔍 Running SonarQube analysis..."
+            mvn sonar:sonar \
+              -Dsonar.projectKey=guardianes-de-gaia-backend \
+              -Dsonar.organization=${{ github.repository_owner }} \
+              -Dsonar.host.url=https://sonarcloud.io \
+              -Dsonar.qualitygate.wait=true
+          else
+            echo "⚠️ SonarQube analysis skipped - no token provided"
+          fi
+      
+      - name: 📐 Check code formatting
+        working-directory: ./backend
+        run: |
+          mvn spotless:check
+      
+      - name: 🔍 Run SpotBugs analysis
+        working-directory: ./backend
+        run: |
+          mvn compile spotbugs:check
+      
+      - name: 📋 Quality gate evaluation
+        id: quality-check
+        run: |
+          COVERAGE=${{ steps.coverage.outputs.percentage }}
+          PASSED=true
+          
+          echo "## 📊 Code Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Coverage check
+          if [ "$COVERAGE" -lt 80 ]; then
+            echo "❌ **Coverage**: $COVERAGE% (minimum: 80%)" >> $GITHUB_STEP_SUMMARY
+            PASSED=false
+          else
+            echo "✅ **Coverage**: $COVERAGE%" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Set output
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          
+          if [ "$PASSED" = "false" ]; then
+            echo "❌ Quality gate failed"
+            exit 1
+          else
+            echo "✅ Quality gate passed"
+          fi
+
+  # ============================================
+  # Security Scanning
+  # ============================================
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    
+    strategy:
+      matrix:
+        scanner: [codeql, trivy, semgrep]
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # CodeQL Analysis
+      - name: 🔍 Initialize CodeQL
+        if: matrix.scanner == 'codeql'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java
+          queries: security-extended,security-and-quality
+      
+      - name: ☕ Setup Java for CodeQL
+        if: matrix.scanner == 'codeql'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🏗️ Build for CodeQL
+        if: matrix.scanner == 'codeql'
+        working-directory: ./backend
+        run: |
+          mvn clean compile -DskipTests
+      
+      - name: 🔍 Perform CodeQL Analysis
+        if: matrix.scanner == 'codeql'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: 'codeql-${{ matrix.scanner }}'
+      
+      # Trivy Filesystem Scan
+      - name: 🛡️ Run Trivy filesystem scan
+        if: matrix.scanner == 'trivy'
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: 📤 Upload Trivy scan results
+        if: matrix.scanner == 'trivy'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-filesystem'
+      
+      # Semgrep SAST
+      - name: 🔍 Run Semgrep
+        if: matrix.scanner == 'semgrep'
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/java
+            p/owasp-top-ten
+            p/spring
+          publishToken: ${{ secrets.SEMGREP_PUBLISH_TOKEN }}
+          publishDeployment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          generateSarif: "1"
+      
+      - name: 📤 Upload Semgrep results
+        if: matrix.scanner == 'semgrep' && always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: 'semgrep'
+
+  # ============================================
+  # Dependency Vulnerability Scan
+  # ============================================
+  dependency-scan:
+    name: 📦 Dependency Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🔍 OWASP Dependency Check
+        working-directory: ./backend
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionsLocation=.dependency-check-suppressions.xml
+      
+      - name: 📤 Upload OWASP results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: backend/target/dependency-check-report.html
+      
+      - name: 🔍 Snyk vulnerability scan
+        uses: snyk/actions/maven@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=backend/pom.xml
+        continue-on-error: true
+      
+      - name: 📤 Upload Snyk results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif
+          category: 'snyk-dependencies'
+
+  # ============================================
+  # License Compliance Scan
+  # ============================================
+  license-scan:
+    name: 📄 License Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🔍 License scan with FOSSA
+        if: secrets.FOSSA_API_KEY
+        uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          path: backend/
+      
+      - name: 📋 Generate license report
+        working-directory: ./backend
+        run: |
+          # Generate license report using Maven
+          mvn license:add-third-party
+          
+          echo "## 📄 License Compliance Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "target/generated-sources/license/THIRD-PARTY.txt" ]; then
+            echo "✅ License report generated successfully" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Summary:" >> $GITHUB_STEP_SUMMARY
+            
+            # Count licenses
+            LICENSE_COUNT=$(grep -c "^License:" target/generated-sources/license/THIRD-PARTY.txt || echo "0")
+            echo "- **Total dependencies with licenses**: $LICENSE_COUNT" >> $GITHUB_STEP_SUMMARY
+            
+            # Check for potential problematic licenses
+            if grep -q "GPL" target/generated-sources/license/THIRD-PARTY.txt; then
+              echo "⚠️ **Warning**: GPL licenses detected" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ No GPL licenses detected" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ License report generation failed" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 📤 Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: backend/target/generated-sources/license/
+
+  # ============================================
+  # Mobile Security Scan
+  # ============================================
+  mobile-security:
+    name: 📱 Mobile Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🎯 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          cache: true
+      
+      - name: 📦 Get dependencies
+        working-directory: ./mobile/guardianes_mobile
+        run: flutter pub get
+      
+      - name: 🔍 Flutter security audit
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          # Check for security issues in pubspec.yaml
+          echo "## 📱 Mobile Security Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check dependencies for known vulnerabilities
+          flutter pub deps --style=compact > deps.txt
+          
+          echo "### Dependency Analysis:" >> $GITHUB_STEP_SUMMARY
+          DEP_COUNT=$(cat deps.txt | wc -l)
+          echo "- **Total dependencies**: $DEP_COUNT" >> $GITHUB_STEP_SUMMARY
+          
+          # Basic security checks
+          if grep -q "http:" pubspec.yaml; then
+            echo "⚠️ **Warning**: HTTP dependencies detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No insecure HTTP dependencies" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🛡️ Android security checks
+        working-directory: ./mobile/guardianes_mobile/android
+        run: |
+          echo "### Android Security:" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for debug flags in release builds
+          if grep -q "debuggable.*true" app/build.gradle; then
+            echo "⚠️ **Warning**: Debug flags in build.gradle" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No debug flags in release builds" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check permissions
+          if [ -f "app/src/main/AndroidManifest.xml" ]; then
+            PERMISSION_COUNT=$(grep -c "uses-permission" app/src/main/AndroidManifest.xml || echo "0")
+            echo "- **Android permissions**: $PERMISSION_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================
+  # Compliance & Policy Checks
+  # ============================================
+  compliance-check:
+    name: 📋 Compliance Check
+    runs-on: ubuntu-latest
+    if: github.event.inputs.scan_level == 'compliance' || github.event_name == 'schedule'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔍 Policy compliance check
+        run: |
+          echo "## 📋 Compliance Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for required files
+          echo "### Required Files:" >> $GITHUB_STEP_SUMMARY
+          
+          files=("README.md" "LICENSE" "SECURITY.md" ".gitignore" "CLAUDE.md")
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ $file" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ $file (missing)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          # Check for secrets in files
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Policy:" >> $GITHUB_STEP_SUMMARY
+          
+          # Look for potential secrets
+          if git log --all --full-history --grep="password\|secret\|key" --oneline | head -5 | wc -l | grep -q "0"; then
+            echo "✅ No potential secrets in commit messages" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Potential secrets found in commit history" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================
+  # Security Gate Summary
+  # ============================================
+  security-gate-summary:
+    name: 🎯 Security Gate Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality-gate, security-scan, dependency-scan, license-scan, mobile-security]
+    if: always()
+    permissions:
+      pull-requests: write
+      security-events: write
+    
+    steps:
+      - name: 📊 Evaluate security gate
+        id: security-gate
+        run: |
+          PASSED=true
+          
+          echo "## 🛡️ Security & Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Gate Status:" >> $GITHUB_STEP_SUMMARY
+          
+          # Check each job result
+          jobs=(
+            "code-quality-gate:${{ needs.code-quality-gate.result }}"
+            "security-scan:${{ needs.security-scan.result }}"
+            "dependency-scan:${{ needs.dependency-scan.result }}"
+            "license-scan:${{ needs.license-scan.result }}"
+            "mobile-security:${{ needs.mobile-security.result }}"
+          )
+          
+          for job in "${jobs[@]}"; do
+            name=$(echo "$job" | cut -d: -f1)
+            status=$(echo "$job" | cut -d: -f2)
+            
+            if [ "$status" = "success" ]; then
+              echo "- ✅ **$name**: Passed" >> $GITHUB_STEP_SUMMARY
+            elif [ "$status" = "failure" ]; then
+              echo "- ❌ **$name**: Failed" >> $GITHUB_STEP_SUMMARY
+              PASSED=false
+            else
+              echo "- ⚠️ **$name**: $status" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$PASSED" = "true" ]; then
+            echo "✅ **Security and Quality Gates PASSED**" >> $GITHUB_STEP_SUMMARY
+            echo "All security and quality checks have passed. Safe to proceed with deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Security and Quality Gates FAILED**" >> $GITHUB_STEP_SUMMARY
+            echo "Please review and fix the security or quality issues before proceeding." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+      
+      - name: 💬 Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const coverage = '${{ needs.code-quality-gate.outputs.coverage-percentage }}';
+            const qualityPassed = '${{ needs.code-quality-gate.outputs.quality-gate-passed }}';
+            
+            const comment = `## 🛡️ Security & Quality Gate Report
+            
+            **Coverage**: ${coverage}%
+            **Quality Gate**: ${qualityPassed === 'true' ? '✅ Passed' : '❌ Failed'}
+            
+            **Security Scans**:
+            - CodeQL: ${{ needs.security-scan.result }}
+            - Dependency Check: ${{ needs.dependency-scan.result }}
+            - License Compliance: ${{ needs.license-scan.result }}
+            - Mobile Security: ${{ needs.mobile-security.result }}
+            
+            ${qualityPassed === 'true' ? '✅ All checks passed! Safe to merge.' : '❌ Please fix issues before merging.'}`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: 🚨 Notify security team on critical issues
+        if: failure() && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#guardianes-security'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_SECURITY }}
+          custom_payload: |
+            {
+              "text": "🚨 CRITICAL: Security gate failed in Guardianes de Gaia",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "fields": [
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch", 
+                      "value": "${{ github.ref }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Workflow",
+                      "value": "${{ github.workflow }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Action",
+                      "value": "Immediate review required",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }

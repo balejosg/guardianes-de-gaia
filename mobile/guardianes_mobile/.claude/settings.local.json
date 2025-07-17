@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter:*)",
+      "Bash(rm:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(./gradlew:*)",
+      "Bash(find:*)",
+      "Bash(dart analyze:*)",
+      "Bash(ls:*)",
+      "Bash(true)",
+      "Bash(sudo chown:*)",
+      "Bash(mkdir:*)",
+      "Bash(wget:*)",
+      "Bash(unzip:*)",
+      "Bash(mv:*)",
+      "Bash(export ANDROID_HOME=$HOME/Android/Sdk)",
+      "Bash(export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools)",
+      "Bash($HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager:*)",
+      "WebFetch(domain:pub.dev)",
+      "Bash(cp:*)"
+    ],
+    "deny": []
+  }
+}

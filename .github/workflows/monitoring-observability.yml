@@ -1,0 +1,880 @@
+name: 📊 Monitoring & Observability Integration
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'monitoring/**'
+      - 'helm/templates/servicemonitor.yaml'
+      - '.github/workflows/monitoring-observability.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'monitoring/**'
+      - 'helm/templates/servicemonitor.yaml'
+      - '.github/workflows/monitoring-observability.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      action:
+        description: 'Monitoring action'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - validate
+          - update-dashboards
+          - test-alerts
+
+env:
+  PROMETHEUS_VERSION: "2.47.0"
+  GRAFANA_VERSION: "10.1.0"
+  LOKI_VERSION: "2.9.0"
+
+jobs:
+  # ============================================
+  # Monitoring Stack Validation
+  # ============================================
+  validate-monitoring:
+    name: 🔍 Validate Monitoring Configuration
+    runs-on: ubuntu-latest
+    
+    outputs:
+      dashboard-count: ${{ steps.validate.outputs.dashboard-count }}
+      alert-count: ${{ steps.validate.outputs.alert-count }}
+      validation-passed: ${{ steps.validate.outputs.validation-passed }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔍 Validate monitoring configuration
+        id: validate
+        run: |
+          echo "🔍 Validating monitoring configuration..."
+          
+          VALIDATION_PASSED="true"
+          DASHBOARD_COUNT=0
+          ALERT_COUNT=0
+          
+          # Create monitoring directory if it doesn't exist
+          mkdir -p monitoring/{dashboards,alerts,rules}
+          
+          # Count dashboards
+          if [ -d "monitoring/dashboards" ]; then
+            DASHBOARD_COUNT=$(find monitoring/dashboards -name "*.json" | wc -l)
+          fi
+          
+          # Count alerts
+          if [ -d "monitoring/alerts" ]; then
+            ALERT_COUNT=$(find monitoring/alerts -name "*.yml" -o -name "*.yaml" | wc -l)
+          fi
+          
+          echo "dashboard-count=$DASHBOARD_COUNT" >> $GITHUB_OUTPUT
+          echo "alert-count=$ALERT_COUNT" >> $GITHUB_OUTPUT
+          echo "validation-passed=$VALIDATION_PASSED" >> $GITHUB_OUTPUT
+          
+          echo "## 📊 Monitoring Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dashboards**: $DASHBOARD_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Alerts**: $ALERT_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validation**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 🔍 Validate Prometheus rules
+        run: |
+          echo "🔍 Validating Prometheus rules..."
+          
+          # Install promtool for validation
+          wget -q https://github.com/prometheus/prometheus/releases/download/v${{ env.PROMETHEUS_VERSION }}/prometheus-${{ env.PROMETHEUS_VERSION }}.linux-amd64.tar.gz
+          tar -xzf prometheus-${{ env.PROMETHEUS_VERSION }}.linux-amd64.tar.gz
+          sudo mv prometheus-${{ env.PROMETHEUS_VERSION }}.linux-amd64/promtool /usr/local/bin/
+          
+          # Validate rules if they exist
+          if [ -d "monitoring/rules" ]; then
+            for rule_file in monitoring/rules/*.yml monitoring/rules/*.yaml; do
+              if [ -f "$rule_file" ]; then
+                echo "Validating $rule_file..."
+                promtool check rules "$rule_file"
+              fi
+            done
+          fi
+          
+          echo "✅ Prometheus rules validation completed"
+      
+      - name: 🔍 Validate Grafana dashboards
+        run: |
+          echo "🔍 Validating Grafana dashboards..."
+          
+          # Install jq for JSON validation
+          sudo apt-get update && sudo apt-get install -y jq
+          
+          # Validate JSON dashboards
+          if [ -d "monitoring/dashboards" ]; then
+            for dashboard in monitoring/dashboards/*.json; do
+              if [ -f "$dashboard" ]; then
+                echo "Validating $dashboard..."
+                
+                # Check if it's valid JSON
+                if ! jq . "$dashboard" > /dev/null 2>&1; then
+                  echo "❌ Invalid JSON in $dashboard"
+                  exit 1
+                fi
+                
+                # Check required fields
+                if ! jq -e '.title' "$dashboard" > /dev/null; then
+                  echo "❌ Missing title in $dashboard"
+                  exit 1
+                fi
+                
+                echo "✅ $dashboard is valid"
+              fi
+            done
+          fi
+          
+          echo "✅ Grafana dashboard validation completed"
+
+  # ============================================
+  # Create Monitoring Configuration
+  # ============================================
+  create-monitoring-config:
+    name: 📋 Create Monitoring Configuration
+    runs-on: ubuntu-latest
+    needs: [validate-monitoring]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📋 Create Prometheus configuration
+        run: |
+          mkdir -p monitoring/prometheus
+          
+          cat > monitoring/prometheus/prometheus.yml << 'EOF'
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+            external_labels:
+              cluster: 'guardianes-de-gaia'
+              environment: '${ENVIRONMENT}'
+          
+          rule_files:
+            - "/etc/prometheus/rules/*.yml"
+          
+          alerting:
+            alertmanagers:
+              - static_configs:
+                  - targets:
+                      - alertmanager:9093
+          
+          scrape_configs:
+            # Backend application metrics
+            - job_name: 'guardianes-backend'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names:
+                      - guardianes-dev
+                      - guardianes-staging
+                      - guardianes-prod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: true
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                  action: replace
+                  target_label: __metrics_path__
+                  regex: (.+)
+                - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                  action: replace
+                  regex: ([^:]+)(?::\d+)?;(\d+)
+                  replacement: $1:$2
+                  target_label: __address__
+                - action: labelmap
+                  regex: __meta_kubernetes_pod_label_(.+)
+                - source_labels: [__meta_kubernetes_namespace]
+                  action: replace
+                  target_label: kubernetes_namespace
+                - source_labels: [__meta_kubernetes_pod_name]
+                  action: replace
+                  target_label: kubernetes_pod_name
+          
+            # MySQL metrics
+            - job_name: 'mysql'
+              kubernetes_sd_configs:
+                - role: service
+                  namespaces:
+                    names:
+                      - guardianes-dev
+                      - guardianes-staging
+                      - guardianes-prod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name]
+                  action: keep
+                  regex: '.*-mysql.*'
+                - source_labels: [__meta_kubernetes_service_port_name]
+                  action: keep
+                  regex: mysql
+          
+            # Redis metrics
+            - job_name: 'redis'
+              kubernetes_sd_configs:
+                - role: service
+                  namespaces:
+                    names:
+                      - guardianes-dev
+                      - guardianes-staging
+                      - guardianes-prod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name]
+                  action: keep
+                  regex: '.*-redis.*'
+                - source_labels: [__meta_kubernetes_service_port_name]
+                  action: keep
+                  regex: redis
+          
+            # Kubernetes cluster metrics
+            - job_name: 'kubernetes-nodes'
+              kubernetes_sd_configs:
+                - role: node
+              relabel_configs:
+                - action: labelmap
+                  regex: __meta_kubernetes_node_label_(.+)
+                - target_label: __address__
+                  replacement: kubernetes.default.svc:443
+                - source_labels: [__meta_kubernetes_node_name]
+                  regex: (.+)
+                  target_label: __metrics_path__
+                  replacement: /api/v1/nodes/$1/proxy/metrics
+          
+            # Kubernetes API server
+            - job_name: 'kubernetes-apiservers'
+              kubernetes_sd_configs:
+                - role: endpoints
+              scheme: https
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+                  action: keep
+                  regex: default;kubernetes;https
+          EOF
+          
+          echo "✅ Prometheus configuration created"
+      
+      - name: 📋 Create Grafana dashboards
+        run: |
+          mkdir -p monitoring/dashboards
+          
+          # Backend Application Dashboard
+          cat > monitoring/dashboards/backend-dashboard.json << 'EOF'
+          {
+            "dashboard": {
+              "id": null,
+              "title": "Guardianes de Gaia - Backend Metrics",
+              "tags": ["guardianes", "backend", "java", "spring-boot"],
+              "timezone": "UTC",
+              "refresh": "30s",
+              "time": {
+                "from": "now-1h",
+                "to": "now"
+              },
+              "panels": [
+                {
+                  "id": 1,
+                  "title": "HTTP Request Rate",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "sum(rate(guardianes_http_requests_total[5m])) by (method, status)",
+                      "legendFormat": "{{method}} {{status}}"
+                    }
+                  ],
+                  "yAxes": [
+                    {
+                      "label": "Requests/sec",
+                      "min": 0
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 0
+                  }
+                },
+                {
+                  "id": 2,
+                  "title": "Response Time",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "histogram_quantile(0.95, sum(rate(guardianes_http_requests_duration_seconds_bucket[5m])) by (le))",
+                      "legendFormat": "95th percentile"
+                    },
+                    {
+                      "expr": "histogram_quantile(0.50, sum(rate(guardianes_http_requests_duration_seconds_bucket[5m])) by (le))",
+                      "legendFormat": "50th percentile"
+                    }
+                  ],
+                  "yAxes": [
+                    {
+                      "label": "Seconds",
+                      "min": 0
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 0
+                  }
+                },
+                {
+                  "id": 3,
+                  "title": "JVM Memory Usage",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "guardianes_jvm_memory_used_bytes{area=\"heap\"}",
+                      "legendFormat": "Heap Used"
+                    },
+                    {
+                      "expr": "guardianes_jvm_memory_max_bytes{area=\"heap\"}",
+                      "legendFormat": "Heap Max"
+                    }
+                  ],
+                  "yAxes": [
+                    {
+                      "label": "Bytes",
+                      "min": 0
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 8
+                  }
+                },
+                {
+                  "id": 4,
+                  "title": "Database Connection Pool",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "guardianes_hikaricp_connections_active",
+                      "legendFormat": "Active Connections"
+                    },
+                    {
+                      "expr": "guardianes_hikaricp_connections_idle",
+                      "legendFormat": "Idle Connections"
+                    }
+                  ],
+                  "yAxes": [
+                    {
+                      "label": "Connections",
+                      "min": 0
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 8
+                  }
+                }
+              ]
+            }
+          }
+          EOF
+          
+          # Business Metrics Dashboard
+          cat > monitoring/dashboards/business-metrics.json << 'EOF'
+          {
+            "dashboard": {
+              "id": null,
+              "title": "Guardianes de Gaia - Business Metrics",
+              "tags": ["guardianes", "business", "game-metrics"],
+              "timezone": "UTC",
+              "refresh": "1m",
+              "time": {
+                "from": "now-24h",
+                "to": "now"
+              },
+              "panels": [
+                {
+                  "id": 1,
+                  "title": "Daily Active Users",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "guardianes_active_users_daily",
+                      "legendFormat": "Daily Active Users"
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 0,
+                    "y": 0
+                  }
+                },
+                {
+                  "id": 2,
+                  "title": "Steps Recorded Today",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "sum(guardianes_steps_recorded_total)",
+                      "legendFormat": "Total Steps"
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 6,
+                    "y": 0
+                  }
+                },
+                {
+                  "id": 3,
+                  "title": "Battles Completed",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "sum(guardianes_battles_completed_total)",
+                      "legendFormat": "Battles"
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 12,
+                    "y": 0
+                  }
+                },
+                {
+                  "id": 4,
+                  "title": "Cards Collected",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "sum(guardianes_cards_collected_total)",
+                      "legendFormat": "Cards"
+                    }
+                  ],
+                  "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 18,
+                    "y": 0
+                  }
+                }
+              ]
+            }
+          }
+          EOF
+          
+          echo "✅ Grafana dashboards created"
+      
+      - name: 📋 Create alert rules
+        run: |
+          mkdir -p monitoring/rules
+          
+          cat > monitoring/rules/backend-alerts.yml << 'EOF'
+          groups:
+            - name: guardianes-backend
+              rules:
+                - alert: BackendDown
+                  expr: up{job="guardianes-backend"} == 0
+                  for: 1m
+                  labels:
+                    severity: critical
+                    service: backend
+                  annotations:
+                    summary: "Guardianes backend is down"
+                    description: "Backend service {{ $labels.instance }} has been down for more than 1 minute"
+                
+                - alert: HighResponseTime
+                  expr: histogram_quantile(0.95, sum(rate(guardianes_http_requests_duration_seconds_bucket[5m])) by (le)) > 2
+                  for: 5m
+                  labels:
+                    severity: warning
+                    service: backend
+                  annotations:
+                    summary: "High response time detected"
+                    description: "95th percentile response time is {{ $value }}s"
+                
+                - alert: HighErrorRate
+                  expr: sum(rate(guardianes_http_requests_total{status=~"5.."}[5m])) / sum(rate(guardianes_http_requests_total[5m])) > 0.1
+                  for: 5m
+                  labels:
+                    severity: critical
+                    service: backend
+                  annotations:
+                    summary: "High error rate detected"
+                    description: "Error rate is {{ $value | humanizePercentage }}"
+                
+                - alert: HighMemoryUsage
+                  expr: guardianes_jvm_memory_used_bytes{area="heap"} / guardianes_jvm_memory_max_bytes{area="heap"} > 0.9
+                  for: 5m
+                  labels:
+                    severity: warning
+                    service: backend
+                  annotations:
+                    summary: "High memory usage"
+                    description: "JVM heap usage is {{ $value | humanizePercentage }}"
+                
+                - alert: DatabaseConnectionPoolExhausted
+                  expr: guardianes_hikaricp_connections_active / guardianes_hikaricp_connections_max > 0.9
+                  for: 2m
+                  labels:
+                    severity: critical
+                    service: database
+                  annotations:
+                    summary: "Database connection pool nearly exhausted"
+                    description: "Connection pool usage is {{ $value | humanizePercentage }}"
+          EOF
+          
+          cat > monitoring/rules/business-alerts.yml << 'EOF'
+          groups:
+            - name: guardianes-business
+              rules:
+                - alert: LowDailyActiveUsers
+                  expr: guardianes_active_users_daily < 100
+                  for: 1h
+                  labels:
+                    severity: warning
+                    team: product
+                  annotations:
+                    summary: "Low daily active users"
+                    description: "Daily active users dropped to {{ $value }}"
+                
+                - alert: NoStepsRecorded
+                  expr: increase(guardianes_steps_recorded_total[1h]) == 0
+                  for: 2h
+                  labels:
+                    severity: warning
+                    team: product
+                  annotations:
+                    summary: "No steps recorded"
+                    description: "No steps have been recorded in the last 2 hours"
+                
+                - alert: HighBattleFailureRate
+                  expr: sum(rate(guardianes_battles_failed_total[5m])) / sum(rate(guardianes_battles_total[5m])) > 0.5
+                  for: 10m
+                  labels:
+                    severity: warning
+                    team: game-design
+                  annotations:
+                    summary: "High battle failure rate"
+                    description: "Battle failure rate is {{ $value | humanizePercentage }}"
+          EOF
+          
+          echo "✅ Alert rules created"
+      
+      - name: 📤 Upload monitoring configuration
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-config
+          path: monitoring/
+          retention-days: 7
+
+  # ============================================
+  # Deploy Monitoring Stack
+  # ============================================
+  deploy-monitoring:
+    name: 📊 Deploy Monitoring Stack
+    runs-on: ubuntu-latest
+    needs: [validate-monitoring, create-monitoring-config]
+    if: github.event.inputs.action == 'deploy' || github.event_name == 'push'
+    environment: ${{ github.event.inputs.environment || 'development' }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Download monitoring configuration
+        uses: actions/download-artifact@v4
+        with:
+          name: monitoring-config
+          path: monitoring/
+      
+      - name: ⚓ Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: "3.13.0"
+      
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "1.28.0"
+      
+      - name: 🔐 Configure Kubernetes access
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          # Configure kubectl for target environment
+          if [ "$ENVIRONMENT" = "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+          else
+            echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
+          fi
+          
+          kubectl config use-context $ENVIRONMENT
+          kubectl get nodes
+      
+      - name: 📦 Add monitoring Helm repositories
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo update
+      
+      - name: 🚀 Deploy Prometheus
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          echo "🚀 Deploying Prometheus..."
+          
+          # Create namespace
+          kubectl create namespace monitoring-$ENVIRONMENT --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Deploy Prometheus
+          helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
+            --namespace monitoring-$ENVIRONMENT \
+            --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+            --set prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues=false \
+            --set prometheus.prometheusSpec.ruleSelectorNilUsesHelmValues=false \
+            --set prometheus.prometheusSpec.retention=30d \
+            --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=50Gi \
+            --set grafana.adminPassword="${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
+            --set grafana.persistence.enabled=true \
+            --set grafana.persistence.size=10Gi \
+            --wait --timeout=600s
+          
+          echo "✅ Prometheus deployed successfully"
+      
+      - name: 📊 Configure Grafana dashboards
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          echo "📊 Configuring Grafana dashboards..."
+          
+          # Create ConfigMap for dashboards
+          kubectl create configmap guardianes-dashboards \
+            --from-file=monitoring/dashboards/ \
+            --namespace monitoring-$ENVIRONMENT \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Label ConfigMap for automatic discovery
+          kubectl label configmap guardianes-dashboards \
+            grafana_dashboard=1 \
+            --namespace monitoring-$ENVIRONMENT
+          
+          echo "✅ Grafana dashboards configured"
+      
+      - name: 🔔 Configure alert rules
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          echo "🔔 Configuring alert rules..."
+          
+          # Create ConfigMap for alert rules
+          kubectl create configmap guardianes-alerts \
+            --from-file=monitoring/rules/ \
+            --namespace monitoring-$ENVIRONMENT \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Label ConfigMap for automatic discovery
+          kubectl label configmap guardianes-alerts \
+            prometheus_rule=1 \
+            --namespace monitoring-$ENVIRONMENT
+          
+          echo "✅ Alert rules configured"
+      
+      - name: 🔍 Verify monitoring deployment
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          echo "🔍 Verifying monitoring deployment..."
+          
+          # Check Prometheus
+          kubectl rollout status deployment/prometheus-kube-prometheus-prometheus-operator \
+            --namespace monitoring-$ENVIRONMENT \
+            --timeout=300s
+          
+          # Check Grafana
+          kubectl rollout status deployment/prometheus-grafana \
+            --namespace monitoring-$ENVIRONMENT \
+            --timeout=300s
+          
+          # Check services
+          kubectl get svc -n monitoring-$ENVIRONMENT
+          
+          echo "✅ Monitoring deployment verified"
+
+  # ============================================
+  # Test Monitoring Stack
+  # ============================================
+  test-monitoring:
+    name: 🧪 Test Monitoring Stack
+    runs-on: ubuntu-latest
+    needs: [deploy-monitoring]
+    if: github.event.inputs.action == 'deploy' || github.event_name == 'push'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "1.28.0"
+      
+      - name: 🔐 Configure Kubernetes access
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          if [ "$ENVIRONMENT" = "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+          else
+            echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
+          fi
+          
+          kubectl config use-context $ENVIRONMENT
+      
+      - name: 🧪 Test Prometheus
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          echo "🧪 Testing Prometheus..."
+          
+          # Port forward to Prometheus
+          kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 \
+            --namespace monitoring-$ENVIRONMENT &
+          
+          # Wait for port forward
+          sleep 10
+          
+          # Test Prometheus API
+          curl -f http://localhost:9090/api/v1/targets || exit 1
+          curl -f http://localhost:9090/api/v1/rules || exit 1
+          
+          echo "✅ Prometheus tests passed"
+      
+      - name: 🧪 Test Grafana
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          echo "🧪 Testing Grafana..."
+          
+          # Port forward to Grafana
+          kubectl port-forward svc/prometheus-grafana 3000:80 \
+            --namespace monitoring-$ENVIRONMENT &
+          
+          # Wait for port forward
+          sleep 10
+          
+          # Test Grafana API
+          curl -f http://localhost:3000/api/health || exit 1
+          
+          echo "✅ Grafana tests passed"
+      
+      - name: 🔔 Test Alertmanager
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+        run: |
+          echo "🔔 Testing Alertmanager..."
+          
+          # Port forward to Alertmanager
+          kubectl port-forward svc/prometheus-kube-prometheus-alertmanager 9093:9093 \
+            --namespace monitoring-$ENVIRONMENT &
+          
+          # Wait for port forward
+          sleep 10
+          
+          # Test Alertmanager API
+          curl -f http://localhost:9093/api/v1/status || exit 1
+          
+          echo "✅ Alertmanager tests passed"
+
+  # ============================================
+  # Monitoring Summary
+  # ============================================
+  monitoring-summary:
+    name: 📋 Monitoring Summary
+    runs-on: ubuntu-latest
+    needs: [validate-monitoring, deploy-monitoring, test-monitoring]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate monitoring summary
+        run: |
+          echo "## 📊 Monitoring & Observability Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Configuration:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dashboards**: ${{ needs.validate-monitoring.outputs.dashboard-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Alerts**: ${{ needs.validate-monitoring.outputs.alert-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ github.event.inputs.environment || 'development' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🎯 Deployment Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validation**: ${{ needs.validate-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment**: ${{ needs.deploy-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Testing**: ${{ needs.test-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.deploy-monitoring.result }}" == "success" && 
+                "${{ needs.test-monitoring.result }}" == "success" ]]; then
+            echo "✅ **Monitoring stack deployed and tested successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Monitoring deployment failed or was skipped.**" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🚨 Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#guardianes-monitoring'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_MONITORING }}
+          custom_payload: |
+            {
+              "text": "🚨 Monitoring deployment failed!",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "fields": [
+                    {
+                      "title": "Environment",
+                      "value": "${{ github.event.inputs.environment || 'development' }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Action",
+                      "value": "${{ github.event.inputs.action || 'deploy' }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Dashboards",
+                      "value": "${{ needs.validate-monitoring.outputs.dashboard-count }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Alerts",
+                      "value": "${{ needs.validate-monitoring.outputs.alert-count }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }

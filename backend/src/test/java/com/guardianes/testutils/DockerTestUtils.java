@@ -17,12 +17,19 @@ import java.util.Base64;
  * 
  * Provides common utilities for Docker-based integration tests,
  * including container setup, health checks, and HTTP utilities.
+ * 
+ * IMPORTANT: All container factory methods return containers that should be used
+ * with @Container annotation for proper lifecycle management. TestContainers
+ * framework automatically handles start/stop/cleanup when used with annotations.
  */
 public class DockerTestUtils {
 
     /**
-     * Creates a standard MySQL test container with guardianes database
+     * Creates a standard MySQL test container with guardianes database.
+     * Note: Caller is responsible for proper resource management.
+     * Use with @Container annotation for automatic lifecycle management.
      */
+    @SuppressWarnings("resource") // Caller manages lifecycle via @Container annotation
     public static MySQLContainer<?> createMySQLContainer(Network network) {
         return new MySQLContainer<>("mysql:8.0")
                 .withNetwork(network)
@@ -36,32 +43,40 @@ public class DockerTestUtils {
     /**
      * Creates a standard Redis test container
      */
+    @SuppressWarnings("resource") // Caller manages lifecycle via @Container annotation
     public static GenericContainer<?> createRedisContainer(Network network) {
-        return new GenericContainer<>("redis:7-alpine")
+        @SuppressWarnings("resource") // Returned container managed by caller via @Container
+        GenericContainer<?> container = new GenericContainer<>("redis:7-alpine")
                 .withNetwork(network)
                 .withNetworkAliases("redis")
                 .withExposedPorts(6379);
+        return container;
     }
 
     /**
      * Creates a RabbitMQ test container with management interface
      */
+    @SuppressWarnings("resource") // Caller manages lifecycle via @Container annotation
     public static GenericContainer<?> createRabbitMQContainer(Network network) {
-        return new GenericContainer<>("rabbitmq:3.12-management-alpine")
+        @SuppressWarnings("resource") // Returned container managed by caller via @Container
+        GenericContainer<?> container = new GenericContainer<>("rabbitmq:3.12-management-alpine")
                 .withNetwork(network)
                 .withNetworkAliases("rabbitmq")
                 .withExposedPorts(5672, 15672)
                 .withEnv("RABBITMQ_DEFAULT_USER", "guardianes")
                 .withEnv("RABBITMQ_DEFAULT_PASS", "secret");
+        return container;
     }
 
     /**
      * Creates the backend application container with standard configuration
      */
+    @SuppressWarnings("resource") // Caller manages lifecycle via @Container annotation
     public static GenericContainer<?> createBackendContainer(Network network, 
                                                            GenericContainer<?> mysql, 
                                                            GenericContainer<?> redis) {
-        return new GenericContainer<>(
+        @SuppressWarnings("resource") // Returned container managed by caller via @Container
+        GenericContainer<?> container = new GenericContainer<>(
                 DockerImageName.parse("guardianes-de-gaia-backend:latest")
                         .asCompatibleSubstituteFor("openjdk"))
                 .withNetwork(network)
@@ -74,6 +89,7 @@ public class DockerTestUtils {
                 .withEnv("SPRING_REDIS_HOST", "redis")
                 .withEnv("SPRING_REDIS_PORT", "6379")
                 .dependsOn(mysql, redis);
+        return container;
     }
 
     /**

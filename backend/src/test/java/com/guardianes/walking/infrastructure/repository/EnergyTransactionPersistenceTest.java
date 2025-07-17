@@ -1,11 +1,13 @@
 package com.guardianes.walking.infrastructure.repository;
 
+import com.guardianes.testconfig.GuardianTestConfiguration;
 import com.guardianes.walking.domain.EnergyRepository;
 import com.guardianes.walking.domain.EnergyTransaction;
 import com.guardianes.walking.domain.EnergyTransactionType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 
@@ -17,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Import(GuardianTestConfiguration.class)
 public class EnergyTransactionPersistenceTest {
 
     @Autowired

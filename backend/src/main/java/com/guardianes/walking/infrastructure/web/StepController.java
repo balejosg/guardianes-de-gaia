@@ -5,8 +5,6 @@ import com.guardianes.walking.application.dto.StepSubmissionResponse;
 import com.guardianes.walking.application.dto.CurrentStepCountResponse;
 import com.guardianes.walking.application.dto.StepHistoryResponse;
 import com.guardianes.walking.application.service.StepTrackingApplicationService;
-import com.guardianes.walking.domain.RateLimitExceededException;
-import com.guardianes.walking.domain.GuardianNotFoundException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

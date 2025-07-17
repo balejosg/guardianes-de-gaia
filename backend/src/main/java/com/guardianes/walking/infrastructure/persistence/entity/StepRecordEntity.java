@@ -6,8 +6,8 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "step_records", indexes = {
-    @Index(name = "idx_step_records_guardian_date", columnList = "guardianId, timestamp"),
-    @Index(name = "idx_step_records_guardian_timestamp", columnList = "guardianId, timestamp")
+    @Index(name = "idx_step_records_guardian_date", columnList = "guardianId, recorded_at"),
+    @Index(name = "idx_step_records_guardian_recorded_at", columnList = "guardianId, recorded_at")
 })
 public class StepRecordEntity {
     
@@ -21,7 +21,7 @@ public class StepRecordEntity {
     @Column(name = "step_count", nullable = false)
     private Integer stepCount;
     
-    @Column(name = "timestamp", nullable = false)
+    @Column(name = "recorded_at", nullable = false)
     private LocalDateTime timestamp;
     
     protected StepRecordEntity() {

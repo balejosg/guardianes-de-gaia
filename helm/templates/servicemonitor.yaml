@@ -1,0 +1,46 @@
+{{- if and .Values.monitoring.prometheus.enabled .Values.monitoring.prometheus.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "guardianes-de-gaia.fullname" . }}-backend
+  labels:
+    {{- include "guardianes-de-gaia.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.prometheus.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "guardianes-de-gaia.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  endpoints:
+    - port: http
+      path: {{ .Values.monitoring.prometheus.serviceMonitor.path }}
+      interval: {{ .Values.monitoring.prometheus.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.monitoring.prometheus.serviceMonitor.scrapeTimeout }}
+      metricRelabelings:
+        # Rename metrics to be more descriptive
+        - sourceLabels: [__name__]
+          regex: 'jvm_memory_used_bytes'
+          targetLabel: __name__
+          replacement: 'guardianes_jvm_memory_used_bytes'
+        - sourceLabels: [__name__]
+          regex: 'http_server_requests_seconds.*'
+          targetLabel: __name__
+          replacement: 'guardianes_http_requests_${1}'
+        # Add application labels
+        - targetLabel: application
+          replacement: 'guardianes-de-gaia'
+        - targetLabel: component
+          replacement: 'backend'
+      relabelings:
+        # Add namespace label
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: kubernetes_namespace
+        # Add pod name label
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: kubernetes_pod_name
+        # Add service name label
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: kubernetes_service_name
+{{- end }}

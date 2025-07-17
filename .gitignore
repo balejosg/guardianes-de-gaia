@@ -52,6 +52,13 @@ build/
 /build/
 /mobile/build/
 
+# Prevent accidental Flutter SDK commits
+/flutter/
+flutter/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.dart_tool/
+
 # Android related
 **/android/**/gradle-wrapper.jar
 **/android/.gradle

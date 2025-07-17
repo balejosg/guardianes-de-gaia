@@ -1,0 +1,363 @@
+# Production environment values for guardianes-de-gaia
+# This file overrides default values for production environment
+
+# Global configuration
+global:
+  imageRegistry: "ghcr.io"
+  environment: "production"
+
+# Backend configuration for production
+backend:
+  replicaCount: 3
+  
+  image:
+    tag: "stable"
+    pullPolicy: IfNotPresent
+  
+  # Production resource requirements
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Enable auto-scaling for production
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+  
+  # Production-specific environment variables
+  env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: "production,kubernetes"
+    - name: JAVA_OPTS
+      value: "-Xmx1536m -Xms1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    - name: LOG_LEVEL
+      value: "WARN"
+    - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+      value: "health,info,prometheus,metrics"
+  
+  # Stricter health checks for production
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Ingress configuration for production
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://app.guardianes-de-gaia.com"
+  hosts:
+    - host: api.guardianes-de-gaia.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: guardianes-prod-tls
+      hosts:
+        - api.guardianes-de-gaia.com
+
+# MySQL configuration for production
+mysql:
+  enabled: true
+  auth:
+    database: guardianes_prod
+    username: guardianes_prod
+    # Passwords will be provided via external secret management
+    password: ""
+    rootPassword: ""
+  
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 100Gi
+    
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+    
+    # Production-optimized MySQL configuration
+    configuration: |-
+      [mysqld]
+      default_authentication_plugin=mysql_native_password
+      skip-name-resolve
+      explicit_defaults_for_timestamp
+      basedir=/opt/bitnami/mysql
+      port=3306
+      bind-address=*
+      max_allowed_packet=64M
+      character-set-server=UTF8
+      collation-server=utf8_general_ci
+      
+      # Production optimizations
+      innodb_buffer_pool_size=2G
+      innodb_log_file_size=512M
+      innodb_flush_log_at_trx_commit=1
+      innodb_lock_wait_timeout=50
+      max_connections=200
+      slow_query_log=1
+      slow_query_log_file=/opt/bitnami/mysql/logs/slow.log
+      long_query_time=2
+      
+      # Performance tuning
+      innodb_buffer_pool_instances=4
+      innodb_io_capacity=1000
+      innodb_io_capacity_max=2000
+      innodb_read_io_threads=8
+      innodb_write_io_threads=8
+      
+      # Replication and backup
+      server-id=1
+      log-bin=mysql-bin
+      binlog-format=ROW
+      expire_logs_days=7
+  
+  # Enable read replicas for production
+  secondary:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 100Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Redis configuration for production
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""  # Will be provided via external secret
+  
+  master:
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 20Gi
+    
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+  
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 20Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# RabbitMQ configuration for production
+rabbitmq:
+  enabled: true
+  auth:
+    username: guardianes_prod
+    password: ""  # Will be provided via external secret
+    erlangCookie: ""
+  
+  persistence:
+    enabled: true
+    storageClass: "gp3"
+    size: 50Gi
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  
+  # Enable RabbitMQ clustering
+  replicaCount: 3
+  
+  # Production-optimized RabbitMQ configuration
+  configuration: |-
+    # Performance optimizations
+    vm_memory_high_watermark.relative = 0.7
+    disk_free_limit.relative = 2.0
+    
+    # Clustering
+    cluster_formation.peer_discovery_backend = kubernetes
+    cluster_formation.kubernetes.host = kubernetes.default.svc.cluster.local
+    cluster_formation.kubernetes.address_type = hostname
+    
+    # Management plugin
+    management.tcp.port = 15672
+    management.tcp.ip = 0.0.0.0
+
+# Monitoring configuration for production
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+      labels:
+        environment: production
+        team: backend
+  
+  grafana:
+    enabled: true
+    adminPassword: ""  # Will be provided via external secret
+    
+    # Production dashboards
+    dashboards:
+      enabled: true
+      
+    # Enhanced datasources for production
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://prometheus-server:80
+            access: proxy
+            isDefault: true
+          - name: Loki
+            type: loki
+            url: http://loki:3100
+            access: proxy
+
+# Configuration for production
+config:
+  application:
+    name: "Guardianes de Gaia"
+    environment: "production"
+    
+    # Production game configuration
+    game:
+      energyPerSteps: 10
+      maxDailyEnergy: 1000
+      xpPerBattle: 50
+    
+    battle:
+      maxBattleDuration: 300
+      maxCardsPerDeck: 10
+    
+    walking:
+      minStepsForReward: 100
+      maxStepsPerDay: 20000
+  
+  logging:
+    level:
+      root: WARN
+      com.guardianes: INFO
+      org.springframework.security: WARN
+
+# Security configuration for production
+security:
+  networkPolicy:
+    enabled: true
+  
+  podSecurityStandards:
+    enforce: "restricted"
+    audit: "restricted"
+    warn: "restricted"
+
+# Backup configuration for production
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM UTC
+  retention: "30d"
+  
+  mysql:
+    enabled: true
+    storageClass: "gp3"
+    size: 50Gi
+    
+    # Additional backup configuration
+    s3:
+      enabled: true
+      bucket: "guardianes-prod-backups"
+      region: "us-east-1"
+
+# Node affinity - prefer production nodes
+nodeSelector:
+  environment: production
+  node-type: application
+
+# Tolerations for production workloads
+tolerations:
+  - key: "production"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+# Strong anti-affinity for production
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - guardianes-de-gaia
+        topologyKey: kubernetes.io/hostname
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: environment
+              operator: In
+              values:
+                - production
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: instance-type
+              operator: In
+              values:
+                - m5.large
+                - m5.xlarge

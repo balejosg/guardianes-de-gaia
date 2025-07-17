@@ -1,0 +1,356 @@
+name: 🐳 Docker Build & Push
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      push_to_registry:
+        description: 'Push images to registry'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  REGISTRY_DOCKERHUB: docker.io
+  REGISTRY_GHCR: ghcr.io
+  IMAGE_NAME_BACKEND: guardianes-de-gaia/backend
+  IMAGE_NAME_POSTGRES: guardianes-de-gaia/postgres
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  # ============================================
+  # Backend Docker Image Build
+  # ============================================
+  backend-docker:
+    name: 🔄 Backend Docker Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tags: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🔍 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: ${{ env.PLATFORMS }}
+      
+      - name: 🔐 Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: 🔐 Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME_BACKEND }}
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=Guardianes de Gaia Backend
+            org.opencontainers.image.description=Spring Boot backend for Guardianes de Gaia mobile game
+            org.opencontainers.image.vendor=Guardianes de Gaia Team
+            org.opencontainers.image.licenses=MIT
+      
+      - name: 🏗️ Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.dev
+          platforms: ${{ env.PLATFORMS }}
+          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_to_registry == 'true' || github.event.inputs.push_to_registry == '') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+          build-args: |
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VCS_REF=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+            VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+      
+      - name: 🛡️ Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+          format: 'sarif'
+          output: 'trivy-results-backend.sarif'
+      
+      - name: 📤 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-backend.sarif'
+          category: 'backend-container'
+      
+      - name: 🔍 Analyze image with Dive
+        if: github.event_name == 'pull_request'
+        run: |
+          # Install dive for image analysis
+          wget -q https://github.com/wagoodman/dive/releases/download/v0.12.0/dive_0.12.0_linux_amd64.deb
+          sudo dpkg -i dive_0.12.0_linux_amd64.deb
+          
+          # Analyze the image (only on PR to provide feedback)
+          echo "## 🔍 Docker Image Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get image size
+          IMAGE_SIZE=$(docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | grep "${{ env.IMAGE_NAME_BACKEND }}" | head -1 | awk '{print $2}')
+          echo "- **Image Size**: $IMAGE_SIZE" >> $GITHUB_STEP_SUMMARY
+          
+          # Run dive analysis
+          dive --ci ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.event.pull_request.head.sha || github.sha }}
+
+  # ============================================
+  # Database Docker Image Build
+  # ============================================
+  postgres-docker:
+    name: 🗄️ PostgreSQL Docker Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔍 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: ${{ env.PLATFORMS }}
+      
+      - name: 🔐 Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: 🔐 Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME_POSTGRES }}
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_POSTGRES }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=Guardianes de Gaia Database
+            org.opencontainers.image.description=PostgreSQL database with Guardianes de Gaia schema
+            org.opencontainers.image.vendor=Guardianes de Gaia Team
+      
+      - name: 📝 Create PostgreSQL Dockerfile
+        run: |
+          mkdir -p ./postgres
+          cat > ./postgres/Dockerfile << 'EOF'
+          FROM postgres:16-alpine
+          
+          # Install additional extensions
+          RUN apk add --no-cache postgresql-contrib
+          
+          # Copy initialization scripts
+          COPY docker-entrypoint-initdb.d/ /docker-entrypoint-initdb.d/
+          
+          # Set default database configuration
+          COPY postgresql.conf /usr/local/share/postgresql/postgresql.conf.sample
+          
+          # Health check
+          HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+            CMD pg_isready -U ${POSTGRES_USER:-postgres} || exit 1
+          
+          EXPOSE 5432
+          EOF
+      
+      - name: 📝 Create PostgreSQL configuration
+        run: |
+          mkdir -p ./postgres/docker-entrypoint-initdb.d
+          
+          # Create init script
+          cat > ./postgres/docker-entrypoint-initdb.d/01-init.sql << 'EOF'
+          -- Guardianes de Gaia Database Initialization
+          CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+          CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+          
+          -- Create application user
+          CREATE USER guardianes WITH PASSWORD 'guardianes_password';
+          GRANT ALL PRIVILEGES ON DATABASE guardianes TO guardianes;
+          EOF
+          
+          # Create PostgreSQL config
+          cat > ./postgres/postgresql.conf << 'EOF'
+          # Guardianes de Gaia PostgreSQL Configuration
+          shared_preload_libraries = 'pg_stat_statements'
+          
+          # Connection settings
+          max_connections = 100
+          shared_buffers = 256MB
+          effective_cache_size = 1GB
+          maintenance_work_mem = 64MB
+          checkpoint_completion_target = 0.9
+          wal_buffers = 16MB
+          default_statistics_target = 100
+          random_page_cost = 1.1
+          effective_io_concurrency = 200
+          work_mem = 4MB
+          min_wal_size = 1GB
+          max_wal_size = 4GB
+          
+          # Logging
+          log_statement = 'all'
+          log_duration = on
+          log_min_duration_statement = 1000
+          log_checkpoints = on
+          log_connections = on
+          log_disconnections = on
+          EOF
+      
+      - name: 🏗️ Build and push PostgreSQL image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./postgres
+          platforms: ${{ env.PLATFORMS }}
+          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_to_registry == 'true' || github.event.inputs.push_to_registry == '') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================
+  # Multi-Architecture Build Summary
+  # ============================================
+  build-summary:
+    name: 📋 Docker Build Summary
+    runs-on: ubuntu-latest
+    needs: [backend-docker, postgres-docker]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Build Summary
+        run: |
+          echo "## 🐳 Docker Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Build Status:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend Docker**: ${{ needs.backend-docker.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **PostgreSQL Docker**: ${{ needs.postgres-docker.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.backend-docker.result }}" == "success" ]]; then
+            echo "### 🎯 Backend Image Details:" >> $GITHUB_STEP_SUMMARY
+            echo "- **Digest**: ${{ needs.backend-docker.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tags**: " >> $GITHUB_STEP_SUMMARY
+            echo '${{ needs.backend-docker.outputs.image-tags }}' | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### 🏗️ Build Information:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platforms**: ${{ env.PLATFORMS }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: GitHub Container Registry & Docker Hub" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Scan**: ✅ Completed with Trivy" >> $GITHUB_STEP_SUMMARY
+          echo "- **SBOM**: ✅ Generated" >> $GITHUB_STEP_SUMMARY
+          echo "- **Provenance**: ✅ Attestation included" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.backend-docker.result }}" == "success" && "${{ needs.postgres-docker.result }}" == "success" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **All Docker images built successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Some Docker builds failed. Please review logs.**" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🚨 Notify on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#guardianes-docker'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ============================================
+  # Image Promotion (Production Tags)
+  # ============================================
+  promote-production:
+    name: 🚀 Promote to Production
+    runs-on: ubuntu-latest
+    needs: [backend-docker]
+    if: github.ref == 'refs/heads/main' && needs.backend-docker.result == 'success'
+    environment: production
+    
+    steps:
+      - name: 🔐 Login to registries
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY_GHCR }} -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login ${{ env.REGISTRY_DOCKERHUB }} -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+      
+      - name: 🏷️ Promote images to production tags
+        run: |
+          # Extract the SHA tag from the built image
+          SHA_TAG="${{ github.sha }}"
+          
+          # Pull the SHA-tagged image
+          docker pull ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:main-${SHA_TAG:0:7}
+          
+          # Tag as stable
+          docker tag ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:main-${SHA_TAG:0:7} \
+                     ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:stable
+          
+          docker tag ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:main-${SHA_TAG:0:7} \
+                     ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME_BACKEND }}:stable
+          
+          # Push stable tags
+          docker push ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:stable
+          docker push ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME_BACKEND }}:stable
+          
+          echo "✅ Images promoted to production (stable tag)" >> $GITHUB_STEP_SUMMARY

@@ -4,8 +4,6 @@ import com.guardianes.walking.application.dto.EnergyBalanceResponse;
 import com.guardianes.walking.application.dto.EnergySpendingRequest;
 import com.guardianes.walking.application.dto.EnergySpendingResponse;
 import com.guardianes.walking.application.service.EnergyManagementApplicationService;
-import com.guardianes.walking.domain.InsufficientEnergyException;
-import com.guardianes.walking.domain.GuardianNotFoundException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

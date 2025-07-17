@@ -1,0 +1,341 @@
+name: 🐳 Docker Compose Stack
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docker-compose*.yml'
+      - 'backend/**'
+      - '.github/workflows/docker-compose.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docker-compose*.yml'
+      - 'backend/**'
+      - '.github/workflows/docker-compose.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+env:
+  COMPOSE_FILE: docker-compose.yml
+  COMPOSE_PROJECT_NAME: guardianes-${{ github.event.inputs.environment || 'ci' }}
+
+jobs:
+  # ============================================
+  # Docker Compose Build & Test
+  # ============================================
+  docker-compose-build:
+    name: 🏗️ Build Docker Compose Stack
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        compose-file: 
+          - docker-compose.yml
+          - docker-compose.test.yml
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔍 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 📋 Validate Docker Compose file
+        run: |
+          echo "🔍 Validating ${{ matrix.compose-file }}..."
+          docker-compose -f ${{ matrix.compose-file }} config --quiet
+          echo "✅ Docker Compose file is valid"
+      
+      - name: 🏗️ Build Docker Compose services
+        run: |
+          echo "🔨 Building services from ${{ matrix.compose-file }}..."
+          docker-compose -f ${{ matrix.compose-file }} build --parallel
+      
+      - name: 📊 Analyze built images
+        run: |
+          echo "## 📊 Docker Images Analysis (${{ matrix.compose-file }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Image | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Get images from docker-compose
+          docker-compose -f ${{ matrix.compose-file }} images --format "table {{.Service}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}" | tail -n +2 | while read line; do
+            SERVICE=$(echo "$line" | awk '{print $1}')
+            IMAGE=$(echo "$line" | awk '{print $2}')
+            SIZE=$(echo "$line" | awk '{print $3}')
+            echo "| $SERVICE | $IMAGE | $SIZE |" >> $GITHUB_STEP_SUMMARY
+          done
+      
+      - name: 💾 Save Docker images as artifacts
+        if: matrix.compose-file == 'docker-compose.yml'
+        run: |
+          # Save backend image
+          docker save $(docker-compose -f ${{ matrix.compose-file }} images backend -q) | gzip > backend-image.tar.gz
+          
+          # Get image info
+          echo "Backend image saved: $(ls -lh backend-image.tar.gz | awk '{print $5}')"
+      
+      - name: 📤 Upload Docker images
+        if: matrix.compose-file == 'docker-compose.yml'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images-${{ github.run_id }}
+          path: |
+            backend-image.tar.gz
+          retention-days: 1
+
+  # ============================================
+  # Integration Test with Docker Compose
+  # ============================================
+  docker-compose-integration:
+    name: 🧪 Integration Test Stack
+    runs-on: ubuntu-latest
+    needs: [docker-compose-build]
+    
+    services:
+      # Use Docker-in-Docker for complex orchestration
+      docker:
+        image: docker:dind
+        options: --privileged
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔍 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 📥 Download Docker images
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images-${{ github.run_id }}
+      
+      - name: 📦 Load Docker images
+        run: |
+          docker load < backend-image.tar.gz
+          echo "✅ Docker images loaded"
+      
+      - name: 🚀 Start Docker Compose stack
+        run: |
+          echo "🚀 Starting Docker Compose stack..."
+          docker-compose -f docker-compose.test.yml up -d
+          
+          echo "⏳ Waiting for services to be ready..."
+          sleep 30
+      
+      - name: 🔍 Check service health
+        run: |
+          echo "## 🏥 Service Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status | Health |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Check each service
+          for service in $(docker-compose -f docker-compose.test.yml ps --services); do
+            STATUS=$(docker-compose -f docker-compose.test.yml ps $service --format "table {{.State}}" | tail -n +2 | head -1)
+            
+            # Try to get health status
+            HEALTH="N/A"
+            if docker-compose -f docker-compose.test.yml ps $service --format "table {{.Health}}" | grep -q "healthy"; then
+              HEALTH="✅ Healthy"
+            elif docker-compose -f docker-compose.test.yml ps $service --format "table {{.Health}}" | grep -q "unhealthy"; then
+              HEALTH="❌ Unhealthy"
+            elif [ "$STATUS" = "Up" ]; then
+              HEALTH="⚠️ Running"
+            fi
+            
+            echo "| $service | $STATUS | $HEALTH |" >> $GITHUB_STEP_SUMMARY
+          done
+      
+      - name: 🧪 Run health check tests
+        run: |
+          echo "🧪 Testing service endpoints..."
+          
+          # Wait for backend to be ready
+          timeout 120 bash -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
+          
+          # Test backend health endpoint
+          echo "Testing backend health..."
+          curl -f http://localhost:8080/actuator/health || exit 1
+          
+          # Test backend API endpoints
+          echo "Testing backend API..."
+          curl -f http://localhost:8080/actuator/info || exit 1
+          
+          # Test metrics endpoint
+          echo "Testing metrics..."
+          curl -f http://localhost:8080/actuator/prometheus || exit 1
+          
+          echo "✅ All health checks passed!"
+      
+      - name: 🔄 Test service restart resilience
+        run: |
+          echo "🔄 Testing service restart resilience..."
+          
+          # Restart backend service
+          docker-compose -f docker-compose.test.yml restart backend
+          sleep 20
+          
+          # Check if it comes back up
+          timeout 60 bash -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
+          echo "✅ Backend restart successful"
+      
+      - name: 📊 Generate performance metrics
+        run: |
+          echo "## ⚡ Performance Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Measure response times
+          echo "### API Response Times:" >> $GITHUB_STEP_SUMMARY
+          
+          HEALTH_TIME=$(curl -o /dev/null -s -w '%{time_total}' http://localhost:8080/actuator/health)
+          echo "- **Health Endpoint**: ${HEALTH_TIME}s" >> $GITHUB_STEP_SUMMARY
+          
+          INFO_TIME=$(curl -o /dev/null -s -w '%{time_total}' http://localhost:8080/actuator/info)
+          echo "- **Info Endpoint**: ${INFO_TIME}s" >> $GITHUB_STEP_SUMMARY
+          
+          # Memory usage
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resource Usage:" >> $GITHUB_STEP_SUMMARY
+          docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📋 Collect logs
+        if: always()
+        run: |
+          echo "📋 Collecting service logs..."
+          mkdir -p logs
+          
+          for service in $(docker-compose -f docker-compose.test.yml ps --services); do
+            docker-compose -f docker-compose.test.yml logs $service > logs/${service}.log 2>&1
+          done
+      
+      - name: 📤 Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-compose-logs-${{ github.run_id }}
+          path: logs/
+          retention-days: 7
+      
+      - name: 🛑 Stop Docker Compose stack
+        if: always()
+        run: |
+          echo "🛑 Stopping Docker Compose stack..."
+          docker-compose -f docker-compose.test.yml down -v
+          docker system prune -f
+
+  # ============================================
+  # Security Scan for Docker Compose
+  # ============================================
+  docker-compose-security:
+    name: 🛡️ Security Scan Stack
+    runs-on: ubuntu-latest
+    needs: [docker-compose-build]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📥 Download Docker images
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images-${{ github.run_id }}
+      
+      - name: 📦 Load Docker images
+        run: |
+          docker load < backend-image.tar.gz
+      
+      - name: 🔍 Extract image names
+        id: images
+        run: |
+          # Get image names from docker-compose
+          BACKEND_IMAGE=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep backend | head -1)
+          echo "backend_image=$BACKEND_IMAGE" >> $GITHUB_OUTPUT
+          echo "Backend image: $BACKEND_IMAGE"
+      
+      - name: 🛡️ Run Trivy security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.images.outputs.backend_image }}
+          format: 'sarif'
+          output: 'trivy-results-compose.sarif'
+      
+      - name: 📤 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-compose.sarif'
+          category: 'docker-compose-security'
+      
+      - name: 🔐 Scan for secrets in configs
+        run: |
+          echo "🔍 Scanning Docker Compose files for secrets..."
+          
+          # Check for potential secrets in compose files
+          echo "## 🔐 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Look for potential issues
+          if grep -i "password.*=" docker-compose*.yml; then
+            echo "⚠️ **Warning**: Found potential hardcoded passwords" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No hardcoded passwords found" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if grep -i "secret.*=" docker-compose*.yml; then
+            echo "⚠️ **Warning**: Found potential hardcoded secrets" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No hardcoded secrets found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================
+  # Docker Compose Summary
+  # ============================================
+  docker-compose-summary:
+    name: 📋 Docker Compose Summary
+    runs-on: ubuntu-latest
+    needs: [docker-compose-build, docker-compose-integration, docker-compose-security]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Summary
+        run: |
+          echo "## 🐳 Docker Compose Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Test Status:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build**: ${{ needs.docker-compose-build.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Integration Tests**: ${{ needs.docker-compose-integration.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Scan**: ${{ needs.docker-compose-security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.docker-compose-build.result }}" == "success" && 
+                "${{ needs.docker-compose-integration.result }}" == "success" ]]; then
+            echo "✅ **Docker Compose stack working correctly!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The full application stack has been tested and is ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Docker Compose tests failed.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the logs and fix any issues before deployment." >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🚨 Notify on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#guardianes-docker'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

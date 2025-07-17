@@ -1,0 +1,138 @@
+{{- if .Values.security.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "guardianes-de-gaia.fullname" . }}-backend
+  labels:
+    {{- include "guardianes-de-gaia.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "guardianes-de-gaia.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- with .Values.security.networkPolicy.ingress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  egress:
+    # Allow DNS resolution
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow outbound to MySQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mysql
+      ports:
+        - protocol: TCP
+          port: 3306
+    # Allow outbound to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow outbound to RabbitMQ
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: rabbitmq
+      ports:
+        - protocol: TCP
+          port: 5672
+        - protocol: TCP
+          port: 15672
+    # Allow outbound HTTPS for external APIs
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+---
+{{- if .Values.mysql.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "guardianes-de-gaia.fullname" . }}-mysql
+  labels:
+    {{- include "guardianes-de-gaia.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mysql
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow connections from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "guardianes-de-gaia.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: 3306
+{{- end }}
+---
+{{- if .Values.redis.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "guardianes-de-gaia.fullname" . }}-redis
+  labels:
+    {{- include "guardianes-de-gaia.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow connections from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "guardianes-de-gaia.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: 6379
+{{- end }}
+---
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "guardianes-de-gaia.fullname" . }}-rabbitmq
+  labels:
+    {{- include "guardianes-de-gaia.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmq
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow connections from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "guardianes-de-gaia.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: 5672
+        - protocol: TCP
+          port: 15672
+{{- end }}
+{{- end }}

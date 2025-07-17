@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "guardianes-de-gaia.fullname" . }}-config
+  labels:
+    {{- include "guardianes-de-gaia.labels" . | nindent 4 }}
+data:
+  # Application configuration
+  application.yml: |
+    spring:
+      application:
+        name: {{ .Values.config.application.name }}
+      profiles:
+        active: kubernetes
+      
+      # Jackson configuration
+      jackson:
+        serialization:
+          write-dates-as-timestamps: false
+        deserialization:
+          fail-on-unknown-properties: false
+      
+      # JPA configuration
+      jpa:
+        hibernate:
+          ddl-auto: validate
+        show-sql: false
+        properties:
+          hibernate:
+            format_sql: true
+            dialect: org.hibernate.dialect.MySQL8Dialect
+            
+    # Management endpoints
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,prometheus,metrics
+          base-path: /actuator
+      endpoint:
+        health:
+          show-details: always
+        prometheus:
+          enabled: true
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+      
+    # Logging configuration
+    logging:
+      level:
+        {{- range $key, $value := .Values.config.logging.level }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+      pattern:
+        console: "{{ .Values.config.logging.pattern.console }}"
+        file: "{{ .Values.config.logging.pattern.file }}"
+  
+  # Game configuration
+  game-config.yml: |
+    game:
+      energy:
+        stepsPerEnergy: {{ .Values.config.application.game.energyPerSteps }}
+        maxDailyEnergy: {{ .Values.config.application.game.maxDailyEnergy }}
+      
+      xp:
+        perBattle: {{ .Values.config.application.game.xpPerBattle }}
+      
+      battle:
+        maxDuration: {{ .Values.config.application.battle.maxBattleDuration }}
+        maxCardsPerDeck: {{ .Values.config.application.battle.maxCardsPerDeck }}
+      
+      walking:
+        minStepsForReward: {{ .Values.config.application.walking.minStepsForReward }}
+        maxStepsPerDay: {{ .Values.config.application.walking.maxStepsPerDay }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.backend.configMapRef }}
+  labels:
+    {{- include "guardianes-de-gaia.labels" . | nindent 4 }}
+data:
+  # Environment-specific configuration
+  SPRING_PROFILES_ACTIVE: "kubernetes"
+  ENVIRONMENT: {{ .Values.config.application.environment }}
+  APP_VERSION: {{ .Values.config.application.version }}
+  
+  # Database configuration
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "com.mysql.cj.jdbc.Driver"
+  SPRING_JPA_DATABASE_PLATFORM: "org.hibernate.dialect.MySQL8Dialect"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "validate"
+  
+  # Connection pool settings
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "20"
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: "5"
+  SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: "30000"
+  SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: "600000"
+  SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: "1800000"
+  
+  # Redis configuration
+  SPRING_REDIS_TIMEOUT: "2000"
+  SPRING_REDIS_LETTUCE_POOL_MAX_ACTIVE: "8"
+  SPRING_REDIS_LETTUCE_POOL_MAX_IDLE: "8"
+  SPRING_REDIS_LETTUCE_POOL_MIN_IDLE: "0"
+  
+  # RabbitMQ configuration
+  SPRING_RABBITMQ_CONNECTION_TIMEOUT: "60000"
+  SPRING_RABBITMQ_LISTENER_SIMPLE_CONCURRENCY: "3"
+  SPRING_RABBITMQ_LISTENER_SIMPLE_MAX_CONCURRENCY: "10"
+  
+  # Actuator configuration
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus,metrics"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "always"
+  MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: "true"
+  
+  # Security configuration
+  JWT_EXPIRATION: "86400"  # 24 hours
+  CORS_ALLOWED_ORIGINS: "https://app.guardianes-de-gaia.com,https://admin.guardianes-de-gaia.com"
+  
+  # Game mechanics configuration
+  GAME_ENERGY_STEPS_PER_ENERGY: "{{ .Values.config.application.game.energyPerSteps }}"
+  GAME_MAX_DAILY_ENERGY: "{{ .Values.config.application.game.maxDailyEnergy }}"
+  GAME_XP_PER_BATTLE: "{{ .Values.config.application.game.xpPerBattle }}"
+  BATTLE_MAX_DURATION: "{{ .Values.config.application.battle.maxBattleDuration }}"
+  BATTLE_MAX_CARDS_PER_DECK: "{{ .Values.config.application.battle.maxCardsPerDeck }}"
+  WALKING_MIN_STEPS_FOR_REWARD: "{{ .Values.config.application.walking.minStepsForReward }}"
+  WALKING_MAX_STEPS_PER_DAY: "{{ .Values.config.application.walking.maxStepsPerDay }}"

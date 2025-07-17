@@ -7,7 +7,6 @@ import io.cucumber.datatable.DataTable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -31,7 +30,6 @@ public class StepTrackingStepDefinitions {
     private DailyStepAggregate currentDayAggregate;
     private int currentEnergyBalance;
     private List<DailyStepAggregate> stepHistory;
-    private List<EnergyTransaction> energyHistory;
     private Exception lastException;
 
     @Given("I am a registered Guardian with ID {int}")
@@ -114,7 +112,7 @@ public class StepTrackingStepDefinitions {
             .thenReturn(List.of(new StepRecord(guardianId, totalSteps, currentDate.atTime(18, 0))));
         
         // Calculate and record energy transaction
-        DailyStepAggregate aggregate = stepAggregationService.aggregateDailySteps(guardianId, currentDate);
+        stepAggregationService.aggregateDailySteps(guardianId, currentDate);
         EnergyTransaction transaction = new EnergyTransaction(
             guardianId, 
             EnergyTransactionType.EARNED, 
@@ -310,7 +308,7 @@ public class StepTrackingStepDefinitions {
     // Helper methods
     private void updateStepMockWithNewSteps(Integer steps, LocalDateTime timestamp) {
         // Update the mock repository to reflect the new steps
-        List<StepRecord> existingSteps = stepRepository.findByGuardianIdAndDate(guardianId, currentDate);
+        stepRepository.findByGuardianIdAndDate(guardianId, currentDate);
         // Add new step record (this would be handled by the actual repository)
     }
 
@@ -396,7 +394,7 @@ public class StepTrackingStepDefinitions {
     @When("I try to record {int} additional steps at {}")
     public void i_try_to_record_additional_steps_at(Integer additionalSteps, String timeString) {
         String[] timeParts = timeString.split(":");
-        LocalDateTime newTimestamp = currentDate.atTime(Integer.parseInt(timeParts[0]), Integer.parseInt(timeParts[1]));
+        currentDate.atTime(Integer.parseInt(timeParts[0]), Integer.parseInt(timeParts[1]));
         
         // This will test the increment validation
         i_try_to_record_steps(additionalSteps);

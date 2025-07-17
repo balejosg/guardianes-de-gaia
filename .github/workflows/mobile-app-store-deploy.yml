@@ -1,0 +1,688 @@
+name: 📱 Mobile App Store Deployment
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target platform'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      build_number:
+        description: 'Build number (leave empty for auto-increment)'
+        required: false
+        type: string
+      skip_tests:
+        description: 'Skip tests (emergency only)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  FLUTTER_VERSION: '3.19.0'
+  JAVA_VERSION: '17'
+  XCODE_VERSION: '15.0'
+  RUBY_VERSION: '3.2'
+
+jobs:
+  # ============================================
+  # Pre-deployment Validation
+  # ============================================
+  validate-release:
+    name: 🔍 Validate Release
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version-name: ${{ steps.version.outputs.version-name }}
+      version-code: ${{ steps.version.outputs.version-code }}
+      build-number: ${{ steps.version.outputs.build-number }}
+      release-notes: ${{ steps.release-notes.outputs.notes }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🎯 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      
+      - name: 📋 Extract version information
+        id: version
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          # Extract version from pubspec.yaml
+          VERSION_NAME=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          VERSION_CODE=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f2)
+          
+          # Handle build number override
+          if [ -n "${{ github.event.inputs.build_number }}" ]; then
+            BUILD_NUMBER="${{ github.event.inputs.build_number }}"
+          else
+            BUILD_NUMBER="$VERSION_CODE"
+          fi
+          
+          echo "version-name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "version-code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "build-number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          
+          echo "## 📋 Release Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: $VERSION_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Code**: $VERSION_CODE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Number**: $BUILD_NUMBER" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Type**: ${{ github.event.inputs.release_type || 'production' }}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📝 Generate release notes
+        id: release-notes
+        run: |
+          # Generate release notes from recent commits
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Use release notes from GitHub release
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ github.event.release.body }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            # Generate from recent commits
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "## What's New" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            git log --oneline --since="7 days ago" --pretty=format:"- %s" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "For more details, visit our GitHub repository." >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: 🧪 Run mobile tests
+        if: github.event.inputs.skip_tests != 'true'
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          echo "🧪 Running mobile tests before release..."
+          flutter pub get
+          flutter packages pub run build_runner build --delete-conflicting-outputs
+          flutter test --coverage
+          
+          echo "✅ Mobile tests passed"
+      
+      - name: 🔍 Validate app icons and assets
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          echo "🔍 Validating app icons and assets..."
+          
+          # Check Android icons
+          if [ ! -f "android/app/src/main/res/mipmap-hdpi/ic_launcher.png" ]; then
+            echo "❌ Missing Android app icon"
+            exit 1
+          fi
+          
+          # Check iOS icons
+          if [ ! -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json" ]; then
+            echo "❌ Missing iOS app icon"
+            exit 1
+          fi
+          
+          # Check required assets
+          if [ ! -d "assets/images" ]; then
+            echo "❌ Missing assets directory"
+            exit 1
+          fi
+          
+          echo "✅ App icons and assets validated"
+
+  # ============================================
+  # Android Play Store Deployment
+  # ============================================
+  deploy-android:
+    name: 🤖 Deploy to Google Play Store
+    runs-on: ubuntu-latest
+    needs: [validate-release]
+    if: |
+      github.event.inputs.platform == 'android' || 
+      github.event.inputs.platform == 'both' || 
+      github.event.inputs.platform == null
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: 🎯 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      
+      - name: 📦 Install dependencies
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          flutter pub get
+          flutter packages pub run build_runner build --delete-conflicting-outputs
+      
+      - name: 🔐 Setup Android signing
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          # Create keystore directory
+          mkdir -p android/app/keystore
+          
+          # Decode keystore from secrets
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore/release.keystore
+          
+          # Create key.properties
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=keystore/release.keystore
+          EOF
+          
+          echo "✅ Android signing configured"
+      
+      - name: 🏗️ Build Android App Bundle
+        working-directory: ./mobile/guardianes_mobile
+        env:
+          BUILD_NUMBER: ${{ needs.validate-release.outputs.build-number }}
+        run: |
+          # Update version in Android
+          sed -i "s/flutter.versionCode=.*/flutter.versionCode=$BUILD_NUMBER/" android/local.properties
+          
+          # Build release App Bundle
+          flutter build appbundle --release --build-number=$BUILD_NUMBER
+          
+          echo "✅ Android App Bundle built successfully"
+      
+      - name: 📦 Setup Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: ./mobile/guardianes_mobile/android
+      
+      - name: 📦 Install Fastlane
+        working-directory: ./mobile/guardianes_mobile/android
+        run: |
+          # Create Gemfile
+          cat > Gemfile << 'EOF'
+          source "https://rubygems.org"
+          
+          gem "fastlane"
+          gem "google-api-client"
+          EOF
+          
+          bundle install
+      
+      - name: 🚀 Deploy to Google Play Store
+        working-directory: ./mobile/guardianes_mobile/android
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          RELEASE_TYPE: ${{ github.event.inputs.release_type || 'production' }}
+          VERSION_NAME: ${{ needs.validate-release.outputs.version-name }}
+          RELEASE_NOTES: ${{ needs.validate-release.outputs.release-notes }}
+        run: |
+          # Create Google Service Account file
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > google-service-account.json
+          
+          # Create Fastlane configuration
+          mkdir -p fastlane
+          
+          cat > fastlane/Fastfile << 'EOF'
+          default_platform(:android)
+          
+          platform :android do
+            desc "Deploy to Google Play Store"
+            lane :deploy do
+              upload_to_play_store(
+                json_key: "google-service-account.json",
+                aab: "../build/app/outputs/bundle/release/app-release.aab",
+                track: ENV['RELEASE_TYPE'] == 'production' ? 'production' : ENV['RELEASE_TYPE'],
+                release_status: ENV['RELEASE_TYPE'] == 'production' ? 'completed' : 'draft',
+                skip_upload_metadata: false,
+                skip_upload_changelogs: false,
+                skip_upload_images: true,
+                skip_upload_screenshots: true
+              )
+            end
+          end
+          EOF
+          
+          # Create metadata
+          mkdir -p fastlane/metadata/android/en-US
+          echo "Guardianes de Gaia" > fastlane/metadata/android/en-US/title.txt
+          echo "A cooperative card game that gamifies walking to school" > fastlane/metadata/android/en-US/short_description.txt
+          echo "$RELEASE_NOTES" > fastlane/metadata/android/en-US/full_description.txt
+          
+          # Create changelog
+          mkdir -p fastlane/metadata/android/en-US/changelogs
+          echo "$RELEASE_NOTES" > "fastlane/metadata/android/en-US/changelogs/${{ needs.validate-release.outputs.build-number }}.txt"
+          
+          # Deploy to Play Store
+          bundle exec fastlane deploy
+          
+          echo "✅ Android app deployed to Google Play Store"
+      
+      - name: 📊 Generate Android deployment report
+        run: |
+          echo "## 🤖 Android Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.validate-release.outputs.version-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build**: ${{ needs.validate-release.outputs.build-number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Track**: ${{ github.event.inputs.release_type || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📤 Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-artifacts
+          path: |
+            mobile/guardianes_mobile/build/app/outputs/bundle/release/
+            mobile/guardianes_mobile/android/fastlane/metadata/
+          retention-days: 30
+
+  # ============================================
+  # iOS App Store Deployment
+  # ============================================
+  deploy-ios:
+    name: 🍎 Deploy to Apple App Store
+    runs-on: macos-latest
+    needs: [validate-release]
+    if: |
+      github.event.inputs.platform == 'ios' || 
+      github.event.inputs.platform == 'both' || 
+      github.event.inputs.platform == null
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🎯 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      
+      - name: 📦 Install dependencies
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          flutter pub get
+          flutter packages pub run build_runner build --delete-conflicting-outputs
+      
+      - name: 🔐 Setup iOS signing
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          # Import certificates
+          echo "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}" | base64 -d > ios_distribution.p12
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > ios_provisioning.mobileprovision
+          
+          # Create keychain
+          security create-keychain -p "${{ secrets.IOS_KEYCHAIN_PASSWORD }}" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "${{ secrets.IOS_KEYCHAIN_PASSWORD }}" build.keychain
+          
+          # Import certificate
+          security import ios_distribution.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ secrets.IOS_KEYCHAIN_PASSWORD }}" build.keychain
+          
+          # Install provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ios_provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          
+          echo "✅ iOS signing configured"
+      
+      - name: 🏗️ Build iOS IPA
+        working-directory: ./mobile/guardianes_mobile
+        env:
+          BUILD_NUMBER: ${{ needs.validate-release.outputs.build-number }}
+        run: |
+          # Update iOS version
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Runner/Info.plist
+          
+          # Build iOS app
+          flutter build ipa --release --build-number=$BUILD_NUMBER
+          
+          echo "✅ iOS IPA built successfully"
+      
+      - name: 📦 Setup Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: ./mobile/guardianes_mobile/ios
+      
+      - name: 📦 Install Fastlane
+        working-directory: ./mobile/guardianes_mobile/ios
+        run: |
+          # Create Gemfile
+          cat > Gemfile << 'EOF'
+          source "https://rubygems.org"
+          
+          gem "fastlane"
+          gem "spaceship"
+          EOF
+          
+          bundle install
+      
+      - name: 🚀 Deploy to Apple App Store
+        working-directory: ./mobile/guardianes_mobile/ios
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          RELEASE_TYPE: ${{ github.event.inputs.release_type || 'production' }}
+          VERSION_NAME: ${{ needs.validate-release.outputs.version-name }}
+          RELEASE_NOTES: ${{ needs.validate-release.outputs.release-notes }}
+        run: |
+          # Create Fastlane configuration
+          mkdir -p fastlane
+          
+          cat > fastlane/Fastfile << 'EOF'
+          default_platform(:ios)
+          
+          platform :ios do
+            desc "Deploy to Apple App Store"
+            lane :deploy do
+              # Upload to App Store Connect
+              upload_to_app_store(
+                username: ENV['APPLE_ID'],
+                app_identifier: "com.guardianes.guardianes_mobile",
+                ipa: "../build/ios/ipa/guardianes_mobile.ipa",
+                skip_metadata: false,
+                skip_screenshots: true,
+                force: true,
+                submit_for_review: ENV['RELEASE_TYPE'] == 'production',
+                automatic_release: ENV['RELEASE_TYPE'] == 'production',
+                submission_information: {
+                  add_id_info_limits_tracking: true,
+                  add_id_info_serves_ads: false,
+                  add_id_info_tracks_action: false,
+                  add_id_info_tracks_install: false,
+                  add_id_info_uses_idfa: false,
+                  content_rights_has_rights: true,
+                  content_rights_contains_third_party_content: false,
+                  export_compliance_platform: "ios",
+                  export_compliance_compliance_required: false,
+                  export_compliance_encryption_updated: false,
+                  export_compliance_app_type: nil,
+                  export_compliance_uses_encryption: false,
+                  export_compliance_is_exempt: false,
+                  export_compliance_contains_third_party_cryptography: false,
+                  export_compliance_contains_proprietary_cryptography: false,
+                  export_compliance_available_on_french_store: false
+                }
+              )
+            end
+          end
+          EOF
+          
+          # Create metadata
+          mkdir -p fastlane/metadata/en-US
+          echo "Guardianes de Gaia" > fastlane/metadata/en-US/name.txt
+          echo "A cooperative card game that gamifies walking to school for families with children aged 6-12." > fastlane/metadata/en-US/subtitle.txt
+          echo "$RELEASE_NOTES" > fastlane/metadata/en-US/description.txt
+          echo "guardianes, walking, game, educational, family, cards, cooperative" > fastlane/metadata/en-US/keywords.txt
+          echo "https://guardianes-de-gaia.com/support" > fastlane/metadata/en-US/support_url.txt
+          echo "https://guardianes-de-gaia.com/privacy" > fastlane/metadata/en-US/privacy_url.txt
+          
+          # Create release notes
+          echo "$RELEASE_NOTES" > "fastlane/metadata/en-US/release_notes.txt"
+          
+          # Deploy to App Store
+          bundle exec fastlane deploy
+          
+          echo "✅ iOS app deployed to Apple App Store"
+      
+      - name: 📊 Generate iOS deployment report
+        run: |
+          echo "## 🍎 iOS Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.validate-release.outputs.version-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build**: ${{ needs.validate-release.outputs.build-number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Track**: ${{ github.event.inputs.release_type || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📤 Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-artifacts
+          path: |
+            mobile/guardianes_mobile/build/ios/ipa/
+            mobile/guardianes_mobile/ios/fastlane/metadata/
+          retention-days: 30
+
+  # ============================================
+  # Post-deployment Validation
+  # ============================================
+  validate-deployment:
+    name: ✅ Validate Store Deployment
+    runs-on: ubuntu-latest
+    needs: [validate-release, deploy-android, deploy-ios]
+    if: always() && !cancelled()
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📊 Validate Android deployment
+        if: needs.deploy-android.result == 'success'
+        run: |
+          echo "📊 Validating Android deployment..."
+          
+          # Check if Android deployment was successful
+          if [ "${{ needs.deploy-android.result }}" = "success" ]; then
+            echo "✅ Android deployment validated"
+          else
+            echo "❌ Android deployment failed"
+            exit 1
+          fi
+      
+      - name: 📊 Validate iOS deployment
+        if: needs.deploy-ios.result == 'success'
+        run: |
+          echo "📊 Validating iOS deployment..."
+          
+          # Check if iOS deployment was successful
+          if [ "${{ needs.deploy-ios.result }}" = "success" ]; then
+            echo "✅ iOS deployment validated"
+          else
+            echo "❌ iOS deployment failed"
+            exit 1
+          fi
+      
+      - name: 📝 Create release documentation
+        env:
+          VERSION_NAME: ${{ needs.validate-release.outputs.version-name }}
+          BUILD_NUMBER: ${{ needs.validate-release.outputs.build-number }}
+          RELEASE_NOTES: ${{ needs.validate-release.outputs.release-notes }}
+        run: |
+          mkdir -p release-docs
+          
+          cat > release-docs/release-$VERSION_NAME.md << EOF
+          # Guardianes de Gaia Release $VERSION_NAME
+          
+          **Release Date:** $(date '+%Y-%m-%d %H:%M:%S UTC')
+          **Version:** $VERSION_NAME
+          **Build Number:** $BUILD_NUMBER
+          **Release Type:** ${{ github.event.inputs.release_type || 'production' }}
+          
+          ## Deployment Status
+          
+          - **Android:** ${{ needs.deploy-android.result }}
+          - **iOS:** ${{ needs.deploy-ios.result }}
+          
+          ## Release Notes
+          
+          $RELEASE_NOTES
+          
+          ## Downloads
+          
+          - **Android:** [Google Play Store](https://play.google.com/store/apps/details?id=com.guardianes.guardianes_mobile)
+          - **iOS:** [Apple App Store](https://apps.apple.com/app/guardianes-de-gaia/id123456789)
+          
+          ## Support
+          
+          For support, visit: https://guardianes-de-gaia.com/support
+          EOF
+          
+          echo "✅ Release documentation created"
+      
+      - name: 📤 Upload release documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-documentation
+          path: release-docs/
+          retention-days: 90
+
+  # ============================================
+  # App Store Deployment Summary
+  # ============================================
+  deployment-summary:
+    name: 📋 App Store Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [validate-release, deploy-android, deploy-ios, validate-deployment]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate deployment summary
+        run: |
+          echo "## 📱 Mobile App Store Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Release Details:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.validate-release.outputs.version-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build**: ${{ needs.validate-release.outputs.build-number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ github.event.inputs.release_type || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform**: ${{ github.event.inputs.platform || 'both' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🎯 Deployment Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validation**: ${{ needs.validate-release.result }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event.inputs.platform }}" != "ios" ]; then
+            echo "- **Android**: ${{ needs.deploy-android.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ github.event.inputs.platform }}" != "android" ]; then
+            echo "- **iOS**: ${{ needs.deploy-ios.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "- **Post-Validation**: ${{ needs.validate-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall success check
+          ANDROID_SUCCESS="true"
+          IOS_SUCCESS="true"
+          
+          if [ "${{ github.event.inputs.platform }}" != "ios" ] && [ "${{ needs.deploy-android.result }}" != "success" ]; then
+            ANDROID_SUCCESS="false"
+          fi
+          
+          if [ "${{ github.event.inputs.platform }}" != "android" ] && [ "${{ needs.deploy-ios.result }}" != "success" ]; then
+            IOS_SUCCESS="false"
+          fi
+          
+          if [ "$ANDROID_SUCCESS" = "true" ] && [ "$IOS_SUCCESS" = "true" ]; then
+            echo "✅ **All deployments completed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Your app is now available in the app stores." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Some deployments failed.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the logs and retry if necessary." >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🎉 Notify successful deployment
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#guardianes-releases'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
+          custom_payload: |
+            {
+              "text": "🎉 Mobile app successfully deployed to app stores!",
+              "attachments": [
+                {
+                  "color": "good",
+                  "fields": [
+                    {
+                      "title": "Version",
+                      "value": "${{ needs.validate-release.outputs.version-name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Build",
+                      "value": "${{ needs.validate-release.outputs.build-number }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Platform",
+                      "value": "${{ github.event.inputs.platform || 'both' }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Release Type",
+                      "value": "${{ github.event.inputs.release_type || 'production' }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
+      
+      - name: 🚨 Notify failed deployment
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#guardianes-releases'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
+          custom_payload: |
+            {
+              "text": "🚨 Mobile app deployment failed!",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "fields": [
+                    {
+                      "title": "Version",
+                      "value": "${{ needs.validate-release.outputs.version-name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Platform",
+                      "value": "${{ github.event.inputs.platform || 'both' }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Android Status",
+                      "value": "${{ needs.deploy-android.result }}",
+                      "short": true
+                    },
+                    {
+                      "title": "iOS Status",
+                      "value": "${{ needs.deploy-ios.result }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }

@@ -1,5 +1,6 @@
 package com.guardianes.walking.application;
 
+import com.guardianes.testconfig.GuardianTestConfiguration;
 import com.guardianes.walking.application.dto.StepSubmissionRequest;
 import com.guardianes.walking.application.dto.StepSubmissionResponse;
 import com.guardianes.walking.application.service.StepTrackingApplicationService;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.context.annotation.Import;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Import(GuardianTestConfiguration.class)
 public class StepSubmissionEnergyIntegrationTest {
 
     @Autowired

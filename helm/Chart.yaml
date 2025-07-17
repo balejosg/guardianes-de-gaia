@@ -1,0 +1,47 @@
+apiVersion: v2
+name: guardianes-de-gaia
+description: A Helm chart for Guardianes de Gaia mobile game backend and infrastructure
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - mobile-game
+  - spring-boot
+  - educational
+  - gamification
+  - walking
+
+home: https://github.com/guardianes-de-gaia/guardianes-de-gaia
+sources:
+  - https://github.com/guardianes-de-gaia/guardianes-de-gaia
+
+maintainers:
+  - name: Guardianes de Gaia Team
+    email: team@guardianes-de-gaia.com
+
+dependencies:
+  - name: mysql
+    version: "9.4.6"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: mysql.enabled
+  - name: redis
+    version: "18.1.5"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  - name: rabbitmq
+    version: "12.0.10"
+    repository: "https://charts.bitnami.com/bitnami" 
+    condition: rabbitmq.enabled
+  - name: prometheus
+    version: "25.0.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: monitoring.prometheus.enabled
+  - name: grafana
+    version: "6.60.4"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: monitoring.grafana.enabled
+
+annotations:
+  category: Application
+  licenses: MIT
