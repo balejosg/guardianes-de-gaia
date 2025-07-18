@@ -40,7 +40,20 @@
       "Bash(git filter-branch:*)",
       "Bash(git reset:*)",
       "Bash(wget:*)",
-      "Bash(git gc:*)"
+      "Bash(git gc:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run:*)",
+      "Bash(grep:*)",
+      "Bash(touch:*)",
+      "Bash(timeout 30 mvn clean compile)",
+      "Bash(timeout 60 mvn test -Dtest=*GuardianTest*)",
+      "Bash(timeout 60 mvn test -Dtest='*GuardianTest*')",
+      "Bash(timeout 60 mvn compile spotbugs:check)"
     ],
     "deny": []
   }

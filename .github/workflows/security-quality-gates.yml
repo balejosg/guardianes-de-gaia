@@ -286,7 +286,7 @@ jobs:
           cache: maven
       
       - name: 🔍 License scan with FOSSA
-        if: secrets.FOSSA_API_KEY
+        if: ${{ secrets.FOSSA_API_KEY }}
         uses: fossas/fossa-action@main
         with:
           api-key: ${{ secrets.FOSSA_API_KEY }}
