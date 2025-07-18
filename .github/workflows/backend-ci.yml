@@ -304,7 +304,7 @@ jobs:
       
       - name: 🐳 Start Test Environment
         run: |
-          docker-compose -f docker-compose.test.yml up -d
+          docker compose -f docker-compose.test.yml up -d
           sleep 30  # Wait for services to start
       
       - name: ⚡ Run Load Tests with JMeter
@@ -327,7 +327,7 @@ jobs:
       
       - name: 🛑 Stop Test Environment
         if: always()
-        run: docker-compose -f docker-compose.test.yml down
+        run: docker compose -f docker-compose.test.yml down
       
       - name: 📤 Upload Performance Results
         uses: actions/upload-artifact@v4

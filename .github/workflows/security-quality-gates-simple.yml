@@ -13,6 +13,9 @@ jobs:
   code-quality:
     name: 📊 Code Quality Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
       - name: 📥 Checkout code
@@ -60,6 +63,9 @@ jobs:
   security-scan:
     name: 🛡️ Basic Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
       - name: 📥 Checkout code
@@ -89,6 +95,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [code-quality, security-scan]
     if: always()
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
       - name: 📊 Generate Summary

@@ -325,7 +325,7 @@ jobs:
       - name: 🏗️ Start Backend Services
         run: |
           # Start minimal backend for API testing
-          docker-compose -f docker-compose.test.yml up -d
+          docker compose -f docker-compose.test.yml up -d
           sleep 30  # Wait for services
       
       - name: 🧪 Run Integration Tests
@@ -337,7 +337,7 @@ jobs:
       - name: 🛑 Stop Backend Services
         if: always()
         run: |
-          docker-compose -f docker-compose.test.yml down
+          docker compose -f docker-compose.test.yml down
 
   # ============================================
   # Performance Testing

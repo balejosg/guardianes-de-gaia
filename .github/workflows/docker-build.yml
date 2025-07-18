@@ -133,6 +133,7 @@ jobs:
   postgres-docker:
     name: 🗄️ PostgreSQL Docker Build
     runs-on: ubuntu-latest
+    if: false  # Disabled - using MySQL instead
     permissions:
       contents: read
       packages: write
@@ -254,7 +255,7 @@ jobs:
   build-summary:
     name: 📋 Docker Build Summary
     runs-on: ubuntu-latest
-    needs: [backend-docker, postgres-docker]
+    needs: [backend-docker]
     if: always()
     
     steps:
@@ -264,7 +265,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📈 Build Status:" >> $GITHUB_STEP_SUMMARY
           echo "- **Backend Docker**: ${{ needs.backend-docker.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **PostgreSQL Docker**: ${{ needs.postgres-docker.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **PostgreSQL Docker**: Disabled (using MySQL)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.backend-docker.result }}" == "success" ]]; then
@@ -282,7 +283,7 @@ jobs:
           echo "- **SBOM**: ✅ Generated" >> $GITHUB_STEP_SUMMARY
           echo "- **Provenance**: ✅ Attestation included" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "${{ needs.backend-docker.result }}" == "success" && "${{ needs.postgres-docker.result }}" == "success" ]]; then
+          if [[ "${{ needs.backend-docker.result }}" == "success" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ **All Docker images built successfully!**" >> $GITHUB_STEP_SUMMARY
           else

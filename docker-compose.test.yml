@@ -49,7 +49,7 @@ services:
       - "3307:3306"
     volumes:
       - mysql-test-data:/var/lib/mysql
-      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - test-network
     healthcheck:
@@ -69,7 +69,7 @@ services:
       - "6380:6379"
     volumes:
       - redis-test-data:/data
-      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      # - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
       - test-network
     healthcheck:
@@ -119,4 +119,4 @@ volumes:
   rabbitmq-test-data:
     driver: local
   maven-cache:
-    external: true
+    driver: local
