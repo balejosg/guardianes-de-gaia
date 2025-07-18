@@ -94,9 +94,10 @@ jobs:
         working-directory: ./backend
         run: |
           mvn test \
-            -Dtest.parallel=true \
+            -Dtest.parallel=false \
             -Dmaven.test.failure.ignore=false \
-            -Djacoco.execution.data.file=target/jacoco-unit.exec
+            -Djacoco.execution.data.file=target/jacoco-unit.exec \
+            -Dmaven.surefire.timeout=300
       
       - name: 📊 Generate Coverage Report
         working-directory: ./backend
@@ -210,7 +211,8 @@ jobs:
         run: |
           mvn test \
             -Dtest="**/integration/**Test" \
-            -Dmaven.test.failure.ignore=false
+            -Dmaven.test.failure.ignore=false \
+            -Dmaven.surefire.timeout=600
       
       - name: 🥒 Run Cucumber BDD Tests
         working-directory: ./backend

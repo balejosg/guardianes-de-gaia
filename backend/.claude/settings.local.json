@@ -59,7 +59,9 @@
       "Bash(python3:*)",
       "Bash(mv:*)",
       "Bash(timeout 60 mvn clean test)",
-      "Bash(timeout 60 mvn clean test -q)"
+      "Bash(timeout 60 mvn clean test -q)",
+      "Bash(timeout 60 mvn test -Dtest=GuardianTest)",
+      "Bash(timeout 60 mvn test -Dtest=GuardianLevelTest)"
     ],
     "deny": []
   }
