@@ -17,8 +17,8 @@ on:
 env:
   REGISTRY_DOCKERHUB: docker.io
   REGISTRY_GHCR: ghcr.io
-  IMAGE_NAME_BACKEND: guardianes-de-gaia/backend
-  IMAGE_NAME_POSTGRES: guardianes-de-gaia/postgres
+  IMAGE_NAME_BACKEND: ${{ github.repository_owner }}/guardianes-backend
+  IMAGE_NAME_POSTGRES: ${{ github.repository_owner }}/guardianes-postgres
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
