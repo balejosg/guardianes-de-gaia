@@ -54,7 +54,9 @@
       "Bash(timeout 60 mvn test -Dtest=*GuardianTest*)",
       "Bash(timeout 60 mvn test -Dtest='*GuardianTest*')",
       "Bash(timeout 60 mvn compile spotbugs:check)",
-      "Bash(gh secret:*)"
+      "Bash(gh secret:*)",
+      "Bash(yamllint:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   }
