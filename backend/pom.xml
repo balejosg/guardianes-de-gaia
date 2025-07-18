@@ -187,6 +187,11 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                     </includes>
+                    <excludes>
+                        <exclude>**/integration/**/*Test.java</exclude>
+                        <exclude>**/docker/**/*Test.java</exclude>
+                        <exclude>**/*IntegrationTest.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>

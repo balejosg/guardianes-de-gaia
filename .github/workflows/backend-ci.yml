@@ -98,6 +98,7 @@ jobs:
             -Dmaven.test.failure.ignore=false \
             -Djacoco.execution.data.file=target/jacoco-unit.exec \
             -Dmaven.surefire.timeout=300 \
+            -DfailIfNoTests=false \
             -Dspring.profiles.active=test
       
       - name: 📊 Generate Coverage Report
@@ -253,6 +254,11 @@ jobs:
       - name: 🏗️ Build Application
         working-directory: ./backend
         run: mvn clean package -DskipTests
+      
+      - name: 🐳 Build Docker Image
+        working-directory: ./backend
+        run: |
+          docker build -t guardianes-de-gaia-backend:latest -f Dockerfile.dev .
       
       - name: 🐳 Run Docker Integration Tests
         working-directory: ./backend
