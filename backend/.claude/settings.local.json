@@ -53,7 +53,8 @@
       "Bash(timeout 30 mvn clean compile)",
       "Bash(timeout 60 mvn test -Dtest=*GuardianTest*)",
       "Bash(timeout 60 mvn test -Dtest='*GuardianTest*')",
-      "Bash(timeout 60 mvn compile spotbugs:check)"
+      "Bash(timeout 60 mvn compile spotbugs:check)",
+      "Bash(gh secret:*)"
     ],
     "deny": []
   }
