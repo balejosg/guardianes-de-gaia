@@ -13,28 +13,27 @@ import org.springframework.context.annotation.Primary;
 @TestConfiguration
 public class TestJpaConfiguration {
 
-    @Bean
-    @Primary
-    public StepRepository stepRepository(
-            StepRecordJpaRepository stepRecordJpaRepository,
-            DailyStepAggregateJpaRepository dailyStepAggregateJpaRepository,
-            StepRecordMapper stepRecordMapper,
-            DailyStepAggregateMapper dailyStepAggregateMapper) {
-        return new JpaStepRepository(
-            stepRecordJpaRepository,
-            dailyStepAggregateJpaRepository,
-            stepRecordMapper,
-            dailyStepAggregateMapper
-        );
-    }
+  @Bean
+  @Primary
+  public StepRepository stepRepository(
+      StepRecordJpaRepository stepRecordJpaRepository,
+      DailyStepAggregateJpaRepository dailyStepAggregateJpaRepository,
+      StepRecordMapper stepRecordMapper,
+      DailyStepAggregateMapper dailyStepAggregateMapper) {
+    return new JpaStepRepository(
+        stepRecordJpaRepository,
+        dailyStepAggregateJpaRepository,
+        stepRecordMapper,
+        dailyStepAggregateMapper);
+  }
 
-    @Bean
-    public StepRecordMapper stepRecordMapper() {
-        return new StepRecordMapper();
-    }
+  @Bean
+  public StepRecordMapper stepRecordMapper() {
+    return new StepRecordMapper();
+  }
 
-    @Bean
-    public DailyStepAggregateMapper dailyStepAggregateMapper() {
-        return new DailyStepAggregateMapper();
-    }
+  @Bean
+  public DailyStepAggregateMapper dailyStepAggregateMapper() {
+    return new DailyStepAggregateMapper();
+  }
 }

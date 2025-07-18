@@ -7,5 +7,4 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @Configuration
 @EnableJpaRepositories(basePackages = "com.guardianes")
 @ConditionalOnProperty(name = "guardianes.jpa.enabled", havingValue = "true", matchIfMissing = true)
-public class JpaConfig {
-}
+public class JpaConfig {}

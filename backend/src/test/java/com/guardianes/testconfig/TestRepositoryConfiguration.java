@@ -13,15 +13,15 @@ import org.springframework.context.annotation.Profile;
 @Profile("test")
 public class TestRepositoryConfiguration {
 
-    @Bean
-    @Primary
-    public StepRepository stepRepository() {
-        return new InMemoryStepRepository();
-    }
+  @Bean
+  @Primary
+  public StepRepository stepRepository() {
+    return new InMemoryStepRepository();
+  }
 
-    @Bean
-    @Primary
-    public EnergyRepository energyRepository() {
-        return new InMemoryEnergyRepository();
-    }
+  @Bean
+  @Primary
+  public EnergyRepository energyRepository() {
+    return new InMemoryEnergyRepository();
+  }
 }

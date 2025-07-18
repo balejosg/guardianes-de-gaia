@@ -57,7 +57,9 @@
       "Bash(gh secret:*)",
       "Bash(yamllint:*)",
       "Bash(python3:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(timeout 60 mvn clean test)",
+      "Bash(timeout 60 mvn clean test -q)"
     ],
     "deny": []
   }

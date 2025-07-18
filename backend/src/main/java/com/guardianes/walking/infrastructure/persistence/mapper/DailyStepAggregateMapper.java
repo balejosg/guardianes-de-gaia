@@ -6,26 +6,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DailyStepAggregateMapper {
-    
-    public DailyStepAggregateEntity toEntity(DailyStepAggregate domain) {
-        if (domain == null) {
-            return null;
-        }
-        return new DailyStepAggregateEntity(
-            domain.getGuardianId(),
-            domain.getDate(),
-            domain.getTotalSteps()
-        );
+
+  public DailyStepAggregateEntity toEntity(DailyStepAggregate domain) {
+    if (domain == null) {
+      return null;
     }
-    
-    public DailyStepAggregate toDomain(DailyStepAggregateEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-        return new DailyStepAggregate(
-            entity.getGuardianId(),
-            entity.getDate(),
-            entity.getTotalSteps()
-        );
+    return new DailyStepAggregateEntity(
+        domain.getGuardianId(), domain.getDate(), domain.getTotalSteps());
+  }
+
+  public DailyStepAggregate toDomain(DailyStepAggregateEntity entity) {
+    if (entity == null) {
+      return null;
     }
+    return new DailyStepAggregate(entity.getGuardianId(), entity.getDate(), entity.getTotalSteps());
+  }
 }

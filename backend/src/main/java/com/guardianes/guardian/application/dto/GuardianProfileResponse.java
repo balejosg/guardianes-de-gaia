@@ -1,7 +1,6 @@
 package com.guardianes.guardian.application.dto;
 
 import com.guardianes.guardian.domain.model.GuardianLevel;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -19,5 +18,4 @@ public record GuardianProfileResponse(
     int totalEnergyGenerated,
     LocalDateTime createdAt,
     LocalDateTime lastActiveAt,
-    boolean isChild
-) {}
+    boolean isChild) {}

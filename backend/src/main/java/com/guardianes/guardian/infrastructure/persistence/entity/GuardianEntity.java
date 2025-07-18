@@ -8,191 +8,202 @@ import java.util.Objects;
 @Entity
 @Table(name = "guardians")
 public class GuardianEntity {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @Column(unique = true, nullable = false, length = 20)
-    private String username;
-    
-    @Column(unique = true, nullable = false, length = 100)
-    private String email;
-    
-    @Column(nullable = false, length = 255)
-    private String passwordHash;
-    
-    @Column(nullable = false, length = 50)
-    private String name;
-    
-    @Column(nullable = false)
-    private LocalDate birthDate;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private GuardianLevelEntity level = GuardianLevelEntity.INITIATE;
-    
-    @Column(nullable = false)
-    private Integer experiencePoints = 0;
-    
-    @Column(nullable = false)
-    private Integer totalSteps = 0;
-    
-    @Column(nullable = false)
-    private Integer totalEnergyGenerated = 0;
-    
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-    
-    @Column(nullable = false)
-    private LocalDateTime lastActiveAt;
-    
-    @Column(nullable = false)
-    private Boolean active = true;
-    
-    public GuardianEntity() {
-        this.createdAt = LocalDateTime.now();
-        this.lastActiveAt = LocalDateTime.now();
-    }
-    
-    public GuardianEntity(String username, String email, String passwordHash, String name, LocalDate birthDate) {
-        this();
-        this.username = username;
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.name = name;
-        this.birthDate = birthDate;
-    }
 
-    public Long getId() {
-        return id;
-    }
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+  @Column(unique = true, nullable = false, length = 20)
+  private String username;
 
-    public String getUsername() {
-        return username;
-    }
+  @Column(unique = true, nullable = false, length = 100)
+  private String email;
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+  @Column(nullable = false, length = 255)
+  private String passwordHash;
 
-    public String getEmail() {
-        return email;
-    }
+  @Column(nullable = false, length = 50)
+  private String name;
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+  @Column(nullable = false)
+  private LocalDate birthDate;
 
-    public String getPasswordHash() {
-        return passwordHash;
-    }
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  private GuardianLevelEntity level = GuardianLevelEntity.INITIATE;
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
+  @Column(nullable = false)
+  private Integer experiencePoints = 0;
 
-    public String getName() {
-        return name;
-    }
+  @Column(nullable = false)
+  private Integer totalSteps = 0;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  @Column(nullable = false)
+  private Integer totalEnergyGenerated = 0;
 
-    public LocalDate getBirthDate() {
-        return birthDate;
-    }
+  @Column(nullable = false)
+  private LocalDateTime createdAt;
 
-    public void setBirthDate(LocalDate birthDate) {
-        this.birthDate = birthDate;
-    }
+  @Column(nullable = false)
+  private LocalDateTime lastActiveAt;
 
-    public GuardianLevelEntity getLevel() {
-        return level;
-    }
+  @Column(nullable = false)
+  private Boolean active = true;
 
-    public void setLevel(GuardianLevelEntity level) {
-        this.level = level;
-    }
+  public GuardianEntity() {
+    this.createdAt = LocalDateTime.now();
+    this.lastActiveAt = LocalDateTime.now();
+  }
 
-    public Integer getExperiencePoints() {
-        return experiencePoints;
-    }
+  public GuardianEntity(
+      String username, String email, String passwordHash, String name, LocalDate birthDate) {
+    this();
+    this.username = username;
+    this.email = email;
+    this.passwordHash = passwordHash;
+    this.name = name;
+    this.birthDate = birthDate;
+  }
 
-    public void setExperiencePoints(Integer experiencePoints) {
-        this.experiencePoints = experiencePoints;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public Integer getTotalSteps() {
-        return totalSteps;
-    }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public void setTotalSteps(Integer totalSteps) {
-        this.totalSteps = totalSteps;
-    }
+  public String getUsername() {
+    return username;
+  }
 
-    public Integer getTotalEnergyGenerated() {
-        return totalEnergyGenerated;
-    }
+  public void setUsername(String username) {
+    this.username = username;
+  }
 
-    public void setTotalEnergyGenerated(Integer totalEnergyGenerated) {
-        this.totalEnergyGenerated = totalEnergyGenerated;
-    }
+  public String getEmail() {
+    return email;
+  }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+  public void setEmail(String email) {
+    this.email = email;
+  }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+  public String getPasswordHash() {
+    return passwordHash;
+  }
 
-    public LocalDateTime getLastActiveAt() {
-        return lastActiveAt;
-    }
+  public void setPasswordHash(String passwordHash) {
+    this.passwordHash = passwordHash;
+  }
 
-    public void setLastActiveAt(LocalDateTime lastActiveAt) {
-        this.lastActiveAt = lastActiveAt;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public Boolean getActive() {
-        return active;
-    }
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public void setActive(Boolean active) {
-        this.active = active;
-    }
+  public LocalDate getBirthDate() {
+    return birthDate;
+  }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        GuardianEntity that = (GuardianEntity) o;
-        return Objects.equals(id, that.id) &&
-               Objects.equals(username, that.username) &&
-               Objects.equals(email, that.email);
-    }
+  public void setBirthDate(LocalDate birthDate) {
+    this.birthDate = birthDate;
+  }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, username, email);
-    }
+  public GuardianLevelEntity getLevel() {
+    return level;
+  }
 
-    @Override
-    public String toString() {
-        return "GuardianEntity{" +
-               "id=" + id +
-               ", username='" + username + '\'' +
-               ", email='" + email + '\'' +
-               ", name='" + name + '\'' +
-               ", level=" + level +
-               ", experiencePoints=" + experiencePoints +
-               ", active=" + active +
-               '}';
-    }
+  public void setLevel(GuardianLevelEntity level) {
+    this.level = level;
+  }
+
+  public Integer getExperiencePoints() {
+    return experiencePoints;
+  }
+
+  public void setExperiencePoints(Integer experiencePoints) {
+    this.experiencePoints = experiencePoints;
+  }
+
+  public Integer getTotalSteps() {
+    return totalSteps;
+  }
+
+  public void setTotalSteps(Integer totalSteps) {
+    this.totalSteps = totalSteps;
+  }
+
+  public Integer getTotalEnergyGenerated() {
+    return totalEnergyGenerated;
+  }
+
+  public void setTotalEnergyGenerated(Integer totalEnergyGenerated) {
+    this.totalEnergyGenerated = totalEnergyGenerated;
+  }
+
+  public LocalDateTime getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(LocalDateTime createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  public LocalDateTime getLastActiveAt() {
+    return lastActiveAt;
+  }
+
+  public void setLastActiveAt(LocalDateTime lastActiveAt) {
+    this.lastActiveAt = lastActiveAt;
+  }
+
+  public Boolean getActive() {
+    return active;
+  }
+
+  public void setActive(Boolean active) {
+    this.active = active;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    GuardianEntity that = (GuardianEntity) o;
+    return Objects.equals(id, that.id)
+        && Objects.equals(username, that.username)
+        && Objects.equals(email, that.email);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, username, email);
+  }
+
+  @Override
+  public String toString() {
+    return "GuardianEntity{"
+        + "id="
+        + id
+        + ", username='"
+        + username
+        + '\''
+        + ", email='"
+        + email
+        + '\''
+        + ", name='"
+        + name
+        + '\''
+        + ", level="
+        + level
+        + ", experiencePoints="
+        + experiencePoints
+        + ", active="
+        + active
+        + '}';
+  }
 }

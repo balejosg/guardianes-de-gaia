@@ -13,18 +13,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @TestConfiguration
 public class GuardianTestConfiguration {
 
-    @MockBean
-    private GuardianRepository guardianRepository;
+  @MockBean private GuardianRepository guardianRepository;
 
-    @MockBean
-    private GuardianRegistrationService guardianRegistrationService;
+  @MockBean private GuardianRegistrationService guardianRegistrationService;
 
-    @MockBean
-    private GuardianAuthenticationService guardianAuthenticationService;
+  @MockBean private GuardianAuthenticationService guardianAuthenticationService;
 
-    @Bean
-    @Primary
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+  @Bean
+  @Primary
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
 }

@@ -17,36 +17,38 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**", "/actuator/**")
-            )
-            .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/actuator/**").authenticated()
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().authenticated()
-            )
-            .httpBasic(basic -> basic.realmName("Guardianes API"));
-            
-        return http.build();
-    }
+  @Bean
+  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/actuator/**"))
+        .authorizeHttpRequests(
+            authz ->
+                authz
+                    .requestMatchers("/actuator/**")
+                    .authenticated()
+                    .requestMatchers("/api/**")
+                    .authenticated()
+                    .anyRequest()
+                    .authenticated())
+        .httpBasic(basic -> basic.realmName("Guardianes API"));
 
-    @Bean
-    @ConditionalOnMissingBean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    return http.build();
+  }
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password(passwordEncoder().encode("dev123"))
-                .roles("ADMIN")
-                .build();
+  @Bean
+  @ConditionalOnMissingBean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
 
-        return new InMemoryUserDetailsManager(admin);
-    }
+  @Bean
+  public UserDetailsService userDetailsService() {
+    UserDetails admin =
+        User.builder()
+            .username("admin")
+            .password(passwordEncoder().encode("dev123"))
+            .roles("ADMIN")
+            .build();
+
+    return new InMemoryUserDetailsManager(admin);
+  }
 }

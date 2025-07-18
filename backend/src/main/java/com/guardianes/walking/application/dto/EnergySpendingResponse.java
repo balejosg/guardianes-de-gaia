@@ -7,5 +7,4 @@ public record EnergySpendingResponse(
     Integer newBalance,
     Integer amountSpent,
     EnergySpendingSource source,
-    String message
-) {}
+    String message) {}
