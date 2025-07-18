@@ -75,21 +75,23 @@ jobs:
           fi
       
       - name: 🔍 SonarQube Quality Gate
+        if: secrets.SONAR_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         working-directory: ./backend
         run: |
-          if [ -n "$SONAR_TOKEN" ]; then
-            echo "🔍 Running SonarQube analysis..."
-            mvn sonar:sonar \
-              -Dsonar.projectKey=guardianes-de-gaia-backend \
-              -Dsonar.organization=${{ github.repository_owner }} \
-              -Dsonar.host.url=https://sonarcloud.io \
-              -Dsonar.qualitygate.wait=true
-          else
-            echo "⚠️ SonarQube analysis skipped - no token provided"
-          fi
+          echo "🔍 Running SonarQube analysis..."
+          mvn sonar:sonar \
+            -Dsonar.projectKey=guardianes-de-gaia-backend \
+            -Dsonar.organization=${{ github.repository_owner }} \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.qualitygate.wait=true
+      
+      - name: 📊 SonarQube Skip Message
+        if: '!secrets.SONAR_TOKEN'
+        run: |
+          echo "⚠️ SonarQube analysis skipped - no token provided"
       
       - name: 📐 Check code formatting
         working-directory: ./backend
@@ -206,8 +208,8 @@ jobs:
             p/java
             p/owasp-top-ten
             p/spring
-          publishToken: ${{ secrets.SEMGREP_PUBLISH_TOKEN }}
-          publishDeployment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          publishToken: ${{ secrets.SEMGREP_PUBLISH_TOKEN || '' }}
+          publishDeployment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.SEMGREP_PUBLISH_TOKEN }}
           generateSarif: "1"
       
       - name: 📤 Upload Semgrep results
@@ -253,6 +255,7 @@ jobs:
           path: backend/target/dependency-check-report.html
       
       - name: 🔍 Snyk vulnerability scan
+        if: secrets.SNYK_TOKEN
         uses: snyk/actions/maven@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -261,7 +264,7 @@ jobs:
         continue-on-error: true
       
       - name: 📤 Upload Snyk results
-        if: always()
+        if: always() && secrets.SNYK_TOKEN
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk.sarif
