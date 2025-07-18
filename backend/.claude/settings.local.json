@@ -61,7 +61,9 @@
       "Bash(timeout 60 mvn clean test)",
       "Bash(timeout 60 mvn clean test -q)",
       "Bash(timeout 60 mvn test -Dtest=GuardianTest)",
-      "Bash(timeout 60 mvn test -Dtest=GuardianLevelTest)"
+      "Bash(timeout 60 mvn test -Dtest=GuardianLevelTest)",
+      "Bash(timeout 120 mvn test -Dtest=DockerHealthTest)",
+      "Bash(timeout 60 mvn test -Dtest=StepSubmissionEnergyIntegrationTest)"
     ],
     "deny": []
   }

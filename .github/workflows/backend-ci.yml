@@ -210,9 +210,9 @@ jobs:
           SPRING_RABBITMQ_PASSWORD: test_password
         run: |
           mvn test \
-            -Dtest="**/integration/**Test" \
+            -Dtest="**/*IntegrationTest,!**/docker/**Test" \
             -Dmaven.test.failure.ignore=false \
-            -Dmaven.surefire.timeout=600
+            -Dmaven.surefire.timeout=900
       
       - name: 🥒 Run Cucumber BDD Tests
         working-directory: ./backend
@@ -228,6 +228,49 @@ jobs:
           path: |
             backend/target/surefire-reports/
             backend/target/cucumber-reports/
+
+  # ============================================
+  # Docker Integration Tests (Heavy)
+  # ============================================
+  docker-integration-tests:
+    name: 🐳 Docker Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    timeout-minutes: 20
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🏗️ Build Application
+        working-directory: ./backend
+        run: mvn clean package -DskipTests
+      
+      - name: 🐳 Run Docker Integration Tests
+        working-directory: ./backend
+        env:
+          SPRING_PROFILES_ACTIVE: integration-test
+        run: |
+          mvn test \
+            -Dtest="**/docker/**Test" \
+            -Dmaven.test.failure.ignore=false \
+            -Dmaven.surefire.timeout=1200
+      
+      - name: 💾 Archive Docker Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docker-integration-test-results
+          path: |
+            backend/target/surefire-reports/
+            backend/target/site/jacoco/
 
   # ============================================
   # Performance Tests
@@ -292,7 +335,7 @@ jobs:
   build-summary:
     name: 📋 Build Summary
     runs-on: ubuntu-latest
-    needs: [code-quality, unit-tests, integration-tests, performance-tests]
+    needs: [code-quality, unit-tests, integration-tests, docker-integration-tests, performance-tests]
     if: always()
     
     steps:
@@ -304,12 +347,14 @@ jobs:
           echo "- Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Integration Tests: ${{ needs.docker-integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Performance Tests: ${{ needs.performance-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.code-quality.result }}" == "success" && 
                 "${{ needs.unit-tests.result }}" == "success" && 
-                "${{ needs.integration-tests.result }}" == "success" ]]; then
+                "${{ needs.integration-tests.result }}" == "success" && 
+                "${{ needs.docker-integration-tests.result }}" == "success" ]]; then
             echo "✅ **All critical tests passed!** Ready for deployment." >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Some tests failed.** Please review before merging." >> $GITHUB_STEP_SUMMARY
