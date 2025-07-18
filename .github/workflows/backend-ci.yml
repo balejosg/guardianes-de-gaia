@@ -18,7 +18,7 @@ on:
 
 env:
   JAVA_VERSION: '17'
-  MAVEN_OPTS: '-Xmx2048m -XX:MaxPermSize=512m'
+  MAVEN_OPTS: '-Xmx2048m -XX:MaxMetaspaceSize=512m'
   TESTCONTAINERS_RYUK_DISABLED: 'true'
 
 jobs:
