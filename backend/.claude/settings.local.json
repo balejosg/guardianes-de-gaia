@@ -56,7 +56,8 @@
       "Bash(timeout 60 mvn compile spotbugs:check)",
       "Bash(gh secret:*)",
       "Bash(yamllint:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

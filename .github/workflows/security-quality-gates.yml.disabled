@@ -89,7 +89,7 @@ jobs:
             -Dsonar.qualitygate.wait=true
       
       - name: 📊 SonarQube Skip Message
-        if: '!secrets.SONAR_TOKEN'
+        if: ${{ !secrets.SONAR_TOKEN }}
         run: |
           echo "⚠️ SonarQube analysis skipped - no token provided"
       
