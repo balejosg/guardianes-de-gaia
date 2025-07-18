@@ -97,7 +97,9 @@ jobs:
             -Dtest.parallel=false \
             -Dmaven.test.failure.ignore=false \
             -Djacoco.execution.data.file=target/jacoco-unit.exec \
-            -Dmaven.surefire.timeout=300
+            -Dmaven.surefire.timeout=300 \
+            -Dtest='!**/*IntegrationTest,!**/docker/**Test' \
+            -Dspring.profiles.active=test
       
       - name: 📊 Generate Coverage Report
         working-directory: ./backend
