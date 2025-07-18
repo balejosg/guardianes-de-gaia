@@ -98,7 +98,6 @@ jobs:
             -Dmaven.test.failure.ignore=false \
             -Djacoco.execution.data.file=target/jacoco-unit.exec \
             -Dmaven.surefire.timeout=300 \
-            -Dtest='!**/*IntegrationTest,!**/docker/**Test' \
             -Dspring.profiles.active=test
       
       - name: 📊 Generate Coverage Report
@@ -212,7 +211,7 @@ jobs:
           SPRING_RABBITMQ_PASSWORD: test_password
         run: |
           mvn test \
-            -Dtest="**/*IntegrationTest,!**/docker/**Test" \
+            -Dtest="**/*IntegrationTest" \
             -Dmaven.test.failure.ignore=false \
             -Dmaven.surefire.timeout=900
       
@@ -261,7 +260,7 @@ jobs:
           SPRING_PROFILES_ACTIVE: integration-test
         run: |
           mvn test \
-            -Dtest="**/docker/**Test" \
+            -Dtest="**/docker/*Test" \
             -Dmaven.test.failure.ignore=false \
             -Dmaven.surefire.timeout=1200
       
