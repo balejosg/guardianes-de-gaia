@@ -65,7 +65,8 @@
       "Bash(timeout 120 mvn test -Dtest=DockerHealthTest)",
       "Bash(timeout 60 mvn test -Dtest=StepSubmissionEnergyIntegrationTest)",
       "Bash(timeout 60 mvn test:*)",
-      "Bash(sudo rm:*)"
+      "Bash(sudo rm:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": []
   }

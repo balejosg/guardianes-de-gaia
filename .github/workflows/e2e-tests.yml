@@ -1,0 +1,319 @@
+name: 🌐 End-to-End API Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '*.js'
+      - 'package.json'
+      - '.github/workflows/e2e-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '*.js'
+      - 'package.json'
+      - '.github/workflows/e2e-tests.yml'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'E2E Test Suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - functional-api
+          - user-journey
+          - simple-journey
+          - visual-journey
+
+env:
+  NODE_VERSION: '18'
+  BACKEND_PORT: 8080
+  TEST_TIMEOUT: 300000  # 5 minutes
+
+jobs:
+  # ============================================
+  # Backend Service Setup
+  # ============================================
+  backend-setup:
+    name: 🚀 Backend Service Setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    outputs:
+      backend-ready: ${{ steps.health-check.outputs.ready }}
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_test_secret
+          MYSQL_DATABASE: guardianes_test
+          MYSQL_USER: guardianes_test
+          MYSQL_PASSWORD: test_secret
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost -u root -proot_test_secret" --health-interval=10s --health-timeout=5s --health-retries=5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=3s --health-retries=3
+      
+      rabbitmq:
+        image: rabbitmq:3.12-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: guardian_test
+          RABBITMQ_DEFAULT_PASS: rabbit_test_secret
+          RABBITMQ_DEFAULT_VHOST: /test
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: --health-cmd="rabbitmq-diagnostics ping" --health-interval=30s --health-timeout=10s --health-retries=5
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: 🏗️ Build Backend
+        working-directory: ./backend
+        run: |
+          mvn clean compile -DskipTests
+      
+      - name: 🚀 Start Backend Service
+        working-directory: ./backend
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/guardianes_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          SPRING_DATASOURCE_USERNAME: guardianes_test
+          SPRING_DATASOURCE_PASSWORD: test_secret
+          SPRING_REDIS_HOST: localhost
+          SPRING_REDIS_PORT: 6379
+          SPRING_RABBITMQ_HOST: localhost
+          SPRING_RABBITMQ_PORT: 5672
+          SERVER_PORT: ${{ env.BACKEND_PORT }}
+        run: |
+          mvn spring-boot:run &
+          BACKEND_PID=$!
+          echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+          echo "Backend started with PID: $BACKEND_PID"
+      
+      - name: ⏳ Wait for Backend Health
+        id: health-check
+        run: |
+          echo "Waiting for backend to be ready..."
+          for i in {1..30}; do
+            if curl -f http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
+              echo "Backend is ready!"
+              echo "ready=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "Attempt $i/30: Backend not ready yet, waiting 10 seconds..."
+            sleep 10
+          done
+          echo "Backend failed to start within timeout"
+          echo "ready=false" >> $GITHUB_OUTPUT
+          exit 1
+      
+      - name: 📊 Backend Status Check
+        if: always()
+        run: |
+          echo "## 🚀 Backend Service Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Check**: ${{ steps.health-check.outputs.ready == 'true' && '✅ Ready' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Port**: ${{ env.BACKEND_PORT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Profile**: test" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # E2E Test Execution
+  # ============================================
+  e2e-tests:
+    name: 🧪 E2E Tests (${{ matrix.test-file }})
+    runs-on: ubuntu-latest
+    needs: [backend-setup]
+    if: needs.backend-setup.outputs.backend-ready == 'true'
+    permissions:
+      contents: read
+    
+    strategy:
+      matrix:
+        test-file:
+          - functional-api-test.js
+          - user-journey-test.js
+          - simple-journey-test.js
+          - visual-journey-test.js
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📦 Install Dependencies
+        run: |
+          npm install
+          # Install additional dependencies if needed
+          npm list puppeteer || npm install puppeteer
+      
+      - name: 🚀 Restart Backend Services
+        run: |
+          # Restart backend for this test matrix
+          echo "Setting up backend services for E2E tests..."
+          docker compose -f docker-compose.test.yml up -d || echo "Docker compose not available, using services from previous job"
+          
+          # Wait for backend to be ready
+          timeout 120 bash -c 'until curl -f http://localhost:${{ env.BACKEND_PORT }}/actuator/health; do sleep 5; done'
+      
+      - name: 🧪 Run E2E Test - ${{ matrix.test-file }}
+        id: test-execution
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          CI: 'true'
+          BACKEND_URL: 'http://localhost:${{ env.BACKEND_PORT }}'
+          SCREENSHOTS_ENABLED: 'true'
+          LOG_LEVEL: 'info'
+        run: |
+          echo "Running E2E test: ${{ matrix.test-file }}"
+          
+          # Create required directories
+          npm run pretest
+          
+          # Extract test name for targeted execution
+          TEST_NAME=$(echo "${{ matrix.test-file }}" | sed 's/-test\.js$//' | sed 's/\.js$//')
+          
+          # Run the specific test using the test runner
+          timeout ${{ env.TEST_TIMEOUT }} npm run test:$TEST_NAME || {
+            echo "Test failed or timed out"
+            exit 1
+          }
+        continue-on-error: false
+      
+      - name: 📸 Upload Screenshots & Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.test-file }}-${{ github.run_id }}
+          path: |
+            screenshots/
+            e2e-test-results.json
+            *.png
+            logs/
+          retention-days: 7
+      
+      - name: 📋 Collect Logs
+        if: failure()
+        run: |
+          echo "Collecting logs for debugging..."
+          mkdir -p logs
+          
+          # Backend logs
+          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/loggers > logs/backend-loggers.json || echo "Could not get backend loggers"
+          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/metrics > logs/backend-metrics.json || echo "Could not get backend metrics"
+          
+          # System logs
+          docker compose -f docker-compose.test.yml logs > logs/docker-services.log 2>&1 || echo "Could not get docker logs"
+      
+      - name: 📤 Upload Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logs-${{ matrix.test-file }}-${{ github.run_id }}
+          path: logs/
+          retention-days: 3
+      
+      - name: 🛑 Cleanup
+        if: always()
+        run: |
+          # Stop any running processes
+          docker compose -f docker-compose.test.yml down || echo "Docker compose cleanup skipped"
+          pkill -f "spring-boot:run" || echo "No Spring Boot processes to kill"
+
+  # ============================================
+  # E2E Test Summary
+  # ============================================
+  e2e-summary:
+    name: 📋 E2E Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-setup, e2e-tests]
+    if: always()
+    permissions:
+      contents: read
+    
+    steps:
+      - name: 📊 Generate E2E Test Summary
+        run: |
+          echo "## 🌐 End-to-End Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Test Execution Status:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend Setup**: ${{ needs.backend-setup.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **E2E Tests**: ${{ needs.e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.backend-setup.result }}" == "success" && "${{ needs.e2e-tests.result }}" == "success" ]]; then
+            echo "✅ **All E2E tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The complete user journey validation has been verified." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Some E2E tests failed.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the test logs and screenshots for debugging." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📸 Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
+          echo "- Screenshots from all test runs" >> $GITHUB_STEP_SUMMARY
+          echo "- Debug logs for failed tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance metrics and health checks" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 🚨 Notify on E2E Failure
+        if: failure() || needs.e2e-tests.result == 'failure'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#guardianes-testing'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          custom_payload: |
+            {
+              "text": "🚨 E2E Tests failed in Guardianes de Gaia",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "fields": [
+                    {
+                      "title": "Backend Setup",
+                      "value": "${{ needs.backend-setup.result }}",
+                      "short": true
+                    },
+                    {
+                      "title": "E2E Tests",
+                      "value": "${{ needs.e2e-tests.result }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        continue-on-error: true

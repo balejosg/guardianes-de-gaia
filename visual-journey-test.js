@@ -7,20 +7,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-const CONFIG = {
-    baseUrl: 'http://localhost:8080',
-    grafanaUrl: 'http://localhost:3000',
-    credentials: {
-        username: 'admin',
-        password: '7kF2xN4pM8vWc1uE5rT9hY3oS0nB6qA3dX7vC5mN2p'
-    },
-    screenshots: './screenshots/visual-journey',
-    delays: {
-        short: 1000,
-        medium: 2000,
-        long: 3000
-    }
-};
+const CONFIG = require('./e2e-config');
 
 class VisualUserJourney {
     constructor() {

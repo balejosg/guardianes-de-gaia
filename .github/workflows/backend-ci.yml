@@ -313,17 +313,50 @@ jobs:
           wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.2.tgz
           tar -xzf apache-jmeter-5.6.2.tgz
           
-          # Run performance tests (if JMeter test plans exist)
+          # Wait for backend to be fully ready
+          echo "🔄 Waiting for backend to be ready..."
+          timeout 60 sh -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
+          
+          # Run comprehensive JMeter performance tests
+          echo "📊 Running JMeter Performance Test Suite..."
+          
+          # 1. Load Test (moderate load for CI environment)
           if [ -f "backend/src/test/jmeter/load-test.jmx" ]; then
+            echo "🔄 Running Load Tests..."
             ./apache-jmeter-5.6.2/bin/jmeter -n \
               -t backend/src/test/jmeter/load-test.jmx \
-              -l performance-results.jtl \
-              -e -o performance-report/
-          else
-            echo "📊 Creating basic performance test..."
-            curl -f http://localhost:8080/actuator/health || exit 1
-            echo "✅ Basic health check passed"
+              -l load-test-results.jtl \
+              -e -o load-test-report/ \
+              -Jusers=5 \
+              -Jramp.up=10 \
+              -Jduration=30 \
+              -Jbase.url=http://localhost:8080
           fi
+          
+          # 2. API Validation Test (functional verification)
+          if [ -f "backend/src/test/jmeter/api-validation-test.jmx" ]; then
+            echo "🔍 Running API Validation Tests..."
+            ./apache-jmeter-5.6.2/bin/jmeter -n \
+              -t backend/src/test/jmeter/api-validation-test.jmx \
+              -l api-validation-results.jtl \
+              -e -o api-validation-report/ \
+              -Jbase.url=http://localhost:8080
+          fi
+          
+          # 3. Stress Test (lightweight for CI)
+          if [ -f "backend/src/test/jmeter/stress-test.jmx" ]; then
+            echo "⚡ Running Stress Tests (CI mode)..."
+            ./apache-jmeter-5.6.2/bin/jmeter -n \
+              -t backend/src/test/jmeter/stress-test.jmx \
+              -l stress-test-results.jtl \
+              -e -o stress-test-report/ \
+              -Jstress.users=10 \
+              -Jstress.ramp.up=20 \
+              -Jstress.duration=30 \
+              -Jbase.url=http://localhost:8080
+          fi
+          
+          echo "✅ All JMeter tests completed"
       
       - name: 🛑 Stop Test Environment
         if: always()
@@ -334,7 +367,11 @@ jobs:
         if: always()
         with:
           name: performance-test-results
-          path: performance-report/
+          path: |
+            load-test-report/
+            api-validation-report/
+            stress-test-report/
+            *.jtl
 
   # ============================================
   # Build Summary
@@ -356,6 +393,11 @@ jobs:
           echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Docker Integration Tests: ${{ needs.docker-integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Performance Tests: ${{ needs.performance-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 End-to-End Tests:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Available in separate E2E workflow" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: Runs automatically on push/PR" >> $GITHUB_STEP_SUMMARY
+          echo "- **Coverage**: 4 comprehensive test suites (Functional API, User Journey, Simple Journey, Visual Interface)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.code-quality.result }}" == "success" && 

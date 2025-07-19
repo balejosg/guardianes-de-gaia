@@ -1,10 +1,11 @@
 package com.guardianes.cucumber;
 
-import io.cucumber.junit.Cucumber;
 import io.cucumber.junit.CucumberOptions;
-import org.junit.runner.RunWith;
+import org.junit.platform.suite.api.SelectClasspathResource;
+import org.junit.platform.suite.api.Suite;
 
-@RunWith(Cucumber.class)
+@Suite
+@SelectClasspathResource("features")
 @CucumberOptions(
     features = "src/test/resources/features",
     glue = "com.guardianes.cucumber",

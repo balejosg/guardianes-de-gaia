@@ -6,28 +6,7 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
-
-// Test configuration
-const CONFIG = {
-    baseUrl: 'http://localhost:8080',
-    testUser: {
-        username: 'admin',
-        password: 'admin123'
-    },
-    testGuardian: {
-        id: 1,
-        name: 'Test Guardian'
-    },
-    screenshots: {
-        enabled: true,
-        directory: './screenshots/user-journey'
-    },
-    delays: {
-        short: 1000,
-        medium: 2000,
-        long: 3000
-    }
-};
+const CONFIG = require('./e2e-config');
 
 class GuardianesUserJourney {
     constructor() {

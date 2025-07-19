@@ -306,15 +306,44 @@ jobs:
     name: 🔗 Mobile-Backend Integration
     runs-on: ubuntu-latest
     needs: [flutter-tests]
+    timeout-minutes: 30
     
     services:
-      backend:
-        image: openjdk:17-jdk-slim
-        options: --health-cmd "curl -f http://localhost:8080/actuator/health || exit 1"
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: guardianes_test
+          MYSQL_USER: guardianes_test
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
       
       - name: 🎯 Setup Flutter
         uses: subosito/flutter-action@v2
@@ -322,22 +351,123 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       
-      - name: 🏗️ Start Backend Services
-        run: |
-          # Start minimal backend for API testing
-          docker compose -f docker-compose.test.yml up -d
-          sleep 30  # Wait for services
+      - name: 📦 Get Flutter Dependencies
+        working-directory: ./mobile/guardianes_mobile
+        run: flutter pub get
       
-      - name: 🧪 Run Integration Tests
+      - name: 🔧 Generate Flutter Code
         working-directory: ./mobile/guardianes_mobile
         run: |
-          # Run integration tests that connect to real backend
-          flutter test integration_test/ || echo "No integration tests found"
+          flutter packages pub run build_runner build --delete-conflicting-outputs
       
-      - name: 🛑 Stop Backend Services
+      - name: ⏳ Wait for Services
+        run: |
+          echo "🔄 Waiting for MySQL..."
+          timeout 60 sh -c 'until nc -z localhost 3306; do sleep 1; done'
+          echo "🔄 Waiting for Redis..."
+          timeout 30 sh -c 'until nc -z localhost 6379; do sleep 1; done'
+          echo "✅ All services ready!"
+      
+      - name: 🏗️ Build Backend
+        working-directory: ./backend
+        run: mvn clean package -DskipTests
+      
+      - name: 🚀 Start Backend Application
+        working-directory: ./backend
+        env:
+          SPRING_PROFILES_ACTIVE: integration-test
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/guardianes_test
+          SPRING_DATASOURCE_USERNAME: guardianes_test
+          SPRING_DATASOURCE_PASSWORD: test_password
+          SPRING_REDIS_HOST: localhost
+          SPRING_REDIS_PORT: 6379
+        run: |
+          # Start backend in background
+          java -jar target/*.jar &
+          BACKEND_PID=$!
+          echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+          
+          # Wait for backend to be ready
+          echo "🔄 Waiting for backend to start..."
+          timeout 120 sh -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
+          echo "✅ Backend is ready!"
+      
+      - name: 🧪 Run Guardian Authentication Integration Tests
+        working-directory: ./mobile/guardianes_mobile
+        env:
+          BACKEND_URL: http://localhost:8080
+        run: |
+          echo "🔐 Running Guardian Authentication Integration Tests..."
+          flutter test integration_test/guardian_auth_integration_test.dart \
+            --dart-define=BACKEND_URL=http://localhost:8080 \
+            --reporter=expanded
+      
+      - name: 🧪 Run Step Tracking Integration Tests
+        working-directory: ./mobile/guardianes_mobile
+        env:
+          BACKEND_URL: http://localhost:8080
+        run: |
+          echo "🚶 Running Step Tracking Integration Tests..."
+          flutter test integration_test/step_tracking_integration_test.dart \
+            --dart-define=BACKEND_URL=http://localhost:8080 \
+            --reporter=expanded
+      
+      - name: 🧪 Run Complete App Flow Integration Tests
+        working-directory: ./mobile/guardianes_mobile
+        env:
+          BACKEND_URL: http://localhost:8080
+        run: |
+          echo "🔄 Running Complete App Flow Integration Tests..."
+          flutter test integration_test/app_flow_integration_test.dart \
+            --dart-define=BACKEND_URL=http://localhost:8080 \
+            --reporter=expanded
+      
+      - name: 🧪 Run All Integration Tests (Comprehensive)
+        working-directory: ./mobile/guardianes_mobile
+        env:
+          BACKEND_URL: http://localhost:8080
+          VERBOSE_TESTS: 'true'
+        run: |
+          echo "🎯 Running All Integration Tests..."
+          flutter test integration_test/ \
+            --dart-define=BACKEND_URL=http://localhost:8080 \
+            --dart-define=VERBOSE_TESTS=true \
+            --reporter=expanded \
+            --coverage
+      
+      - name: 📊 Generate Integration Test Coverage
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          if [ -f "coverage/lcov.info" ]; then
+            # Install lcov for coverage reporting
+            sudo apt-get update && sudo apt-get install -y lcov
+            
+            # Generate HTML coverage report for integration tests
+            genhtml coverage/lcov.info -o coverage/integration_html
+            
+            echo "## 🧪 Integration Test Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            COVERAGE=$(lcov --summary coverage/lcov.info | grep lines | awk '{print $2}')
+            echo "**Integration Test Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🛑 Stop Backend Application
         if: always()
         run: |
-          docker compose -f docker-compose.test.yml down
+          if [ ! -z "$BACKEND_PID" ]; then
+            kill $BACKEND_PID 2>/dev/null || true
+          fi
+      
+      - name: 📤 Upload Integration Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-integration-test-results
+          path: |
+            mobile/guardianes_mobile/coverage/integration_html/
+            mobile/guardianes_mobile/test_results/
+            mobile/guardianes_mobile/integration_test/screenshots/
 
   # ============================================
   # Performance Testing

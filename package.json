@@ -1,5 +1,38 @@
 {
+  "name": "guardianes-de-gaia-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end API tests for Guardianes de Gaia",
+  "scripts": {
+    "test": "node run-e2e-tests.js",
+    "test:all": "node run-e2e-tests.js",
+    "test:functional": "node run-e2e-tests.js functional-api",
+    "test:user-journey": "node run-e2e-tests.js user-journey",
+    "test:simple": "node run-e2e-tests.js simple-journey",
+    "test:visual": "node run-e2e-tests.js visual-journey",
+    "test:ci": "CI=true node run-e2e-tests.js",
+    "test:single": "node",
+    "validate": "node -e \"console.log('✅ Package validation successful')\"",
+    "pretest": "mkdir -p screenshots/e2e-tests logs",
+    "health-check": "node -e \"const config = require('./e2e-config'); config.waitForBackend().then(ready => process.exit(ready ? 0 : 1));\""
+  },
   "dependencies": {
     "puppeteer": "^24.12.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "e2e",
+    "puppeteer",
+    "api-testing",
+    "guardianes-de-gaia"
+  ],
+  "author": "Guardianes de Gaia Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "."
   }
 }

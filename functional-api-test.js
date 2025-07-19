@@ -6,23 +6,7 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
-
-const CONFIG = {
-    baseUrl: 'http://localhost:8080',
-    testGuardian: {
-        id: 1,
-        name: 'Test Guardian'
-    },
-    screenshots: {
-        enabled: true,
-        directory: './screenshots/functional-api'
-    },
-    delays: {
-        short: 1000,
-        medium: 2000,
-        long: 3000
-    }
-};
+const CONFIG = require('./e2e-config');
 
 class FunctionalAPITest {
     constructor() {
@@ -32,24 +16,30 @@ class FunctionalAPITest {
     }
 
     async init() {
-        console.log('🚀 Starting Functional API Test for Guardianes...');
+        CONFIG.log.info('Starting Functional API Test for Guardianes...');
         
-        // Ensure screenshots directory exists
-        if (CONFIG.screenshots.enabled) {
-            fs.mkdirSync(CONFIG.screenshots.directory, { recursive: true });
+        // Wait for backend to be ready
+        const backendReady = await CONFIG.waitForBackend();
+        if (!backendReady) {
+            throw new Error('Backend is not available for testing');
         }
 
-        // Launch browser
+        // Launch browser with environment-specific configuration
         this.browser = await puppeteer.launch({
-            headless: false,
-            defaultViewport: { width: 1280, height: 720 },
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            headless: CONFIG.browser.headless,
+            defaultViewport: CONFIG.browser.defaultViewport,
+            args: CONFIG.browser.args,
+            slowMo: CONFIG.browser.slowMo
         });
 
         this.page = await this.browser.newPage();
         await this.page.setUserAgent('Guardianes-API-TestBot/1.0 (Puppeteer)');
         
-        console.log('✅ Browser initialized');
+        // Set timeouts
+        await this.page.setDefaultNavigationTimeout(CONFIG.timeouts.navigation);
+        await this.page.setDefaultTimeout(CONFIG.timeouts.test);
+        
+        CONFIG.log.success('Browser initialized');
     }
 
     async takeScreenshot(stepName) {
@@ -64,15 +54,15 @@ class FunctionalAPITest {
             fullPage: true
         });
         
-        console.log(`📸 Screenshot saved: ${filename}`);
+        CONFIG.log.debug(`Screenshot saved: ${filename}`);
     }
 
     async testHealthEndpoint() {
-        console.log('\n🏥 Step 1: Testing Health Endpoint');
+        CONFIG.log.info('\n🏥 Step 1: Testing Health Endpoint');
         
         try {
             await this.page.goto(`${CONFIG.baseUrl}/actuator/health`);
-            await new Promise(resolve => setTimeout(resolve, CONFIG.delays.short));
+            await new Promise(resolve => setTimeout(resolve, CONFIG.timeouts.short));
             
             const healthData = await this.page.evaluate(() => {
                 return document.body.textContent;
@@ -81,20 +71,20 @@ class FunctionalAPITest {
             await this.takeScreenshot('health-check');
             
             if (healthData.includes('UP')) {
-                console.log('✅ Health endpoint: System is UP');
+                CONFIG.log.info('✅ Health endpoint: System is UP');
                 return true;
             } else {
-                console.log('❌ Health endpoint: System is DOWN');
+                CONFIG.log.info('❌ Health endpoint: System is DOWN');
                 return false;
             }
         } catch (error) {
-            console.error('❌ Health endpoint error:', error.message);
+            CONFIG.log.error('❌ Health endpoint error:', error.message);
             return false;
         }
     }
 
     async testStepSubmission() {
-        console.log('\n👣 Step 2: Testing Step Submission API');
+        CONFIG.log.info('\n👣 Step 2: Testing Step Submission API');
         
         const submitUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/steps`;
         const stepData = {
@@ -141,35 +131,35 @@ class FunctionalAPITest {
                 }
             }, submitUrl, stepData);
 
-            console.log(`   📊 Response Status: ${response.status} ${response.statusText || ''}`);
+            CONFIG.log.info(`   📊 Response Status: ${response.status} ${response.statusText || ''}`);
             
             if (response.status === 200 || response.status === 201) {
-                console.log(`   ✅ Steps submitted successfully:`);
-                console.log(`   👣 Steps: ${stepData.stepCount}`);
+                CONFIG.log.info(`   ✅ Steps submitted successfully:`);
+                CONFIG.log.info(`   👣 Steps: ${stepData.stepCount}`);
                 if (response.data.energyGenerated) {
-                    console.log(`   ⚡ Energy generated: ${response.data.energyGenerated}`);
+                    CONFIG.log.info(`   ⚡ Energy generated: ${response.data.energyGenerated}`);
                 }
                 await this.takeScreenshot('step-submission-success');
                 return response.data;
             } else if (response.status === 401) {
-                console.log(`   ⚠️  Authentication required for step submission`);
-                console.log(`   💡 This indicates security is properly configured`);
+                CONFIG.log.info(`   ⚠️  Authentication required for step submission`);
+                CONFIG.log.info(`   💡 This indicates security is properly configured`);
                 await this.takeScreenshot('step-submission-auth-required');
                 return { authRequired: true };
             } else {
-                console.log(`   ❌ Step submission failed: ${response.status}`);
-                console.log(`   📝 Response:`, response.data);
+                CONFIG.log.info(`   ❌ Step submission failed: ${response.status}`);
+                CONFIG.log.info(`   📝 Response:`, response.data);
                 await this.takeScreenshot('step-submission-failed');
                 return null;
             }
         } catch (error) {
-            console.error('❌ Step submission error:', error.message);
+            CONFIG.log.error('❌ Step submission error:', error.message);
             return null;
         }
     }
 
     async testCurrentStepCount() {
-        console.log('\n📊 Step 3: Testing Current Step Count API');
+        CONFIG.log.info('\n📊 Step 3: Testing Current Step Count API');
         
         const stepUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/steps/current`;
         
@@ -206,30 +196,30 @@ class FunctionalAPITest {
                 }
             }, stepUrl);
 
-            console.log(`   📊 Response Status: ${response.status} ${response.statusText || ''}`);
+            CONFIG.log.info(`   📊 Response Status: ${response.status} ${response.statusText || ''}`);
             
             if (response.status === 200) {
-                console.log(`   ✅ Current step data retrieved:`);
-                console.log(`   📅 Data:`, response.data);
+                CONFIG.log.info(`   ✅ Current step data retrieved:`);
+                CONFIG.log.info(`   📅 Data:`, response.data);
                 await this.takeScreenshot('current-steps-success');
                 return response.data;
             } else if (response.status === 401) {
-                console.log(`   ⚠️  Authentication required for step data`);
+                CONFIG.log.info(`   ⚠️  Authentication required for step data`);
                 await this.takeScreenshot('current-steps-auth-required');
                 return { authRequired: true };
             } else {
-                console.log(`   ❌ Failed to get current step count: ${response.status}`);
+                CONFIG.log.info(`   ❌ Failed to get current step count: ${response.status}`);
                 await this.takeScreenshot('current-steps-failed');
                 return null;
             }
         } catch (error) {
-            console.error('❌ Current step count error:', error.message);
+            CONFIG.log.error('❌ Current step count error:', error.message);
             return null;
         }
     }
 
     async testEnergyBalance() {
-        console.log('\n⚡ Step 4: Testing Energy Balance API');
+        CONFIG.log.info('\n⚡ Step 4: Testing Energy Balance API');
         
         const energyUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/energy/balance`;
         
@@ -266,59 +256,59 @@ class FunctionalAPITest {
                 }
             }, energyUrl);
 
-            console.log(`   📊 Response Status: ${response.status} ${response.statusText || ''}`);
+            CONFIG.log.info(`   📊 Response Status: ${response.status} ${response.statusText || ''}`);
             
             if (response.status === 200) {
-                console.log(`   ✅ Energy balance retrieved:`);
-                console.log(`   ⚡ Balance data:`, response.data);
+                CONFIG.log.info(`   ✅ Energy balance retrieved:`);
+                CONFIG.log.info(`   ⚡ Balance data:`, response.data);
                 await this.takeScreenshot('energy-balance-success');
                 return response.data;
             } else if (response.status === 401) {
-                console.log(`   ⚠️  Authentication required for energy balance`);
+                CONFIG.log.info(`   ⚠️  Authentication required for energy balance`);
                 await this.takeScreenshot('energy-balance-auth-required');
                 return { authRequired: true };
             } else {
-                console.log(`   ❌ Failed to get energy balance: ${response.status}`);
+                CONFIG.log.info(`   ❌ Failed to get energy balance: ${response.status}`);
                 await this.takeScreenshot('energy-balance-failed');
                 return null;
             }
         } catch (error) {
-            console.error('❌ Energy balance error:', error.message);
+            CONFIG.log.error('❌ Energy balance error:', error.message);
             return null;
         }
     }
 
     async testAPIDocumentation() {
-        console.log('\n📚 Step 5: Testing API Documentation');
+        CONFIG.log.info('\n📚 Step 5: Testing API Documentation');
         
         try {
             await this.page.goto(`${CONFIG.baseUrl}/swagger-ui/index.html`);
-            await new Promise(resolve => setTimeout(resolve, CONFIG.delays.medium));
+            await new Promise(resolve => setTimeout(resolve, CONFIG.timeouts.medium));
             
             const pageContent = await this.page.content();
             
             if (pageContent.includes('swagger-ui') || pageContent.includes('OpenAPI')) {
-                console.log('   ✅ Swagger UI is accessible');
+                CONFIG.log.info('   ✅ Swagger UI is accessible');
                 await this.takeScreenshot('swagger-ui-accessible');
                 return true;
             } else if (pageContent.includes('Unauthorized') || pageContent.includes('login')) {
-                console.log('   ⚠️  Swagger UI requires authentication (secure setup)');
+                CONFIG.log.info('   ⚠️  Swagger UI requires authentication (secure setup)');
                 await this.takeScreenshot('swagger-ui-auth-required');
                 return { authRequired: true };
             } else {
-                console.log('   ❌ Swagger UI not accessible');
+                CONFIG.log.info('   ❌ Swagger UI not accessible');
                 await this.takeScreenshot('swagger-ui-failed');
                 return false;
             }
         } catch (error) {
-            console.log(`   ❌ Swagger UI error: ${error.message}`);
+            CONFIG.log.info(`   ❌ Swagger UI error: ${error.message}`);
             await this.takeScreenshot('swagger-ui-error');
             return false;
         }
     }
 
     async generateAPIReport() {
-        console.log('\n📋 Step 6: Generating API Test Report');
+        CONFIG.log.info('\n📋 Step 6: Generating API Test Report');
         
         await this.page.setContent(`
             <html>
@@ -425,10 +415,10 @@ class FunctionalAPITest {
             </html>
         `);
         
-        await this.page.waitForTimeout(CONFIG.delays.short);
+        await this.page.waitForTimeout(CONFIG.timeouts.short);
         await this.takeScreenshot('api-test-report');
         
-        console.log('   ✅ API test report generated');
+        CONFIG.log.info('   ✅ API test report generated');
     }
 
     async runFunctionalAPITest() {
@@ -447,25 +437,25 @@ class FunctionalAPITest {
             await this.testAPIDocumentation();
             await this.generateAPIReport();
             
-            console.log('\n🎉 Functional API Test Completed!');
-            console.log('\n📋 Summary:');
-            console.log('   ✅ System health check passed');
-            console.log('   ⚠️  API endpoints require authentication (secure)');
-            console.log('   🔧 Core infrastructure is ready');
-            console.log('   📚 API documentation available');
-            console.log('   🎮 Ready for frontend integration');
+            CONFIG.log.info('\n🎉 Functional API Test Completed!');
+            CONFIG.log.info('\n📋 Summary:');
+            CONFIG.log.info('   ✅ System health check passed');
+            CONFIG.log.info('   ⚠️  API endpoints require authentication (secure)');
+            CONFIG.log.info('   🔧 Core infrastructure is ready');
+            CONFIG.log.info('   📚 API documentation available');
+            CONFIG.log.info('   🎮 Ready for frontend integration');
             
             if (CONFIG.screenshots.enabled) {
-                console.log(`\n📸 Screenshots saved to: ${CONFIG.screenshots.directory}`);
+                CONFIG.log.info(`\n📸 Screenshots saved to: ${CONFIG.screenshots.directory}`);
             }
             
         } catch (error) {
-            console.error('\n❌ Functional API Test Failed:', error.message);
+            CONFIG.log.error('\n❌ Functional API Test Failed:', error.message);
             await this.takeScreenshot('api-test-error');
         } finally {
             if (this.browser) {
                 await this.browser.close();
-                console.log('🔚 Browser closed');
+                CONFIG.log.info('🔚 Browser closed');
             }
         }
     }
@@ -474,7 +464,7 @@ class FunctionalAPITest {
 // Run the test
 if (require.main === module) {
     const test = new FunctionalAPITest();
-    test.runFunctionalAPITest().catch(console.error);
+    test.runFunctionalAPITest().catch(CONFIG.log.error);
 }
 
 module.exports = FunctionalAPITest;

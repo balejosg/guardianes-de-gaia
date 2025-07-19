@@ -3,18 +3,7 @@
  * API-focused journey test that can run without full browser automation
  */
 
-// Simple configuration
-const CONFIG = {
-    baseUrl: 'http://localhost:8080',
-    testUser: {
-        username: 'admin',
-        password: '7kF2xN4pM8vWc1uE5rT9hY3oS0nB6qA3dX7vC5mN2p'
-    },
-    testGuardian: {
-        id: 1,
-        name: 'Test Guardian'
-    }
-};
+const CONFIG = require('./e2e-config');
 
 class SimpleUserJourney {
     constructor() {
