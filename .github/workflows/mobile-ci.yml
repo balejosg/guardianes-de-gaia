@@ -118,6 +118,7 @@ jobs:
           file: ./mobile/guardianes_mobile/coverage/lcov_filtered.info
           flags: mobile-tests
           name: Mobile Coverage
+          fail_ci_if_error: false
       
       - name: 📊 Coverage Summary
         working-directory: ./mobile/guardianes_mobile
@@ -570,10 +571,7 @@ jobs:
             echo "❌ **Mobile build failed.** Please review errors." >> $GITHUB_STEP_SUMMARY
           fi
       
-      - name: 🚨 Notify on Failure
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          channel: '#guardianes-mobile'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      - name: 📊 Pipeline Status
+        if: always()
+        run: |
+          echo "Mobile CI pipeline completed. Check GitHub Actions for detailed results."

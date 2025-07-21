@@ -281,39 +281,10 @@ jobs:
           echo "- Debug logs for failed tests" >> $GITHUB_STEP_SUMMARY
           echo "- Performance metrics and health checks" >> $GITHUB_STEP_SUMMARY
       
-      - name: 🚨 Notify on E2E Failure
-        if: failure() || needs.e2e-tests.result == 'failure'
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          channel: '#guardianes-testing'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-          custom_payload: |
-            {
-              "text": "🚨 E2E Tests failed in Guardianes de Gaia",
-              "attachments": [
-                {
-                  "color": "danger",
-                  "fields": [
-                    {
-                      "title": "Backend Setup",
-                      "value": "${{ needs.backend-setup.result }}",
-                      "short": true
-                    },
-                    {
-                      "title": "E2E Tests",
-                      "value": "${{ needs.e2e-tests.result }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Branch",
-                      "value": "${{ github.ref_name }}",
-                      "short": true
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        continue-on-error: true
+      - name: 📊 E2E Pipeline Status
+        if: always()
+        run: |
+          echo "E2E test pipeline completed. Results:"
+          echo "- Backend Setup: ${{ needs.backend-setup.result }}"
+          echo "- E2E Tests: ${{ needs.e2e-tests.result }}"
+          echo "Check GitHub Actions for detailed test reports and screenshots."
