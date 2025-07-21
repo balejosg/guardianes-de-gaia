@@ -61,32 +61,54 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
-      - name: 🏗️ Build Backend
+      - name: 🏗️ Build Backend & Download Dependencies
         working-directory: ./backend
         run: |
+          echo "Pre-warming Maven dependencies and compiling..."
           mvn clean compile -DskipTests
+          # Pre-download Spring Boot run dependencies to avoid startup delays
+          mvn dependency:resolve dependency:resolve-sources
+          echo "✅ All dependencies pre-downloaded and compiled"
       
       - name: 🚀 Start Backend Service (H2 In-Memory)
         working-directory: ./backend
         env:
           SPRING_PROFILES_ACTIVE: e2e
           SERVER_PORT: ${{ env.BACKEND_PORT }}
-          JAVA_OPTS: '-Xmx1024m -Xms512m'
+          JAVA_OPTS: '-Xmx1024m -Xms512m -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Djava.awt.headless=true'
+          MAVEN_OPTS: '-XX:TieredStopAtLevel=1 -XX:+UseSerialGC'
         run: |
           echo "Starting backend with H2 in-memory database for E2E testing..."
-          mvn spring-boot:run -Dspring-boot.run.profiles=e2e &
+          echo "JVM Options: $JAVA_OPTS"
+          echo "Maven Options: $MAVEN_OPTS"
+          
+          # Start backend with optimized JVM settings for faster startup
+          mvn spring-boot:run -Dspring-boot.run.profiles=e2e -Dspring-boot.run.jvmArguments="$JAVA_OPTS" &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
-          echo "Backend started with PID: $BACKEND_PID"
+          echo "Backend started with PID: $BACKEND_PID at $(date)"
           echo "H2 Console will be available at: http://localhost:${{ env.BACKEND_PORT }}/h2-console"
+          
+          # Give it a moment to start
+          sleep 5
+          echo "Initial startup phase completed"
       
       - name: ⏳ Wait for Backend Health
         id: health-check
         run: |
           echo "Waiting for H2 in-memory backend to be ready..."
-          for i in {1..15}; do
+          echo "Backend PID: $BACKEND_PID"
+          
+          # Extended timeout for CI environment (30 attempts * 10s = 5 minutes max)
+          for i in {1..30}; do
+            # Check if backend process is still running
+            if ! kill -0 $BACKEND_PID 2>/dev/null; then
+              echo "❌ Backend process died unexpectedly"
+              exit 1
+            fi
+            
             if curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
-              echo "✅ Backend is ready!"
+              echo "✅ Backend is ready after ${i} attempts!"
               echo "ready=true" >> $GITHUB_OUTPUT
               
               # Display H2 database info
@@ -95,10 +117,10 @@ jobs:
               
               exit 0
             fi
-            echo "⏳ Attempt $i/15: Backend not ready yet, waiting 8 seconds..."
-            sleep 8
+            echo "⏳ Attempt $i/30: Backend not ready yet, waiting 10 seconds..."
+            sleep 10
           done
-          echo "❌ Backend failed to start within timeout"
+          echo "❌ Backend failed to start within 5-minute timeout"
           echo "ready=false" >> $GITHUB_OUTPUT
           exit 1
       
