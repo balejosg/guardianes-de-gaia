@@ -61,13 +61,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
-      - name: 🏗️ Build Backend
+      - name: 🏗️ Build Backend JAR
         working-directory: ./backend
         run: |
-          echo "Compiling backend for E2E testing..."
-          # Use faster compilation skipping quality checks for E2E
-          mvn compile -DskipTests -Dspotless.apply.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Ddependency-check.skip=true
-          echo "✅ Backend compiled successfully"
+          echo "Building backend JAR for E2E testing..."
+          # Build JAR directly for faster startup - skipping quality checks
+          mvn clean package -DskipTests -Dspotless.apply.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Ddependency-check.skip=true
+          ls -la target/*.jar
+          echo "✅ Backend JAR built successfully"
       
       - name: 🚀 Start Backend Service (H2 In-Memory)
         working-directory: ./backend
@@ -75,22 +76,24 @@ jobs:
           SPRING_PROFILES_ACTIVE: e2e
           SERVER_PORT: ${{ env.BACKEND_PORT }}
           JAVA_OPTS: '-Xmx1024m -Xms512m -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Djava.awt.headless=true'
-          MAVEN_OPTS: '-XX:TieredStopAtLevel=1 -XX:+UseSerialGC'
         run: |
-          echo "Starting backend with H2 in-memory database for E2E testing..."
+          echo "Starting backend JAR with H2 in-memory database for E2E testing..."
           echo "JVM Options: $JAVA_OPTS"
-          echo "Maven Options: $MAVEN_OPTS"
           
-          # Start backend with optimized JVM settings for faster startup
-          mvn spring-boot:run -Dspring-boot.run.profiles=e2e -Dspring-boot.run.jvmArguments="$JAVA_OPTS" &
+          # Find the JAR file
+          JAR_FILE=$(ls target/guardianes-backend-*.jar | head -1)
+          echo "Using JAR: $JAR_FILE"
+          
+          # Start backend JAR directly for much faster startup
+          java $JAVA_OPTS -Dspring.profiles.active=e2e -jar "$JAR_FILE" &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
-          echo "Backend started with PID: $BACKEND_PID at $(date)"
+          echo "Backend JAR started with PID: $BACKEND_PID at $(date)"
           echo "H2 Console will be available at: http://localhost:${{ env.BACKEND_PORT }}/h2-console"
           
           # Give it a moment to start
           sleep 5
-          echo "Initial startup phase completed"
+          echo "Initial JAR startup phase completed"
       
       - name: ⏳ Wait for Backend Health
         id: health-check
@@ -98,8 +101,8 @@ jobs:
           echo "Waiting for H2 in-memory backend to be ready..."
           echo "Backend PID: $BACKEND_PID"
           
-          # Extended timeout for CI environment (30 attempts * 10s = 5 minutes max)
-          for i in {1..30}; do
+          # Reasonable timeout for JAR startup (18 attempts * 10s = 3 minutes max)
+          for i in {1..18}; do
             # Check if backend process is still running
             if ! kill -0 $BACKEND_PID 2>/dev/null; then
               echo "❌ Backend process died unexpectedly"
@@ -116,10 +119,10 @@ jobs:
               
               exit 0
             fi
-            echo "⏳ Attempt $i/30: Backend not ready yet, waiting 10 seconds..."
+            echo "⏳ Attempt $i/18: Backend not ready yet, waiting 10 seconds..."
             sleep 10
           done
-          echo "❌ Backend failed to start within 5-minute timeout"
+          echo "❌ Backend JAR failed to start within 3-minute timeout"
           echo "ready=false" >> $GITHUB_OUTPUT
           exit 1
       
