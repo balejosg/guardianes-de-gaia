@@ -92,7 +92,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <!-- Remove test scope to allow E2E profile usage -->
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>

@@ -66,7 +66,9 @@
       "Bash(timeout 60 mvn test -Dtest=StepSubmissionEnergyIntegrationTest)",
       "Bash(timeout 60 mvn test:*)",
       "Bash(sudo rm:*)",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "Bash(docker:*)",
+      "Bash(timeout 30 mvn spring-boot:run:*)"
     ],
     "deny": []
   }
