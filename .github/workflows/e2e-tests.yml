@@ -61,14 +61,13 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
-      - name: 🏗️ Build Backend & Download Dependencies
+      - name: 🏗️ Build Backend
         working-directory: ./backend
         run: |
-          echo "Pre-warming Maven dependencies and compiling..."
-          mvn clean compile -DskipTests
-          # Pre-download Spring Boot run dependencies to avoid startup delays
-          mvn dependency:resolve dependency:resolve-sources
-          echo "✅ All dependencies pre-downloaded and compiled"
+          echo "Compiling backend for E2E testing..."
+          # Use faster compilation skipping quality checks for E2E
+          mvn compile -DskipTests -Dspotless.apply.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Ddependency-check.skip=true
+          echo "✅ Backend compiled successfully"
       
       - name: 🚀 Start Backend Service (H2 In-Memory)
         working-directory: ./backend
