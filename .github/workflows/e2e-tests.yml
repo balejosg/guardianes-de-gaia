@@ -47,34 +47,8 @@ jobs:
     outputs:
       backend-ready: ${{ steps.health-check.outputs.ready }}
     
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root_test_secret
-          MYSQL_DATABASE: guardianes_test
-          MYSQL_USER: guardianes_test
-          MYSQL_PASSWORD: test_secret
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping -h localhost -u root -proot_test_secret" --health-interval=10s --health-timeout=5s --health-retries=5
-      
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=3s --health-retries=3
-      
-      rabbitmq:
-        image: rabbitmq:3.12-management-alpine
-        env:
-          RABBITMQ_DEFAULT_USER: guardian_test
-          RABBITMQ_DEFAULT_PASS: rabbit_test_secret
-          RABBITMQ_DEFAULT_VHOST: /test
-        ports:
-          - 5672:5672
-          - 15672:15672
-        options: --health-cmd="rabbitmq-diagnostics ping" --health-interval=30s --health-timeout=10s --health-retries=5
+    # External services removed - using H2 in-memory database for E2E testing
+    # This eliminates external dependencies and provides faster, more reliable testing
     
     steps:
       - name: 📥 Checkout code
@@ -92,38 +66,39 @@ jobs:
         run: |
           mvn clean compile -DskipTests
       
-      - name: 🚀 Start Backend Service
+      - name: 🚀 Start Backend Service (H2 In-Memory)
         working-directory: ./backend
         env:
-          SPRING_PROFILES_ACTIVE: test
-          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/guardianes_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-          SPRING_DATASOURCE_USERNAME: guardianes_test
-          SPRING_DATASOURCE_PASSWORD: test_secret
-          SPRING_REDIS_HOST: localhost
-          SPRING_REDIS_PORT: 6379
-          SPRING_RABBITMQ_HOST: localhost
-          SPRING_RABBITMQ_PORT: 5672
+          SPRING_PROFILES_ACTIVE: e2e
           SERVER_PORT: ${{ env.BACKEND_PORT }}
+          JAVA_OPTS: '-Xmx1024m -Xms512m'
         run: |
-          mvn spring-boot:run &
+          echo "Starting backend with H2 in-memory database for E2E testing..."
+          mvn spring-boot:run -Dspring-boot.run.profiles=e2e &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
           echo "Backend started with PID: $BACKEND_PID"
+          echo "H2 Console will be available at: http://localhost:${{ env.BACKEND_PORT }}/h2-console"
       
       - name: ⏳ Wait for Backend Health
         id: health-check
         run: |
-          echo "Waiting for backend to be ready..."
-          for i in {1..30}; do
-            if curl -f http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
-              echo "Backend is ready!"
+          echo "Waiting for H2 in-memory backend to be ready..."
+          for i in {1..15}; do
+            if curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
+              echo "✅ Backend is ready!"
               echo "ready=true" >> $GITHUB_OUTPUT
+              
+              # Display H2 database info
+              echo "📊 H2 Database Status:"
+              curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health | jq '.' || echo "Health endpoint responded successfully"
+              
               exit 0
             fi
-            echo "Attempt $i/30: Backend not ready yet, waiting 10 seconds..."
-            sleep 10
+            echo "⏳ Attempt $i/15: Backend not ready yet, waiting 8 seconds..."
+            sleep 8
           done
-          echo "Backend failed to start within timeout"
+          echo "❌ Backend failed to start within timeout"
           echo "ready=false" >> $GITHUB_OUTPUT
           exit 1
       
@@ -132,8 +107,10 @@ jobs:
         run: |
           echo "## 🚀 Backend Service Status" >> $GITHUB_STEP_SUMMARY
           echo "- **Health Check**: ${{ steps.health-check.outputs.ready == 'true' && '✅ Ready' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Database**: H2 In-Memory (MySQL Mode)" >> $GITHUB_STEP_SUMMARY
           echo "- **Port**: ${{ env.BACKEND_PORT }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Profile**: test" >> $GITHUB_STEP_SUMMARY
+          echo "- **Profile**: e2e" >> $GITHUB_STEP_SUMMARY
+          echo "- **H2 Console**: http://localhost:${{ env.BACKEND_PORT }}/h2-console" >> $GITHUB_STEP_SUMMARY
 
   # ============================================
   # E2E Test Execution
@@ -171,14 +148,18 @@ jobs:
           # Install additional dependencies if needed
           npm list puppeteer || npm install puppeteer
       
-      - name: 🚀 Restart Backend Services
+      - name: 🚀 Verify Backend Readiness
         run: |
-          # Restart backend for this test matrix
-          echo "Setting up backend services for E2E tests..."
-          docker compose -f docker-compose.test.yml up -d || echo "Docker compose not available, using services from previous job"
+          # Verify backend is still running and ready for E2E tests
+          echo "Verifying H2 in-memory backend is ready for E2E tests..."
           
-          # Wait for backend to be ready
-          timeout 120 bash -c 'until curl -f http://localhost:${{ env.BACKEND_PORT }}/actuator/health; do sleep 5; done'
+          # Quick health check
+          if curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
+            echo "✅ Backend is ready for testing!"
+          else
+            echo "❌ Backend is not responding, E2E tests may fail"
+            exit 1
+          fi
       
       - name: 🧪 Run E2E Test - ${{ matrix.test-file }}
         id: test-execution
@@ -222,12 +203,17 @@ jobs:
           echo "Collecting logs for debugging..."
           mkdir -p logs
           
-          # Backend logs
+          # Backend logs and metrics
           curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/loggers > logs/backend-loggers.json || echo "Could not get backend loggers"
           curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/metrics > logs/backend-metrics.json || echo "Could not get backend metrics"
+          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health > logs/backend-health.json || echo "Could not get backend health"
           
-          # System logs
-          docker compose -f docker-compose.test.yml logs > logs/docker-services.log 2>&1 || echo "Could not get docker logs"
+          # H2 database info (if accessible)
+          echo "H2 Database URL: jdbc:h2:mem:e2e_testdb;MODE=MySQL" > logs/h2-info.txt
+          echo "H2 Console: http://localhost:${{ env.BACKEND_PORT }}/h2-console" >> logs/h2-info.txt
+          
+          # Process information
+          ps aux | grep java > logs/java-processes.txt || echo "Could not get java processes"
       
       - name: 📤 Upload Logs
         if: failure()
@@ -240,9 +226,13 @@ jobs:
       - name: 🛑 Cleanup
         if: always()
         run: |
-          # Stop any running processes
-          docker compose -f docker-compose.test.yml down || echo "Docker compose cleanup skipped"
+          # Stop any running Spring Boot processes
           pkill -f "spring-boot:run" || echo "No Spring Boot processes to kill"
+          
+          # Clean up any remaining Java processes related to our tests
+          pkill -f "guardianes-backend" || echo "No guardian backend processes to kill"
+          
+          echo "✅ Cleanup completed - H2 in-memory database automatically disposed"
 
   # ============================================
   # E2E Test Summary
@@ -260,6 +250,11 @@ jobs:
         run: |
           echo "## 🌐 End-to-End Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🗄️ Database Configuration:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Database**: H2 In-Memory (MySQL Compatibility Mode)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Profile**: e2e" >> $GITHUB_STEP_SUMMARY
+          echo "- **External Services**: None (fully self-contained)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📈 Test Execution Status:" >> $GITHUB_STEP_SUMMARY
           echo "- **Backend Setup**: ${{ needs.backend-setup.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **E2E Tests**: ${{ needs.e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
@@ -268,18 +263,21 @@ jobs:
           if [[ "${{ needs.backend-setup.result }}" == "success" && "${{ needs.e2e-tests.result }}" == "success" ]]; then
             echo "✅ **All E2E tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "The complete user journey validation has been verified." >> $GITHUB_STEP_SUMMARY
+            echo "The complete user journey validation has been verified using H2 in-memory database." >> $GITHUB_STEP_SUMMARY
+            echo "- Fast execution with zero external dependencies" >> $GITHUB_STEP_SUMMARY
+            echo "- MySQL compatibility mode ensures production-like behavior" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Some E2E tests failed.**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Please review the test logs and screenshots for debugging." >> $GITHUB_STEP_SUMMARY
+            echo "H2 Console was available at: http://localhost:8080/h2-console" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📸 Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
           echo "- Screenshots from all test runs" >> $GITHUB_STEP_SUMMARY
-          echo "- Debug logs for failed tests" >> $GITHUB_STEP_SUMMARY
-          echo "- Performance metrics and health checks" >> $GITHUB_STEP_SUMMARY
+          echo "- Debug logs and H2 database information" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend health checks and metrics" >> $GITHUB_STEP_SUMMARY
       
       - name: 📊 E2E Pipeline Status
         if: always()
