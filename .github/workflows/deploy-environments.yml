@@ -192,7 +192,8 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1\n        continue-on-error: true
+          aws-region: us-east-1
+        continue-on-error: true
       
       - name: 🚀 Deploy to Development ECS
         env:
@@ -259,7 +260,8 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1\n        continue-on-error: true
+          aws-region: us-east-1
+        continue-on-error: true
       
       - name: 📊 Pre-deployment metrics
         run: |
@@ -335,7 +337,8 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          aws-region: us-east-1\n        continue-on-error: true
+          aws-region: us-east-1
+        continue-on-error: true
       
       - name: 📊 Pre-deployment validation
         run: |
@@ -434,7 +437,8 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1\n        continue-on-error: true
+          aws-region: us-east-1
+        continue-on-error: true
       
       - name: ⏪ Execute rollback
         env:
