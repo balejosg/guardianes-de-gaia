@@ -1,12 +1,13 @@
 name: 🚀 Multi-Environment Deployment
 
 on:
-  push:
-    branches: 
-      - main      # Auto-deploy to staging
-      - develop   # Auto-deploy to development
-  release:
-    types: [published]  # Auto-deploy to production on release
+  # Disabled - requires AWS/ECS access and container registry
+  # push:
+  #   branches: 
+  #     - main      # Auto-deploy to staging
+  #     - develop   # Auto-deploy to development
+  # release:
+  #   types: [published]  # Auto-deploy to production on release
   workflow_dispatch:
     inputs:
       environment:
