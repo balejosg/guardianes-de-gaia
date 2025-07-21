@@ -10,7 +10,7 @@
     "test:simple": "node run-e2e-tests.js simple-journey",
     "test:visual": "node run-e2e-tests.js visual-journey",
     "test:ci": "CI=true node run-e2e-tests.js",
-    "test:single": "node",
+    "test:single": "node run-e2e-tests.js",
     "validate": "node -e \"console.log('✅ Package validation successful')\"",
     "pretest": "mkdir -p screenshots/e2e-tests logs",
     "health-check": "node -e \"const config = require('./e2e-config'); config.waitForBackend().then(ready => process.exit(ready ? 0 : 1));\""
