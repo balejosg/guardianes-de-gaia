@@ -77,7 +77,10 @@
       "Bash(cat:*)",
       "Bash(./gradlew:*)",
       "Bash(kill:*)",
-      "Bash(echo \"Exit code: $?\")"
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh api:*)"
     ],
     "deny": []
   }

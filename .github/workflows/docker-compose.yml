@@ -80,11 +80,29 @@ jobs:
       - name: 💾 Save Docker images as artifacts
         if: matrix.compose-file == 'docker-compose.yml'
         run: |
-          # Save backend image
-          docker save $(docker compose -f ${{ matrix.compose-file }} images backend -q) | gzip > backend-image.tar.gz
+          # Get backend image ID first
+          BACKEND_IMAGE_ID=$(docker compose -f ${{ matrix.compose-file }} images backend -q)
+          echo "Backend Image ID: $BACKEND_IMAGE_ID"
+          
+          # Verify image exists
+          if [ -z "$BACKEND_IMAGE_ID" ]; then
+            echo "❌ No backend image found!"
+            docker compose -f ${{ matrix.compose-file }} images
+            exit 1
+          fi
+          
+          # Save backend image with better error handling
+          echo "💾 Saving backend image..."
+          docker save $BACKEND_IMAGE_ID | gzip > backend-image.tar.gz
+          
+          # Verify the tar file was created and has content
+          if [ ! -f backend-image.tar.gz ] || [ ! -s backend-image.tar.gz ]; then
+            echo "❌ Failed to create backend image artifact!"
+            exit 1
+          fi
           
           # Get image info
-          echo "Backend image saved: $(ls -lh backend-image.tar.gz | awk '{print $5}')"
+          echo "✅ Backend image saved: $(ls -lh backend-image.tar.gz | awk '{print $5}')"
       
       - name: 📤 Upload Docker images
         if: matrix.compose-file == 'docker-compose.yml'
@@ -123,8 +141,23 @@ jobs:
       
       - name: 📦 Load Docker images
         run: |
+          # Verify tar file exists and has content
+          if [ ! -f backend-image.tar.gz ] || [ ! -s backend-image.tar.gz ]; then
+            echo "❌ Backend image tar file is missing or empty!"
+            ls -la *.tar.gz || echo "No tar.gz files found"
+            exit 1
+          fi
+          
+          echo "📦 Loading backend image from artifact..."
+          echo "File size: $(ls -lh backend-image.tar.gz | awk '{print $5}')"
+          
+          # Load the image
           docker load < backend-image.tar.gz
-          echo "✅ Docker images loaded"
+          
+          # Verify image was loaded
+          docker images | grep backend || (echo "❌ Backend image not found after loading!" && exit 1)
+          
+          echo "✅ Docker images loaded successfully"
       
       - name: 🚀 Start Docker Compose stack
         run: |
@@ -257,7 +290,21 @@ jobs:
       
       - name: 📦 Load Docker images
         run: |
+          # Verify tar file exists and has content
+          if [ ! -f backend-image.tar.gz ] || [ ! -s backend-image.tar.gz ]; then
+            echo "❌ Backend image tar file is missing or empty!"
+            ls -la *.tar.gz || echo "No tar.gz files found"
+            exit 1
+          fi
+          
+          echo "📦 Loading backend image for security scan..."
+          echo "File size: $(ls -lh backend-image.tar.gz | awk '{print $5}')"
+          
+          # Load the image
           docker load < backend-image.tar.gz
+          
+          # Verify image was loaded
+          docker images | grep backend || (echo "❌ Backend image not found after loading!" && exit 1)
       
       - name: 🔍 Extract image names
         id: images
