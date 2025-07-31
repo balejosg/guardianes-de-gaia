@@ -69,7 +69,7 @@ jobs:
     
     strategy:
       matrix:
-        flutter-version: ['3.16.0', '3.19.0']
+        flutter-version: ['3.19.0']
       fail-fast: false
     
     steps:
