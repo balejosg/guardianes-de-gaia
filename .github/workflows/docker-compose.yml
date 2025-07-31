@@ -80,19 +80,44 @@ jobs:
       - name: 💾 Save Docker images as artifacts
         if: matrix.compose-file == 'docker-compose.yml'
         run: |
-          # Get backend image ID first
+          echo "🔍 Debugging available images and services..."
+          echo "Available Docker images:"
+          docker images
+          echo ""
+          echo "Docker Compose services:"
+          docker compose -f ${{ matrix.compose-file }} ps -a
+          echo ""
+          echo "Docker Compose images:"
+          docker compose -f ${{ matrix.compose-file }} images
+          echo ""
+          
+          # Get backend image ID first - try different approaches
           BACKEND_IMAGE_ID=$(docker compose -f ${{ matrix.compose-file }} images backend -q)
-          echo "Backend Image ID: $BACKEND_IMAGE_ID"
+          echo "Backend Image ID (compose): '$BACKEND_IMAGE_ID'"
+          
+          # If that fails, try to find it by name
+          if [ -z "$BACKEND_IMAGE_ID" ]; then
+            echo "Trying to find backend image by name..."
+            BACKEND_IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -i backend | head -1)
+            echo "Backend Image ID (grep): '$BACKEND_IMAGE_ID'"
+          fi
+          
+          # Still no image? Try to get any image from the compose stack
+          if [ -z "$BACKEND_IMAGE_ID" ]; then
+            echo "Trying to get the first image from compose stack..."
+            BACKEND_IMAGE_ID=$(docker compose -f ${{ matrix.compose-file }} images -q | head -1)
+            echo "First Image ID: '$BACKEND_IMAGE_ID'"
+          fi
           
           # Verify image exists
           if [ -z "$BACKEND_IMAGE_ID" ]; then
-            echo "❌ No backend image found!"
-            docker compose -f ${{ matrix.compose-file }} images
+            echo "❌ No backend image found after all attempts!"
+            echo "This might indicate a build failure. Check build logs above."
             exit 1
           fi
           
           # Save backend image with better error handling
-          echo "💾 Saving backend image..."
+          echo "💾 Saving backend image: $BACKEND_IMAGE_ID"
           docker save $BACKEND_IMAGE_ID | gzip > backend-image.tar.gz
           
           # Verify the tar file was created and has content
