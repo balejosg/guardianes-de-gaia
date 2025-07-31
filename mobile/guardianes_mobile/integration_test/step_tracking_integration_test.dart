@@ -4,6 +4,41 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:guardianes_mobile/main.dart' as app;
 
+// Helper methods for step tracking integration tests
+Future<void> _navigateToStepTracking(WidgetTester tester) async {
+  final stepTrackingNav = find.byKey(const Key('step_tracking_nav'));
+  if (stepTrackingNav.evaluate().isNotEmpty) {
+    await tester.tap(stepTrackingNav);
+    await tester.pumpAndSettle();
+  }
+}
+
+Future<void> _simulateOfflineMode(WidgetTester tester) async {
+  // Simulate offline mode by mocking network calls to fail
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    const MethodChannel('connectivity_plus'),
+    (MethodCall methodCall) async {
+      if (methodCall.method == 'check') {
+        return 'none';
+      }
+      return null;
+    },
+  );
+}
+
+Future<void> _simulateStepCount(WidgetTester tester, int stepCount) async {
+  // Mock the pedometer plugin to return specific step count
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    const MethodChannel('pedometer'),
+    (MethodCall methodCall) async {
+      if (methodCall.method == 'getStepCount') {
+        return stepCount;
+      }
+      return null;
+    },
+  );
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -122,40 +157,4 @@ void main() {
       expect(find.textContaining('límite'), findsOneWidget);
     });
   });
-
-  // Helper methods
-  Future<void> _navigateToStepTracking(WidgetTester tester) async {
-    // Look for step tracking navigation
-    final stepTrackingNav = find.byKey(const Key('step_tracking_nav'));
-    if (stepTrackingNav.evaluate().isNotEmpty) {
-      await tester.tap(stepTrackingNav);
-      await tester.pumpAndSettle();
-    }
-  }
-
-  Future<void> _simulateOfflineMode(WidgetTester tester) async {
-    // Simulate network disconnection
-    await tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('connectivity_plus'),
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'check') {
-          return 'none';
-        }
-        return null;
-      },
-    );
-  }
-
-  Future<void> _simulateStepCount(WidgetTester tester, int stepCount) async {
-    // Simulate step counter sensor data
-    await tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('pedometer'),
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'stepCountStream') {
-          return stepCount;
-        }
-        return null;
-      },
-    );
-  }
 }

@@ -5,6 +5,96 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:guardianes_mobile/main.dart' as app;
 
+// Helper methods for complex integration scenarios
+Future<void> _performRegistration(WidgetTester tester) async {
+  final registerButton = find.text('Registrarse');
+  if (registerButton.evaluate().isNotEmpty) {
+    await tester.tap(registerButton);
+    await tester.pumpAndSettle();
+
+    // Fill registration form
+    await tester.enterText(find.byKey(const Key('guardian_name_field')), 'Integration Test Guardian');
+    await tester.enterText(find.byKey(const Key('guardian_email_field')), 'integration.test@guardianes.com');
+    await tester.enterText(find.byKey(const Key('guardian_password_field')), 'TestPassword123!');
+    await tester.enterText(find.byKey(const Key('guardian_confirm_password_field')), 'TestPassword123!');
+
+    await tester.tap(find.byKey(const Key('register_submit_button')));
+    await tester.pumpAndSettle();
+  }
+}
+
+Future<void> _performLogin(WidgetTester tester) async {
+  final loginButton = find.text('Iniciar Sesión');
+  if (loginButton.evaluate().isNotEmpty) {
+    await tester.tap(loginButton);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('login_email_field')), 'integration.test@guardianes.com');
+    await tester.enterText(find.byKey(const Key('login_password_field')), 'TestPassword123!');
+
+    await tester.tap(find.byKey(const Key('login_submit_button')));
+    await tester.pumpAndSettle();
+  }
+}
+
+Future<void> _navigateToStepTracking(WidgetTester tester) async {
+  final stepTrackingNav = find.byKey(const Key('step_tracking_nav'));
+  if (stepTrackingNav.evaluate().isNotEmpty) {
+    await tester.tap(stepTrackingNav);
+    await tester.pumpAndSettle();
+  }
+}
+
+Future<void> _submitSteps(WidgetTester tester) async {
+  final submitButton = find.byKey(const Key('submit_steps_button'));
+  if (submitButton.evaluate().isNotEmpty) {
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+  }
+}
+
+Future<void> _verifyEnergyCalculation(WidgetTester tester) async {
+  expect(find.byKey(const Key('energy_balance')), findsOneWidget);
+  expect(find.byKey(const Key('current_step_count')), findsOneWidget);
+}
+
+Future<void> _viewStepHistory(WidgetTester tester) async {
+  final historyTab = find.byKey(const Key('step_history_tab'));
+  if (historyTab.evaluate().isNotEmpty) {
+    await tester.tap(historyTab);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('step_history_list')), findsOneWidget);
+  }
+}
+
+Future<void> _simulateNetworkError(WidgetTester tester) async {
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    const MethodChannel('dio'),
+    (MethodCall methodCall) async {
+      throw const SocketException('Network unreachable');
+    },
+  );
+}
+
+Future<void> _attemptBackendOperations(WidgetTester tester) async {
+  // Try login
+  await _performLogin(tester);
+  
+  // Try step submission
+  await _navigateToStepTracking(tester);
+  await _submitSteps(tester);
+}
+
+Future<int> _getCurrentStepCount(WidgetTester tester) async {
+  final stepCountWidget = find.byKey(const Key('current_step_count'));
+  if (stepCountWidget.evaluate().isNotEmpty) {
+    final Text widget = tester.widget(stepCountWidget);
+    // Extract step count from widget text
+    return int.tryParse(widget.data?.replaceAll(RegExp(r'[^0-9]'), '') ?? '0') ?? 0;
+  }
+  return 0;
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -58,7 +148,7 @@ void main() {
       final initialSteps = await _getCurrentStepCount(tester);
 
       // Simulate app going to background and returning
-      await tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         const MethodChannel('flutter/lifecycle'),
         (MethodCall methodCall) async {
           if (methodCall.method == 'AppLifecycleState.paused') {
@@ -77,94 +167,4 @@ void main() {
       expect(resumedSteps, equals(initialSteps));
     });
   });
-
-  // Helper methods for complex integration scenarios
-  Future<void> _performRegistration(WidgetTester tester) async {
-    final registerButton = find.text('Registrarse');
-    if (registerButton.evaluate().isNotEmpty) {
-      await tester.tap(registerButton);
-      await tester.pumpAndSettle();
-
-      // Fill registration form
-      await tester.enterText(find.byKey(const Key('guardian_name_field')), 'Integration Test Guardian');
-      await tester.enterText(find.byKey(const Key('guardian_email_field')), 'integration.test@guardianes.com');
-      await tester.enterText(find.byKey(const Key('guardian_password_field')), 'TestPassword123!');
-      await tester.enterText(find.byKey(const Key('guardian_confirm_password_field')), 'TestPassword123!');
-
-      await tester.tap(find.byKey(const Key('register_submit_button')));
-      await tester.pumpAndSettle();
-    }
-  }
-
-  Future<void> _performLogin(WidgetTester tester) async {
-    final loginButton = find.text('Iniciar Sesión');
-    if (loginButton.evaluate().isNotEmpty) {
-      await tester.tap(loginButton);
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byKey(const Key('login_email_field')), 'integration.test@guardianes.com');
-      await tester.enterText(find.byKey(const Key('login_password_field')), 'TestPassword123!');
-
-      await tester.tap(find.byKey(const Key('login_submit_button')));
-      await tester.pumpAndSettle();
-    }
-  }
-
-  Future<void> _navigateToStepTracking(WidgetTester tester) async {
-    final stepTrackingNav = find.byKey(const Key('step_tracking_nav'));
-    if (stepTrackingNav.evaluate().isNotEmpty) {
-      await tester.tap(stepTrackingNav);
-      await tester.pumpAndSettle();
-    }
-  }
-
-  Future<void> _submitSteps(WidgetTester tester) async {
-    final submitButton = find.byKey(const Key('submit_steps_button'));
-    if (submitButton.evaluate().isNotEmpty) {
-      await tester.tap(submitButton);
-      await tester.pumpAndSettle();
-    }
-  }
-
-  Future<void> _verifyEnergyCalculation(WidgetTester tester) async {
-    expect(find.byKey(const Key('energy_balance')), findsOneWidget);
-    expect(find.byKey(const Key('current_step_count')), findsOneWidget);
-  }
-
-  Future<void> _viewStepHistory(WidgetTester tester) async {
-    final historyTab = find.byKey(const Key('step_history_tab'));
-    if (historyTab.evaluate().isNotEmpty) {
-      await tester.tap(historyTab);
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('step_history_list')), findsOneWidget);
-    }
-  }
-
-  Future<void> _simulateNetworkError(WidgetTester tester) async {
-    await tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('dio'),
-      (MethodCall methodCall) async {
-        throw const SocketException('Network unreachable');
-      },
-    );
-  }
-
-  Future<void> _attemptBackendOperations(WidgetTester tester) async {
-    // Try login
-    await _performLogin(tester);
-    
-    // Try step submission
-    await _navigateToStepTracking(tester);
-    await _submitSteps(tester);
-  }
-
-  Future<int> _getCurrentStepCount(WidgetTester tester) async {
-    final stepCountWidget = find.byKey(const Key('current_step_count'));
-    if (stepCountWidget.evaluate().isNotEmpty) {
-      final widget = tester.widget(stepCountWidget);
-      // Extract step count from widget (implementation depends on widget structure)
-      return 0; // Placeholder
-    }
-    return 0;
-  }
 }
