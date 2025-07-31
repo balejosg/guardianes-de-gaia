@@ -59,6 +59,20 @@ public class GuardianApplicationService {
     return Optional.empty();
   }
 
+  public Guardian createGuardianProfile(GuardianRegistrationRequest request) {
+    return registrationService.registerGuardian(
+        request.username(),
+        request.email(),
+        request.password(),
+        request.name(),
+        request.birthDate());
+  }
+
+  public Optional<GuardianProfileResponse> getGuardianProfile(Long guardianId) {
+    Optional<Guardian> guardian = authenticationService.findById(guardianId);
+    return guardian.map(this::mapToProfileResponse);
+  }
+
   private GuardianProfileResponse mapToProfileResponse(Guardian guardian) {
     return new GuardianProfileResponse(
         guardian.getId(),

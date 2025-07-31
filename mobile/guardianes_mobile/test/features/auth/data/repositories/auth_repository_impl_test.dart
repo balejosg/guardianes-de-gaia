@@ -3,6 +3,7 @@ import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:guardianes_mobile/features/auth/data/datasources/auth_local_datasource.dart';
 import 'package:guardianes_mobile/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:guardianes_mobile/features/auth/data/datasources/guardian_profile_remote_datasource.dart';
 import 'package:guardianes_mobile/features/auth/data/models/auth_response_model.dart';
 import 'package:guardianes_mobile/features/auth/data/models/guardian_model.dart';
 import 'package:guardianes_mobile/features/auth/data/repositories/auth_repository_impl.dart';
@@ -13,18 +14,22 @@ import 'auth_repository_impl_test.mocks.dart';
 @GenerateMocks([
   AuthRemoteDataSource,
   AuthLocalDataSource,
+  GuardianProfileRemoteDataSource,
 ])
 void main() {
   late AuthRepositoryImpl repository;
   late MockAuthRemoteDataSource mockRemoteDataSource;
   late MockAuthLocalDataSource mockLocalDataSource;
+  late MockGuardianProfileRemoteDataSource mockProfileDataSource;
 
   setUp(() {
     mockRemoteDataSource = MockAuthRemoteDataSource();
     mockLocalDataSource = MockAuthLocalDataSource();
+    mockProfileDataSource = MockGuardianProfileRemoteDataSource();
     repository = AuthRepositoryImpl(
       remoteDataSource: mockRemoteDataSource,
       localDataSource: mockLocalDataSource,
+      profileDataSource: mockProfileDataSource,
     );
   });
 

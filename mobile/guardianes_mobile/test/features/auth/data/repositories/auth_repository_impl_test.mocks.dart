@@ -3,16 +3,18 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i4;
+import 'dart:async' as _i5;
 
 import 'package:guardianes_mobile/features/auth/data/datasources/auth_local_datasource.dart'
-    as _i5;
+    as _i6;
 import 'package:guardianes_mobile/features/auth/data/datasources/auth_remote_datasource.dart'
-    as _i3;
+    as _i4;
+import 'package:guardianes_mobile/features/auth/data/datasources/guardian_profile_remote_datasource.dart'
+    as _i7;
 import 'package:guardianes_mobile/features/auth/data/models/auth_response_model.dart'
     as _i2;
 import 'package:guardianes_mobile/features/auth/data/models/guardian_model.dart'
-    as _i6;
+    as _i3;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -40,17 +42,27 @@ class _FakeAuthResponseModel_0 extends _i1.SmartFake
         );
 }
 
+class _FakeGuardianModel_1 extends _i1.SmartFake implements _i3.GuardianModel {
+  _FakeGuardianModel_1(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
 /// A class which mocks [AuthRemoteDataSource].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAuthRemoteDataSource extends _i1.Mock
-    implements _i3.AuthRemoteDataSource {
+    implements _i4.AuthRemoteDataSource {
   MockAuthRemoteDataSource() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Future<_i2.AuthResponseModel> register({
+  _i5.Future<_i2.AuthResponseModel> register({
     required String? username,
     required String? email,
     required String? password,
@@ -70,7 +82,7 @@ class MockAuthRemoteDataSource extends _i1.Mock
           },
         ),
         returnValue:
-            _i4.Future<_i2.AuthResponseModel>.value(_FakeAuthResponseModel_0(
+            _i5.Future<_i2.AuthResponseModel>.value(_FakeAuthResponseModel_0(
           this,
           Invocation.method(
             #register,
@@ -84,10 +96,10 @@ class MockAuthRemoteDataSource extends _i1.Mock
             },
           ),
         )),
-      ) as _i4.Future<_i2.AuthResponseModel>);
+      ) as _i5.Future<_i2.AuthResponseModel>);
 
   @override
-  _i4.Future<_i2.AuthResponseModel> login({
+  _i5.Future<_i2.AuthResponseModel> login({
     required String? usernameOrEmail,
     required String? password,
   }) =>
@@ -101,7 +113,7 @@ class MockAuthRemoteDataSource extends _i1.Mock
           },
         ),
         returnValue:
-            _i4.Future<_i2.AuthResponseModel>.value(_FakeAuthResponseModel_0(
+            _i5.Future<_i2.AuthResponseModel>.value(_FakeAuthResponseModel_0(
           this,
           Invocation.method(
             #login,
@@ -112,74 +124,125 @@ class MockAuthRemoteDataSource extends _i1.Mock
             },
           ),
         )),
-      ) as _i4.Future<_i2.AuthResponseModel>);
+      ) as _i5.Future<_i2.AuthResponseModel>);
 }
 
 /// A class which mocks [AuthLocalDataSource].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAuthLocalDataSource extends _i1.Mock
-    implements _i5.AuthLocalDataSource {
+    implements _i6.AuthLocalDataSource {
   MockAuthLocalDataSource() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Future<void> saveToken(String? token) => (super.noSuchMethod(
+  _i5.Future<void> saveToken(String? token) => (super.noSuchMethod(
         Invocation.method(
           #saveToken,
           [token],
         ),
-        returnValue: _i4.Future<void>.value(),
-        returnValueForMissingStub: _i4.Future<void>.value(),
-      ) as _i4.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i4.Future<String?> getToken() => (super.noSuchMethod(
+  _i5.Future<String?> getToken() => (super.noSuchMethod(
         Invocation.method(
           #getToken,
           [],
         ),
-        returnValue: _i4.Future<String?>.value(),
-      ) as _i4.Future<String?>);
+        returnValue: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
 
   @override
-  _i4.Future<void> removeToken() => (super.noSuchMethod(
+  _i5.Future<void> removeToken() => (super.noSuchMethod(
         Invocation.method(
           #removeToken,
           [],
         ),
-        returnValue: _i4.Future<void>.value(),
-        returnValueForMissingStub: _i4.Future<void>.value(),
-      ) as _i4.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i4.Future<void> saveGuardian(_i6.GuardianModel? guardian) =>
+  _i5.Future<void> saveGuardian(_i3.GuardianModel? guardian) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveGuardian,
           [guardian],
         ),
-        returnValue: _i4.Future<void>.value(),
-        returnValueForMissingStub: _i4.Future<void>.value(),
-      ) as _i4.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i4.Future<_i6.GuardianModel?> getGuardian() => (super.noSuchMethod(
+  _i5.Future<_i3.GuardianModel?> getGuardian() => (super.noSuchMethod(
         Invocation.method(
           #getGuardian,
           [],
         ),
-        returnValue: _i4.Future<_i6.GuardianModel?>.value(),
-      ) as _i4.Future<_i6.GuardianModel?>);
+        returnValue: _i5.Future<_i3.GuardianModel?>.value(),
+      ) as _i5.Future<_i3.GuardianModel?>);
 
   @override
-  _i4.Future<void> removeGuardian() => (super.noSuchMethod(
+  _i5.Future<void> removeGuardian() => (super.noSuchMethod(
         Invocation.method(
           #removeGuardian,
           [],
         ),
-        returnValue: _i4.Future<void>.value(),
-        returnValueForMissingStub: _i4.Future<void>.value(),
-      ) as _i4.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+}
+
+/// A class which mocks [GuardianProfileRemoteDataSource].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockGuardianProfileRemoteDataSource extends _i1.Mock
+    implements _i7.GuardianProfileRemoteDataSource {
+  MockGuardianProfileRemoteDataSource() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<_i3.GuardianModel> getGuardianProfile(int? guardianId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getGuardianProfile,
+          [guardianId],
+        ),
+        returnValue: _i5.Future<_i3.GuardianModel>.value(_FakeGuardianModel_1(
+          this,
+          Invocation.method(
+            #getGuardianProfile,
+            [guardianId],
+          ),
+        )),
+      ) as _i5.Future<_i3.GuardianModel>);
+
+  @override
+  _i5.Future<_i3.GuardianModel> updateGuardianProfile(
+    int? guardianId,
+    Map<String, dynamic>? updates,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateGuardianProfile,
+          [
+            guardianId,
+            updates,
+          ],
+        ),
+        returnValue: _i5.Future<_i3.GuardianModel>.value(_FakeGuardianModel_1(
+          this,
+          Invocation.method(
+            #updateGuardianProfile,
+            [
+              guardianId,
+              updates,
+            ],
+          ),
+        )),
+      ) as _i5.Future<_i3.GuardianModel>);
 }

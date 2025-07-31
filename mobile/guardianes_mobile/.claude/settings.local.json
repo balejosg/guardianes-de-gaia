@@ -18,7 +18,27 @@
       "Bash(export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools)",
       "Bash($HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager:*)",
       "WebFetch(domain:pub.dev)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(make test:*)",
+      "Bash(make:*)",
+      "Bash(curl:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(timeout 300 flutter test)",
+      "Bash(git add:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(./mvnw spring-boot:run:*)",
+      "Bash(sudo systemctl restart:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker system prune:*)",
+      "Bash(SPRING_PROFILES_ACTIVE=e2e ./mvnw spring-boot:run -Dspring-boot.run.arguments=\"--server.port=8080\")",
+      "Bash(ss:*)",
+      "Bash(pkill:*)",
+      "Bash(docker run:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker start:*)"
     ],
     "deny": []
   }

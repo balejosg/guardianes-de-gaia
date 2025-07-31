@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:guardianes_mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:guardianes_mobile/features/cards/presentation/bloc/card_bloc.dart';
+import 'package:guardianes_mobile/features/cards/presentation/pages/qr_scanner_page.dart';
+import 'package:guardianes_mobile/core/utils/injection.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -128,9 +131,13 @@ class HomePage extends StatelessWidget {
                           title: 'Escanear Cartas',
                           icon: Icons.qr_code_scanner,
                           onTap: () {
-                            // TODO: Navigate to QR scanner
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Próximamente disponible')),
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => BlocProvider<CardBloc>(
+                                  create: (context) => getIt<CardBloc>(),
+                                  child: QRScannerPage(guardianId: guardian.id),
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -145,13 +152,10 @@ class HomePage extends StatelessWidget {
                           },
                         ),
                         _FeatureCard(
-                          title: 'Mi Pacto',
-                          icon: Icons.group,
+                          title: 'Mi Perfil',
+                          icon: Icons.person,
                           onTap: () {
-                            // TODO: Navigate to family/pacto
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Próximamente disponible')),
-                            );
+                            Navigator.pushNamed(context, '/profile');
                           },
                         ),
                       ],

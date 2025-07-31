@@ -75,7 +75,7 @@ void main() {
 
         // assert
         verify(mockHttpClient.post(
-          Uri.parse('http://localhost:8080/api/v1/auth/register'),
+          Uri.parse('https://my-guardianes.duckdns.org/api/auth/register'),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -246,7 +246,7 @@ void main() {
 
         // assert
         verify(mockHttpClient.post(
-          Uri.parse('http://localhost:8080/api/v1/auth/login'),
+          Uri.parse('https://my-guardianes.duckdns.org/api/auth/login'),
           headers: {
             'Content-Type': 'application/json',
           },

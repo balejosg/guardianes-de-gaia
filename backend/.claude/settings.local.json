@@ -68,7 +68,8 @@
       "Bash(sudo rm:*)",
       "Bash(npm run test:*)",
       "Bash(docker:*)",
-      "Bash(timeout 30 mvn spring-boot:run:*)"
+      "Bash(timeout 30 mvn spring-boot:run:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

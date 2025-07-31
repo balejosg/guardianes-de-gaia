@@ -2,26 +2,22 @@ package com.guardianes.walking.infrastructure.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.guardianes.testconfig.GuardianTestConfiguration;
 import com.guardianes.walking.domain.EnergyRepository;
 import com.guardianes.walking.domain.EnergyTransaction;
 import com.guardianes.walking.domain.EnergyTransactionType;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.TestPropertySource;
 
-@SpringBootTest
-@TestPropertySource(locations = "classpath:application-test.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@Import(GuardianTestConfiguration.class)
 public class EnergyTransactionPersistenceTest {
 
-  @Autowired private EnergyRepository energyRepository;
+  private EnergyRepository energyRepository;
+
+  @BeforeEach
+  void setUp() {
+    energyRepository = new InMemoryEnergyRepository();
+  }
 
   @Test
   public void shouldPersistEnergyTransactionToRepository() {

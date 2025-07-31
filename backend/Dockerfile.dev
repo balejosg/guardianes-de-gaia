@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Copy the built JAR from builder stage
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/target/guardianes-backend-*.jar app.jar
 
 # Create application user
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser

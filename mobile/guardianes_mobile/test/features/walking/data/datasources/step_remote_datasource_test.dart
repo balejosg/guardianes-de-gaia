@@ -22,7 +22,7 @@ void main() {
   });
 
   group('StepRemoteDataSource', () {
-    const baseUrl = 'http://localhost:8080';
+    const baseUrl = 'https://my-guardianes.duckdns.org';
     const guardianId = 1;
 
     group('submitSteps', () {

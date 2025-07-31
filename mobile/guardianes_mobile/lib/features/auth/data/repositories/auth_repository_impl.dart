@@ -1,5 +1,6 @@
 import 'package:guardianes_mobile/features/auth/data/datasources/auth_local_datasource.dart';
 import 'package:guardianes_mobile/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:guardianes_mobile/features/auth/data/datasources/guardian_profile_remote_datasource.dart';
 import 'package:guardianes_mobile/features/auth/domain/entities/auth_result.dart';
 import 'package:guardianes_mobile/features/auth/domain/entities/guardian.dart';
 import 'package:guardianes_mobile/features/auth/domain/repositories/auth_repository.dart';
@@ -7,10 +8,12 @@ import 'package:guardianes_mobile/features/auth/domain/repositories/auth_reposit
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
+  final GuardianProfileRemoteDataSource profileDataSource;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
+    required this.profileDataSource,
   });
 
   @override
@@ -70,6 +73,12 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Guardian?> getCurrentGuardian() async {
     return await localDataSource.getGuardian();
+  }
+
+  @override
+  Future<Guardian> getGuardianProfile(int guardianId) async {
+    final guardianModel = await profileDataSource.getGuardianProfile(guardianId);
+    return guardianModel;
   }
 
   @override

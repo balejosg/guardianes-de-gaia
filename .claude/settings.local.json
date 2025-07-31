@@ -75,7 +75,9 @@
       "Bash(git commit:*)",
       "Bash(gradle:*)",
       "Bash(cat:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(kill:*)",
+      "Bash(echo \"Exit code: $?\")"
     ],
     "deny": []
   }

@@ -3,14 +3,14 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i4;
+import 'dart:async' as _i5;
 
 import 'package:guardianes_mobile/features/auth/domain/entities/auth_result.dart'
     as _i2;
 import 'package:guardianes_mobile/features/auth/domain/entities/guardian.dart'
-    as _i5;
-import 'package:guardianes_mobile/features/auth/domain/repositories/auth_repository.dart'
     as _i3;
+import 'package:guardianes_mobile/features/auth/domain/repositories/auth_repository.dart'
+    as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -37,16 +37,26 @@ class _FakeAuthResult_0 extends _i1.SmartFake implements _i2.AuthResult {
         );
 }
 
+class _FakeGuardian_1 extends _i1.SmartFake implements _i3.Guardian {
+  _FakeGuardian_1(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
 /// A class which mocks [AuthRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAuthRepository extends _i1.Mock implements _i3.AuthRepository {
+class MockAuthRepository extends _i1.Mock implements _i4.AuthRepository {
   MockAuthRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Future<_i2.AuthResult> register({
+  _i5.Future<_i2.AuthResult> register({
     required String? username,
     required String? email,
     required String? password,
@@ -65,7 +75,7 @@ class MockAuthRepository extends _i1.Mock implements _i3.AuthRepository {
             #birthDate: birthDate,
           },
         ),
-        returnValue: _i4.Future<_i2.AuthResult>.value(_FakeAuthResult_0(
+        returnValue: _i5.Future<_i2.AuthResult>.value(_FakeAuthResult_0(
           this,
           Invocation.method(
             #register,
@@ -79,10 +89,10 @@ class MockAuthRepository extends _i1.Mock implements _i3.AuthRepository {
             },
           ),
         )),
-      ) as _i4.Future<_i2.AuthResult>);
+      ) as _i5.Future<_i2.AuthResult>);
 
   @override
-  _i4.Future<_i2.AuthResult> login({
+  _i5.Future<_i2.AuthResult> login({
     required String? usernameOrEmail,
     required String? password,
   }) =>
@@ -95,7 +105,7 @@ class MockAuthRepository extends _i1.Mock implements _i3.AuthRepository {
             #password: password,
           },
         ),
-        returnValue: _i4.Future<_i2.AuthResult>.value(_FakeAuthResult_0(
+        returnValue: _i5.Future<_i2.AuthResult>.value(_FakeAuthResult_0(
           this,
           Invocation.method(
             #login,
@@ -106,52 +116,68 @@ class MockAuthRepository extends _i1.Mock implements _i3.AuthRepository {
             },
           ),
         )),
-      ) as _i4.Future<_i2.AuthResult>);
+      ) as _i5.Future<_i2.AuthResult>);
 
   @override
-  _i4.Future<void> logout() => (super.noSuchMethod(
+  _i5.Future<void> logout() => (super.noSuchMethod(
         Invocation.method(
           #logout,
           [],
         ),
-        returnValue: _i4.Future<void>.value(),
-        returnValueForMissingStub: _i4.Future<void>.value(),
-      ) as _i4.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i4.Future<String?> getToken() => (super.noSuchMethod(
+  _i5.Future<String?> getToken() => (super.noSuchMethod(
         Invocation.method(
           #getToken,
           [],
         ),
-        returnValue: _i4.Future<String?>.value(),
-      ) as _i4.Future<String?>);
+        returnValue: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
 
   @override
-  _i4.Future<void> saveToken(String? token) => (super.noSuchMethod(
+  _i5.Future<void> saveToken(String? token) => (super.noSuchMethod(
         Invocation.method(
           #saveToken,
           [token],
         ),
-        returnValue: _i4.Future<void>.value(),
-        returnValueForMissingStub: _i4.Future<void>.value(),
-      ) as _i4.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i4.Future<_i5.Guardian?> getCurrentGuardian() => (super.noSuchMethod(
+  _i5.Future<_i3.Guardian?> getCurrentGuardian() => (super.noSuchMethod(
         Invocation.method(
           #getCurrentGuardian,
           [],
         ),
-        returnValue: _i4.Future<_i5.Guardian?>.value(),
-      ) as _i4.Future<_i5.Guardian?>);
+        returnValue: _i5.Future<_i3.Guardian?>.value(),
+      ) as _i5.Future<_i3.Guardian?>);
 
   @override
-  _i4.Future<bool> isLoggedIn() => (super.noSuchMethod(
+  _i5.Future<_i3.Guardian> getGuardianProfile(int? guardianId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getGuardianProfile,
+          [guardianId],
+        ),
+        returnValue: _i5.Future<_i3.Guardian>.value(_FakeGuardian_1(
+          this,
+          Invocation.method(
+            #getGuardianProfile,
+            [guardianId],
+          ),
+        )),
+      ) as _i5.Future<_i3.Guardian>);
+
+  @override
+  _i5.Future<bool> isLoggedIn() => (super.noSuchMethod(
         Invocation.method(
           #isLoggedIn,
           [],
         ),
-        returnValue: _i4.Future<bool>.value(false),
-      ) as _i4.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 }

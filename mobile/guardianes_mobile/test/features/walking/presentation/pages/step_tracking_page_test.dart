@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:guardianes_mobile/core/utils/injection.dart';
+import 'package:guardianes_mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:guardianes_mobile/features/auth/domain/entities/guardian.dart';
 import 'package:guardianes_mobile/features/walking/domain/entities/daily_step_aggregate.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_bloc.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_event.dart';
@@ -15,20 +17,43 @@ import 'package:guardianes_mobile/features/walking/data/services/pedometer_servi
 
 import 'step_tracking_page_test.mocks.dart';
 
-@GenerateMocks([StepBloc, PedometerService])
+@GenerateMocks([StepBloc, PedometerService, AuthBloc])
 void main() {
   late MockStepBloc mockStepBloc;
   late MockPedometerService mockPedometerService;
+  late MockAuthBloc mockAuthBloc;
 
   setUp(() {
     mockStepBloc = MockStepBloc();
     mockPedometerService = MockPedometerService();
+    mockAuthBloc = MockAuthBloc();
     
     // Clear GetIt and register mocks
     getIt.reset();
     
+    // Setup default guardian for AuthBloc
+    final testGuardian = Guardian(
+      id: 1,
+      username: 'test_user',
+      email: 'test@example.com',
+      name: 'Test User',
+      birthDate: DateTime(2015, 1, 1),
+      age: 9,
+      level: 'BEGINNER',
+      experiencePoints: 100,
+      experienceToNextLevel: 50,
+      totalSteps: 5000,
+      totalEnergyGenerated: 500,
+      createdAt: DateTime.now(),
+      lastActiveAt: DateTime.now(),
+      isChild: true,
+    );
+
     // Setup default mock behavior first
     when(mockStepBloc.stream).thenAnswer((_) => Stream.value(StepInitial()));
+    when(mockStepBloc.state).thenReturn(StepInitial());
+    when(mockAuthBloc.stream).thenAnswer((_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
+    when(mockAuthBloc.state).thenReturn(AuthAuthenticated(guardian: testGuardian));
     when(mockPedometerService.initialize()).thenAnswer((_) async => true);
     when(mockPedometerService.getCurrentStepCount()).thenAnswer((_) async => 0);
     when(mockPedometerService.stepCountStream).thenAnswer((_) => Stream.value(0));
@@ -46,8 +71,11 @@ void main() {
 
   Widget createWidgetUnderTest() {
     return MaterialApp(
-      home: BlocProvider<StepBloc>.value(
-        value: mockStepBloc,
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider<StepBloc>.value(value: mockStepBloc),
+          BlocProvider<AuthBloc>.value(value: mockAuthBloc),
+        ],
         child: const StepTrackingPage(),
       ),
     );

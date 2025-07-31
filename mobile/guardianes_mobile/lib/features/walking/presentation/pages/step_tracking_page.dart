@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:guardianes_mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:guardianes_mobile/features/walking/domain/entities/step_record.dart';
+import 'package:guardianes_mobile/features/walking/domain/validators/step_validation.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_bloc.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_event.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_state.dart' as step_state;
-import 'package:guardianes_mobile/features/walking/presentation/widgets/step_counter_widget.dart';
+import 'package:guardianes_mobile/features/walking/presentation/widgets/realtime_step_counter_widget.dart';
 import 'package:guardianes_mobile/features/walking/presentation/widgets/step_history_widget.dart';
 
 class StepTrackingPage extends StatefulWidget {
@@ -19,27 +21,32 @@ class _StepTrackingPageState extends State<StepTrackingPage>
   late TabController _tabController;
   final _stepFormKey = GlobalKey<FormState>();
   final _stepController = TextEditingController();
-  final int _defaultGuardianId = 1; // TODO: Get from user context
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    // Load initial data
-    context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: _defaultGuardianId));
+    // Load initial data with guardian ID from auth state
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
+    }
     
     // Listen for tab changes
     _tabController.addListener(() {
       if (_tabController.index == 1) {
         // History tab selected
-        final now = DateTime.now();
-        final weekAgo = now.subtract(const Duration(days: 7));
-        context.read<StepBloc>().add(GetStepHistoryEvent(
-          guardianId: _defaultGuardianId,
-          fromDate: weekAgo.toIso8601String().split('T')[0],
-          toDate: now.toIso8601String().split('T')[0],
-        ));
+        final authState = context.read<AuthBloc>().state;
+        if (authState is AuthAuthenticated) {
+          final now = DateTime.now();
+          final weekAgo = now.subtract(const Duration(days: 7));
+          context.read<StepBloc>().add(GetStepHistoryEvent(
+            guardianId: authState.guardian.id,
+            fromDate: weekAgo.toIso8601String().split('T')[0],
+            toDate: now.toIso8601String().split('T')[0],
+          ));
+        }
       }
     });
   }
@@ -79,7 +86,10 @@ class _StepTrackingPageState extends State<StepTrackingPage>
               ),
             );
             // Refresh current data
-            context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: _defaultGuardianId));
+            final authState = context.read<AuthBloc>().state;
+            if (authState is AuthAuthenticated) {
+              context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
+            }
           } else if (state is step_state.StepSubmissionError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -114,7 +124,14 @@ class _StepTrackingPageState extends State<StepTrackingPage>
       child: Column(
         children: [
           const SizedBox(height: 20),
-          const StepCounterWidget(),
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              if (authState is AuthAuthenticated) {
+                return RealtimeStepCounterWidget(guardianId: authState.guardian.id);
+              }
+              return const SizedBox.shrink();
+            },
+          ),
           const SizedBox(height: 20),
           _buildTodayStats(),
           const SizedBox(height: 20),
@@ -274,16 +291,19 @@ class _StepTrackingPageState extends State<StepTrackingPage>
   }
 
   Future<void> _handleRefresh() async {
-    context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: _defaultGuardianId));
-    
-    if (_tabController.index == 1) {
-      final now = DateTime.now();
-      final weekAgo = now.subtract(const Duration(days: 7));
-      context.read<StepBloc>().add(GetStepHistoryEvent(
-        guardianId: _defaultGuardianId,
-        fromDate: weekAgo.toIso8601String().split('T')[0],
-        toDate: now.toIso8601String().split('T')[0],
-      ));
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
+      
+      if (_tabController.index == 1) {
+        final now = DateTime.now();
+        final weekAgo = now.subtract(const Duration(days: 7));
+        context.read<StepBloc>().add(GetStepHistoryEvent(
+          guardianId: authState.guardian.id,
+          fromDate: weekAgo.toIso8601String().split('T')[0],
+          toDate: now.toIso8601String().split('T')[0],
+        ));
+      }
     }
   }
 
@@ -347,15 +367,59 @@ class _StepTrackingPageState extends State<StepTrackingPage>
   void _submitManualSteps() {
     if (_stepFormKey.currentState?.validate() ?? false) {
       final stepCount = int.parse(_stepController.text);
-      final stepRecord = StepRecord(
-        guardianId: _defaultGuardianId,
-        stepCount: stepCount,
-        timestamp: DateTime.now().toIso8601String(),
-      );
+      final timestamp = DateTime.now().toIso8601String();
       
-      context.read<StepBloc>().add(SubmitStepsEvent(stepRecord: stepRecord));
-      Navigator.of(context).pop();
-      _stepController.clear();
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthAuthenticated) {
+        // Get current daily total from StepBloc state
+        final stepState = context.read<StepBloc>().state;
+        int currentDailyTotal = 0;
+        if (stepState is step_state.StepLoaded) {
+          currentDailyTotal = stepState.currentSteps.totalSteps;
+        }
+        
+        // Validate step submission before sending
+        final validationResult = StepValidator.validateStepSubmission(
+          stepCount: stepCount,
+          timestamp: timestamp,
+          guardianId: authState.guardian.id,
+          currentDailyTotal: currentDailyTotal,
+        );
+
+        if (validationResult.isValid) {
+          final stepRecord = StepRecord(
+            guardianId: authState.guardian.id,
+            stepCount: stepCount,
+            timestamp: timestamp,
+          );
+        
+          context.read<StepBloc>().add(SubmitStepsEvent(stepRecord: stepRecord));
+          Navigator.of(context).pop();
+          _stepController.clear();
+
+          // Show warnings if any
+          if (validationResult.warnings.isNotEmpty) {
+            Future.delayed(const Duration(milliseconds: 500), () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Warning: ${validationResult.warnings.first}'),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            });
+          }
+        } else {
+          // Show validation error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${validationResult.errorMessage}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     }
   }
 }

@@ -23,5 +23,7 @@ abstract class AuthRepository {
 
   Future<Guardian?> getCurrentGuardian();
 
+  Future<Guardian> getGuardianProfile(int guardianId);
+
   Future<bool> isLoggedIn();
 }

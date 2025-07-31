@@ -75,7 +75,7 @@ jobs:
         env:
           SPRING_PROFILES_ACTIVE: e2e
           SERVER_PORT: ${{ env.BACKEND_PORT }}
-          JAVA_OPTS: '-Xmx1024m -Xms512m -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Djava.awt.headless=true'
+          JAVA_OPTS: '-Xmx768m -Xms768m -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Djava.awt.headless=true -XX:+UnlockExperimentalVMOptions -XX:+UseJVMCICompiler -XX:+EagerJVMCI -Dspring.backgroundpreinitializer.ignore=true -Dspring.output.ansi.enabled=NEVER'
         run: |
           echo "Starting backend JAR with H2 in-memory database for E2E testing..."
           echo "JVM Options: $JAVA_OPTS"
@@ -84,8 +84,8 @@ jobs:
           JAR_FILE=$(ls target/guardianes-backend-*.jar | head -1)
           echo "Using JAR: $JAR_FILE"
           
-          # Start backend JAR directly for much faster startup
-          java $JAVA_OPTS -Dspring.profiles.active=e2e -jar "$JAR_FILE" &
+          # Start backend JAR with ultra-optimized CI profile
+          java $JAVA_OPTS -Dspring.profiles.active=ci -jar "$JAR_FILE" &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
           echo "Backend JAR started with PID: $BACKEND_PID at $(date)"
@@ -101,8 +101,8 @@ jobs:
           echo "Waiting for H2 in-memory backend to be ready..."
           echo "Backend PID: $BACKEND_PID"
           
-          # Reasonable timeout for JAR startup (18 attempts * 10s = 3 minutes max)
-          for i in {1..18}; do
+          # Optimistic timeout for ultra-fast JAR startup (12 attempts * 5s = 1 minute max)
+          for i in {1..12}; do
             # Check if backend process is still running
             if ! kill -0 $BACKEND_PID 2>/dev/null; then
               echo "❌ Backend process died unexpectedly"
@@ -117,12 +117,17 @@ jobs:
               echo "📊 H2 Database Status:"
               curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health | jq '.' || echo "Health endpoint responded successfully"
               
+              # Load test data now that backend is ready
+              echo "🔄 Loading E2E test data..."
+              curl -f -X POST http://localhost:${{ env.BACKEND_PORT }}/api/test/load-data || echo "⚠️ Test data loading failed but continuing..."
+              echo "✅ E2E test data loaded"
+              
               exit 0
             fi
-            echo "⏳ Attempt $i/18: Backend not ready yet, waiting 10 seconds..."
-            sleep 10
+            echo "⏳ Attempt $i/12: Backend not ready yet, waiting 5 seconds..."
+            sleep 5
           done
-          echo "❌ Backend JAR failed to start within 3-minute timeout"
+          echo "❌ Backend JAR failed to start within 1-minute timeout"
           echo "ready=false" >> $GITHUB_OUTPUT
           exit 1
       

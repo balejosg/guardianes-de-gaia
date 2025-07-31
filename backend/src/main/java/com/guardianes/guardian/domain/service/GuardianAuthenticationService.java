@@ -38,6 +38,10 @@ public class GuardianAuthenticationService {
     return Optional.empty();
   }
 
+  public Optional<Guardian> findById(Long guardianId) {
+    return guardianRepository.findById(guardianId);
+  }
+
   private Optional<Guardian> findGuardianByUsernameOrEmail(String usernameOrEmail) {
     if (usernameOrEmail.contains("@")) {
       return guardianRepository.findByEmail(usernameOrEmail);

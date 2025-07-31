@@ -25,7 +25,6 @@ services:
       - TOGGLZ_CONSOLE_SECURED=false
       - TZ=Europe/Madrid
     volumes:
-      - ./backend:/app
       - maven-cache:/root/.m2
     depends_on:
       mysql:

@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:guardianes_mobile/shared/theme/app_theme.dart';
 import 'package:guardianes_mobile/core/utils/injection.dart';
 import 'package:guardianes_mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:guardianes_mobile/features/auth/presentation/bloc/guardian_profile_bloc.dart';
 import 'package:guardianes_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:guardianes_mobile/features/auth/presentation/pages/guardian_profile_page.dart';
 import 'package:guardianes_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:guardianes_mobile/features/walking/presentation/pages/step_tracking_page.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_bloc.dart';
@@ -31,6 +33,18 @@ class GuardianesApp extends StatelessWidget {
           '/step-tracking': (context) => BlocProvider(
             create: (context) => getIt<StepBloc>(),
             child: const StepTrackingPage(),
+          ),
+          '/profile': (context) => BlocProvider(
+            create: (context) {
+              final bloc = getIt<GuardianProfileBloc>();
+              // Auto-load profile when the page is opened
+              final authState = context.read<AuthBloc>().state;
+              if (authState is AuthAuthenticated) {
+                bloc.add(LoadGuardianProfileEvent(guardianId: authState.guardian.id));
+              }
+              return bloc;
+            },
+            child: const GuardianProfilePage(),
           ),
         },
       ),
