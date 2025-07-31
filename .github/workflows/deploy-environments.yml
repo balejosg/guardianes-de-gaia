@@ -13,9 +13,10 @@ on:
       environment:
         description: 'Target environment'
         required: true
-        default: 'development'
+        default: 'local'
         type: choice
         options:
+          - local
           - development
           - staging
           - production
@@ -171,6 +172,34 @@ jobs:
   # ============================================
   # Development Environment Deployment  
   # ============================================
+  deploy-local:
+    name: 🏠 Deploy to Local Machine
+    runs-on: self-hosted
+    needs: [determine-strategy]
+    if: needs.determine-strategy.outputs.environment == 'local'
+    environment:
+      name: local
+      url: http://localhost:8080
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build and run with Docker Compose
+        run: |
+          echo "🚀 Deploying to local machine using Docker Compose..."
+          docker-compose -f docker-compose.yml -f docker-compose.test.yml up --build -d
+          echo "✅ Local deployment complete."
+
+      - name: 🧪 Post-deployment validation
+        run: |
+          echo "🧪 Running post-deployment validation on localhost..."
+          # Give the services a moment to start up
+          sleep 15
+          # Health check
+          curl -f http://localhost:8080/actuator/health
+          echo "✅ Local environment is healthy."
+
   deploy-development:
     name: 🔧 Deploy to Development
     runs-on: ubuntu-latest

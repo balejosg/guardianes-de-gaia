@@ -211,7 +211,12 @@ void main() {
         totalSteps: 2000,
       );
       
+      // Set up stream to emit states
       when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: initialAggregate));
+      when(mockStepBloc.stream).thenAnswer((_) => Stream.fromIterable([
+        const StepLoaded(currentSteps: initialAggregate),
+        const StepLoaded(currentSteps: updatedAggregate),
+      ]));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -220,9 +225,8 @@ void main() {
       expect(find.text('1,000 Steps'), findsOneWidget);
       expect(find.text('100 Energy'), findsOneWidget);
 
-      // Change state
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: updatedAggregate));
-      await tester.pumpWidget(createWidgetUnderTest());
+      // Wait for the stream to emit the next state
+      await tester.pump();
 
       // Assert updated state
       expect(find.text('2,000 Steps'), findsOneWidget);

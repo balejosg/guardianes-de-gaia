@@ -59,6 +59,31 @@ class StepCounterWidget extends StatelessWidget {
   }
 
   Widget _buildStepDisplay(step_state.StepState state) {
+    if (state is step_state.StepLoading) {
+      return const CircularProgressIndicator();
+    }
+    
+    if (state is step_state.StepError) {
+      return Column(
+        children: [
+          Icon(
+            Icons.error,
+            size: 48,
+            color: Colors.red[400],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Error: ${state.message}',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.red[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      );
+    }
+    
     return Column(
       children: [
         Text(
@@ -69,43 +94,17 @@ class StepCounterWidget extends StatelessWidget {
             color: Colors.black87,
           ),
         ),
-        const Text(
-          'Steps',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
-        ),
       ],
     );
   }
 
   Widget _buildEnergyDisplay(step_state.StepState state) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange[200]!),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.bolt,
-            color: Colors.orange[600],
-            size: 20,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            _getEnergyText(state),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.orange[700],
-            ),
-          ),
-        ],
+    return Text(
+      _getEnergyText(state),
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.orange[700],
       ),
     );
   }
@@ -184,11 +183,11 @@ class StepCounterWidget extends StatelessWidget {
     if (state is step_state.StepLoading) {
       return '...';
     } else if (state is step_state.StepLoaded) {
-      return NumberFormat('#,###').format(state.currentSteps.totalSteps);
+      return '${NumberFormat('#,###').format(state.currentSteps.totalSteps)} Steps';
     } else if (state is step_state.StepError) {
-      return '--';
+      return '-- Steps';
     }
-    return '--';
+    return '-- Steps';
   }
 
   String _getEnergyText(step_state.StepState state) {

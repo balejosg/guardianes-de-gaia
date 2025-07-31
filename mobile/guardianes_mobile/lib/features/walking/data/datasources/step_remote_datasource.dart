@@ -25,7 +25,7 @@ abstract class StepRemoteDataSource {
 
 class StepRemoteDataSourceImpl implements StepRemoteDataSource {
   final http.Client client;
-  static const String baseUrl = 'http://localhost:8080';
+  static const String baseUrl = 'https://my-guardianes.duckdns.org';
 
   StepRemoteDataSourceImpl(this.client);
 

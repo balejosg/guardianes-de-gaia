@@ -61,7 +61,7 @@ class StepHistoryWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _formatDate(dayData.date),
+                  dayData.date,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -157,15 +157,25 @@ class StepHistoryWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildSummaryItem(
-                  'Total Steps',
-                  '${NumberFormat('#,###').format(totalSteps)} steps',
-                  Colors.blue[600]!,
+                Expanded(
+                  child: Text(
+                    'Weekly Total: ${NumberFormat('#,###').format(totalSteps)} steps',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue[600],
+                    ),
+                  ),
                 ),
-                _buildSummaryItem(
-                  'Average',
-                  '${NumberFormat('#,###').format(averageSteps.round())} steps/day',
-                  Colors.green[600]!,
+                Expanded(
+                  child: Text(
+                    'Average: ${NumberFormat('#,###').format(averageSteps.round())} steps/day',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green[600],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -175,28 +185,6 @@ class StepHistoryWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryItem(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildEmptyState() {
     return Center(
@@ -260,14 +248,6 @@ class StepHistoryWidget extends StatelessWidget {
     );
   }
 
-  String _formatDate(String dateString) {
-    try {
-      final date = DateTime.parse(dateString);
-      return DateFormat('MMM d, yyyy').format(date);
-    } catch (e) {
-      return dateString;
-    }
-  }
 
   String _formatDayOfWeek(String dateString) {
     try {

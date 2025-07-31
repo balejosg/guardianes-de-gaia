@@ -23,7 +23,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   AuthRemoteDataSourceImpl({
     required this.client,
-    this.baseUrl = 'http://localhost:8080/api/v1',
+    this.baseUrl = 'https://my-guardianes.duckdns.org/api',
   });
 
   @override
