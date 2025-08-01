@@ -145,6 +145,7 @@ jobs:
     name: 🧪 Integration Test Stack
     runs-on: ubuntu-latest
     needs: [docker-compose-build]
+    timeout-minutes: 45
     
     services:
       # Use Docker-in-Docker for complex orchestration
@@ -190,7 +191,7 @@ jobs:
           docker compose -f docker-compose.test.yml up -d
           
           echo "⏳ Waiting for services to be ready..."
-          sleep 90
+          sleep 180
           
           echo "🔍 Checking Docker Compose services status:"
           docker compose -f docker-compose.test.yml ps
@@ -228,8 +229,8 @@ jobs:
         run: |
           echo "🧪 Testing service endpoints..."
           
-          # Wait for backend to be ready
-          timeout 300 bash -c 'until curl -f -u ci:ci_test http://localhost:8080/actuator/health; do sleep 3; done'
+          # Wait for backend to be ready with extended timeout
+          timeout 600 bash -c 'until curl -f -u ci:ci_test http://localhost:8080/actuator/health; do sleep 5; done'
           
           # Test backend health endpoint
           echo "Testing backend health..."

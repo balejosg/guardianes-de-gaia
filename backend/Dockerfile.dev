@@ -43,9 +43,9 @@ USER appuser
 # Expose ports
 EXPOSE 8080 9090
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+# Health check with extended timeout for CI environments
+HEALTHCHECK --interval=30s --timeout=20s --start-period=120s --retries=5 \
+  CMD curl -f -u ci:ci_test http://localhost:8080/actuator/health || exit 1
 
-# Run the application
-CMD ["java", "-jar", "app.jar"]
+# Run the application with optimized JVM flags for CI environments
+CMD ["java", "-Xmx768m", "-Xms768m", "-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-Djava.awt.headless=true", "-Dspring.backgroundpreinitializer.ignore=true", "-Dspring.output.ansi.enabled=NEVER", "-jar", "app.jar"]

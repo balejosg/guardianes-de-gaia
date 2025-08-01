@@ -247,8 +247,8 @@ class GuardianProfilePage extends StatelessWidget {
                                               guardian.experienceToNextLevel))
                                   : 1.0,
                               backgroundColor: Colors.grey[300],
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.purple),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Colors.purple),
                             ),
                             const SizedBox(height: 4),
                             Text(

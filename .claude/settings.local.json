@@ -80,7 +80,10 @@
       "Bash(echo \"Exit code: $?\")",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(dart format:*)",
+      "Bash(pod init:*)",
+      "Bash(gh run watch:*)"
     ],
     "deny": []
   }

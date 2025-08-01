@@ -361,7 +361,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.green,
             shape: BoxShape.circle,
           ),

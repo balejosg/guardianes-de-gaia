@@ -41,6 +41,7 @@ jobs:
   backend-setup:
     name: 🚀 Backend Service Setup
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     
@@ -84,8 +85,8 @@ jobs:
           JAR_FILE=$(ls target/guardianes-backend-*.jar | head -1)
           echo "Using JAR: $JAR_FILE"
           
-          # Start backend JAR with ultra-optimized CI profile
-          java $JAVA_OPTS -Dspring.profiles.active=ci -jar "$JAR_FILE" &
+          # Start backend JAR with E2E profile for proper credentials
+          java $JAVA_OPTS -Dspring.profiles.active=e2e -jar "$JAR_FILE" &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
           echo "Backend JAR started with PID: $BACKEND_PID at $(date)"

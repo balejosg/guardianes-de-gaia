@@ -35,10 +35,10 @@ services:
       - test-network
     healthcheck:
       test: ["CMD", "curl", "-f", "-u", "ci:ci_test", "http://localhost:8080/actuator/health", "||", "exit", "1"]
-      interval: 20s
-      timeout: 15s
-      retries: 20
-      start_period: 120s
+      interval: 30s
+      timeout: 20s
+      retries: 30
+      start_period: 300s
 
   # ============================================
   # Backend Test Runner (runs tests against backend-test)
@@ -96,10 +96,10 @@ services:
       - test-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_test_secret"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   # ============================================
   # Redis Cache for Testing
@@ -116,9 +116,9 @@ services:
       - test-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   # ============================================
   # RabbitMQ Message Queue for Testing
@@ -140,8 +140,8 @@ services:
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
-      timeout: 10s
-      retries: 5
+      timeout: 15s
+      retries: 8
 
 # ============================================
 # Networks

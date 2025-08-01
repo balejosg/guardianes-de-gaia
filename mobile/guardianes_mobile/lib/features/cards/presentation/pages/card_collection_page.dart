@@ -178,8 +178,8 @@ class _CardCollectionPageState extends State<CardCollectionPage> {
         onPressed: () {
           Navigator.of(context).pop();
         },
-        child: const Icon(Icons.qr_code_scanner),
         tooltip: 'Escanear nueva carta',
+        child: const Icon(Icons.qr_code_scanner),
       ),
     );
   }

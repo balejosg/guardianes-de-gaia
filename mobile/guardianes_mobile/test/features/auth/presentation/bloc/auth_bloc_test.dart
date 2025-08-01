@@ -153,7 +153,7 @@ void main() {
           )).thenAnswer((_) async => tAuthResult);
           return authBloc;
         },
-        act: (bloc) => bloc.add(AuthLoginRequested(
+        act: (bloc) => bloc.add(const AuthLoginRequested(
           usernameOrEmail: tUsernameOrEmail,
           password: tPassword,
         )),
@@ -178,13 +178,13 @@ void main() {
           )).thenThrow(Exception('Invalid credentials'));
           return authBloc;
         },
-        act: (bloc) => bloc.add(AuthLoginRequested(
+        act: (bloc) => bloc.add(const AuthLoginRequested(
           usernameOrEmail: tUsernameOrEmail,
           password: tPassword,
         )),
         expect: () => [
           AuthLoading(),
-          AuthError(message: 'Exception: Invalid credentials'),
+          const AuthError(message: 'Exception: Invalid credentials'),
         ],
         verify: (_) {
           verify(mockLoginGuardian(
@@ -203,7 +203,7 @@ void main() {
           )).thenAnswer((_) async => tAuthResult);
           return authBloc;
         },
-        act: (bloc) => bloc.add(AuthLoginRequested(
+        act: (bloc) => bloc.add(const AuthLoginRequested(
           usernameOrEmail: 'test@example.com',
           password: tPassword,
         )),
@@ -282,7 +282,7 @@ void main() {
         )),
         expect: () => [
           AuthLoading(),
-          AuthError(message: 'Exception: Username already exists'),
+          const AuthError(message: 'Exception: Username already exists'),
         ],
         verify: (_) {
           verify(mockRegisterGuardian(
@@ -389,7 +389,7 @@ void main() {
           return authBloc;
         },
         act: (bloc) {
-          bloc.add(AuthLoginRequested(
+          bloc.add(const AuthLoginRequested(
             usernameOrEmail: 'test',
             password: 'password',
           ));
@@ -409,16 +409,16 @@ void main() {
             usernameOrEmail: anyNamed('usernameOrEmail'),
             password: anyNamed('password'),
           )).thenAnswer((_) async {
-            await Future.delayed(Duration(milliseconds: 50));
+            await Future.delayed(const Duration(milliseconds: 50));
             return tAuthResult;
           });
           return authBloc;
         },
-        act: (bloc) => bloc.add(AuthLoginRequested(
+        act: (bloc) => bloc.add(const AuthLoginRequested(
           usernameOrEmail: 'test',
           password: 'password',
         )),
-        wait: Duration(milliseconds: 100),
+        wait: const Duration(milliseconds: 100),
         expect: () => [
           AuthLoading(),
           AuthAuthenticated(guardian: tGuardian),
@@ -436,13 +436,13 @@ void main() {
           )).thenThrow(Exception('Invalid input'));
           return authBloc;
         },
-        act: (bloc) => bloc.add(AuthLoginRequested(
+        act: (bloc) => bloc.add(const AuthLoginRequested(
           usernameOrEmail: '',
           password: '',
         )),
         expect: () => [
           AuthLoading(),
-          AuthError(message: 'Exception: Invalid input'),
+          const AuthError(message: 'Exception: Invalid input'),
         ],
       );
 
@@ -467,7 +467,7 @@ void main() {
         )),
         expect: () => [
           AuthLoading(),
-          AuthError(message: 'Exception: Network error'),
+          const AuthError(message: 'Exception: Network error'),
         ],
       );
     });

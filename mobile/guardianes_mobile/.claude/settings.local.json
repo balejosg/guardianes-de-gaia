@@ -38,7 +38,23 @@
       "Bash(docker run:*)",
       "Bash(docker rm:*)",
       "Bash(docker logs:*)",
-      "Bash(docker start:*)"
+      "Bash(docker start:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(node:*)",
+      "Bash(npm run validate:*)",
+      "Bash(docker compose:*)",
+      "Bash(timeout:*)",
+      "Bash(yamllint:*)",
+      "Bash(docker-compose:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(for i in {1..3})",
+      "Bash(do sleep:*)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(for i in {4..8})"
     ],
     "deny": []
   }

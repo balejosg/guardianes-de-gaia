@@ -131,8 +131,8 @@ class StepValidator {
     required int stepCount,
     required int expectedEnergy,
   }) {
-    const int STEPS_PER_ENERGY = 10;
-    final calculatedEnergy = stepCount ~/ STEPS_PER_ENERGY;
+    const int stepsPerEnergy = 10;
+    final calculatedEnergy = stepCount ~/ stepsPerEnergy;
 
     if (calculatedEnergy != expectedEnergy) {
       return StepValidationResult.invalid(
