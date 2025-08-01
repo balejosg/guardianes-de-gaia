@@ -79,7 +79,8 @@ void main() {
       int calculatedEnergy = stepRecord.calculateEnergy();
 
       // Assert
-      expect(calculatedEnergy, equals(250)); // 2509 steps = 250 energy (rounded down)
+      expect(calculatedEnergy,
+          equals(250)); // 2509 steps = 250 energy (rounded down)
     });
 
     test('should handle zero steps', () {
@@ -109,7 +110,8 @@ void main() {
       int calculatedEnergy = stepRecord.calculateEnergy();
 
       // Assert
-      expect(calculatedEnergy, equals(0)); // 5 steps = 0 energy (needs at least 10 steps)
+      expect(calculatedEnergy,
+          equals(0)); // 5 steps = 0 energy (needs at least 10 steps)
     });
   });
 }

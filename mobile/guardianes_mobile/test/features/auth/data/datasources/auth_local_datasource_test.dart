@@ -15,7 +15,8 @@ void main() {
 
   setUp(() {
     mockSharedPreferences = MockSharedPreferences();
-    dataSource = AuthLocalDataSourceImpl(sharedPreferences: mockSharedPreferences);
+    dataSource =
+        AuthLocalDataSourceImpl(sharedPreferences: mockSharedPreferences);
   });
 
   group('AuthLocalDataSource', () {
@@ -50,7 +51,8 @@ void main() {
 
         // assert
         expect(result, equals(tToken));
-        verify(mockSharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey));
+        verify(
+            mockSharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey));
       });
 
       test('should return null when token is not present', () async {
@@ -62,7 +64,8 @@ void main() {
 
         // assert
         expect(result, isNull);
-        verify(mockSharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey));
+        verify(
+            mockSharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey));
       });
     });
 
@@ -97,7 +100,8 @@ void main() {
         isChild: true,
       );
 
-      test('should call SharedPreferences to save guardian as JSON string', () async {
+      test('should call SharedPreferences to save guardian as JSON string',
+          () async {
         // arrange
         when(mockSharedPreferences.setString(any, any))
             .thenAnswer((_) async => true);
@@ -132,7 +136,8 @@ void main() {
         isChild: true,
       );
 
-      test('should return GuardianModel from SharedPreferences when present', () async {
+      test('should return GuardianModel from SharedPreferences when present',
+          () async {
         // arrange
         final jsonString = jsonEncode(tGuardianModel.toJson());
         when(mockSharedPreferences.getString(any)).thenReturn(jsonString);
@@ -142,7 +147,8 @@ void main() {
 
         // assert
         expect(result, equals(tGuardianModel));
-        verify(mockSharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey));
+        verify(mockSharedPreferences
+            .getString(AuthLocalDataSourceImpl.guardianKey));
       });
 
       test('should return null when guardian is not present', () async {
@@ -154,7 +160,8 @@ void main() {
 
         // assert
         expect(result, isNull);
-        verify(mockSharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey));
+        verify(mockSharedPreferences
+            .getString(AuthLocalDataSourceImpl.guardianKey));
       });
 
       test('should handle invalid JSON gracefully', () async {
@@ -178,7 +185,8 @@ void main() {
         await dataSource.removeGuardian();
 
         // assert
-        verify(mockSharedPreferences.remove(AuthLocalDataSourceImpl.guardianKey));
+        verify(
+            mockSharedPreferences.remove(AuthLocalDataSourceImpl.guardianKey));
       });
     });
 
@@ -221,7 +229,8 @@ void main() {
         final jsonString = jsonEncode(tGuardianModel.toJson());
         when(mockSharedPreferences.setString(any, any))
             .thenAnswer((_) async => true);
-        when(mockSharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey))
+        when(mockSharedPreferences
+                .getString(AuthLocalDataSourceImpl.guardianKey))
             .thenReturn(jsonString);
 
         // act
@@ -242,7 +251,8 @@ void main() {
 
         // assert
         verify(mockSharedPreferences.remove(AuthLocalDataSourceImpl.tokenKey));
-        verify(mockSharedPreferences.remove(AuthLocalDataSourceImpl.guardianKey));
+        verify(
+            mockSharedPreferences.remove(AuthLocalDataSourceImpl.guardianKey));
       });
     });
   });

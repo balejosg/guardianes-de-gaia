@@ -32,7 +32,7 @@ void main() {
           stepCount: 2500,
           timestamp: '2025-07-16T14:30:00',
         );
-        
+
         const responseDto = StepSubmissionResponseDto(
           guardianId: guardianId,
           totalDailySteps: 2500,
@@ -45,9 +45,9 @@ void main() {
           headers: anyNamed('headers'),
           body: anyNamed('body'),
         )).thenAnswer((_) async => http.Response(
-          json.encode(responseDto.toJson()),
-          201,
-        ));
+              json.encode(responseDto.toJson()),
+              201,
+            ));
 
         // Act
         final result = await dataSource.submitSteps(guardianId, request);
@@ -63,7 +63,8 @@ void main() {
         ));
       });
 
-      test('should throw an exception when the response code is not 201', () async {
+      test('should throw an exception when the response code is not 201',
+          () async {
         // Arrange
         const request = StepSubmissionRequestDto(
           stepCount: 2500,
@@ -75,9 +76,9 @@ void main() {
           headers: anyNamed('headers'),
           body: anyNamed('body'),
         )).thenAnswer((_) async => http.Response(
-          'Bad Request',
-          400,
-        ));
+              'Bad Request',
+              400,
+            ));
 
         // Act & Assert
         expect(
@@ -98,9 +99,9 @@ void main() {
           headers: anyNamed('headers'),
           body: anyNamed('body'),
         )).thenAnswer((_) async => http.Response(
-          'Invalid JSON',
-          201,
-        ));
+              'Invalid JSON',
+              201,
+            ));
 
         // Act & Assert
         expect(
@@ -124,9 +125,9 @@ void main() {
           Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/current'),
           headers: anyNamed('headers'),
         )).thenAnswer((_) async => http.Response(
-          json.encode(responseDto.toJson()),
-          200,
-        ));
+              json.encode(responseDto.toJson()),
+              200,
+            ));
 
         // Act
         final result = await dataSource.getCurrentStepCount(guardianId);
@@ -141,15 +142,16 @@ void main() {
         ));
       });
 
-      test('should throw an exception when the response code is not 200', () async {
+      test('should throw an exception when the response code is not 200',
+          () async {
         // Arrange
         when(mockHttpClient.get(
           any,
           headers: anyNamed('headers'),
         )).thenAnswer((_) async => http.Response(
-          'Not Found',
-          404,
-        ));
+              'Not Found',
+              404,
+            ));
 
         // Act & Assert
         expect(
@@ -160,7 +162,9 @@ void main() {
     });
 
     group('getStepHistory', () {
-      test('should perform a GET request to the correct endpoint with query parameters', () async {
+      test(
+          'should perform a GET request to the correct endpoint with query parameters',
+          () async {
         // Arrange
         const fromDate = '2025-07-14';
         const toDate = '2025-07-16';
@@ -170,27 +174,31 @@ void main() {
         );
 
         when(mockHttpClient.get(
-          Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate'),
+          Uri.parse(
+              '$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate'),
           headers: anyNamed('headers'),
         )).thenAnswer((_) async => http.Response(
-          json.encode(responseDto.toJson()),
-          200,
-        ));
+              json.encode(responseDto.toJson()),
+              200,
+            ));
 
         // Act
-        final result = await dataSource.getStepHistory(guardianId, fromDate, toDate);
+        final result =
+            await dataSource.getStepHistory(guardianId, fromDate, toDate);
 
         // Assert
         expect(result, equals(responseDto));
         verify(mockHttpClient.get(
-          Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate'),
+          Uri.parse(
+              '$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate'),
           headers: {
             'Content-Type': 'application/json',
           },
         ));
       });
 
-      test('should throw an exception when the response code is not 200', () async {
+      test('should throw an exception when the response code is not 200',
+          () async {
         // Arrange
         const fromDate = '2025-07-14';
         const toDate = '2025-07-16';
@@ -199,9 +207,9 @@ void main() {
           any,
           headers: anyNamed('headers'),
         )).thenAnswer((_) async => http.Response(
-          'Bad Request',
-          400,
-        ));
+              'Bad Request',
+              400,
+            ));
 
         // Act & Assert
         expect(

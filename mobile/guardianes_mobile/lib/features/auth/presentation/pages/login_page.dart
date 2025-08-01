@@ -89,7 +89,9 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
@@ -141,11 +143,11 @@ class _LoginPageState extends State<LoginPage> {
   void _login() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
-        AuthLoginRequested(
-          usernameOrEmail: _usernameController.text.trim(),
-          password: _passwordController.text,
-        ),
-      );
+            AuthLoginRequested(
+              usernameOrEmail: _usernameController.text.trim(),
+              password: _passwordController.text,
+            ),
+          );
     }
   }
 }

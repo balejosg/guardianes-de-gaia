@@ -77,7 +77,8 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Guardian> getGuardianProfile(int guardianId) async {
-    final guardianModel = await profileDataSource.getGuardianProfile(guardianId);
+    final guardianModel =
+        await profileDataSource.getGuardianProfile(guardianId);
     return guardianModel;
   }
 

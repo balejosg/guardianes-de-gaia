@@ -22,8 +22,12 @@ class _CardCollectionPageState extends State<CardCollectionPage> {
   @override
   void initState() {
     super.initState();
-    context.read<CardBloc>().add(LoadCardCollectionEvent(guardianId: widget.guardianId));
-    context.read<CardBloc>().add(LoadCollectionStatisticsEvent(guardianId: widget.guardianId));
+    context
+        .read<CardBloc>()
+        .add(LoadCardCollectionEvent(guardianId: widget.guardianId));
+    context
+        .read<CardBloc>()
+        .add(LoadCollectionStatisticsEvent(guardianId: widget.guardianId));
   }
 
   @override
@@ -75,11 +79,13 @@ class _CardCollectionPageState extends State<CardCollectionPage> {
                   ElevatedButton(
                     onPressed: () {
                       context.read<CardBloc>().add(
-                        LoadCardCollectionEvent(guardianId: widget.guardianId),
-                      );
+                            LoadCardCollectionEvent(
+                                guardianId: widget.guardianId),
+                          );
                       context.read<CardBloc>().add(
-                        LoadCollectionStatisticsEvent(guardianId: widget.guardianId),
-                      );
+                            LoadCollectionStatisticsEvent(
+                                guardianId: widget.guardianId),
+                          );
                     },
                     child: const Text('Intentar de nuevo'),
                   ),
@@ -92,11 +98,12 @@ class _CardCollectionPageState extends State<CardCollectionPage> {
             return RefreshIndicator(
               onRefresh: () async {
                 context.read<CardBloc>().add(
-                  LoadCardCollectionEvent(guardianId: widget.guardianId),
-                );
+                      LoadCardCollectionEvent(guardianId: widget.guardianId),
+                    );
                 context.read<CardBloc>().add(
-                  LoadCollectionStatisticsEvent(guardianId: widget.guardianId),
-                );
+                      LoadCollectionStatisticsEvent(
+                          guardianId: widget.guardianId),
+                    );
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -118,27 +125,31 @@ class _CardCollectionPageState extends State<CardCollectionPage> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Collection Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Cartas Coleccionadas',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         Text(
                           '${state.collection.cards.length} cartas',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Cards Grid
                     CardCollectionGrid(
                       collection: state.collection,
@@ -146,7 +157,8 @@ class _CardCollectionPageState extends State<CardCollectionPage> {
                         // TODO: Show card details
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Detalles de ${card.card.name} próximamente'),
+                            content: Text(
+                                'Detalles de ${card.card.name} próximamente'),
                           ),
                         );
                       },

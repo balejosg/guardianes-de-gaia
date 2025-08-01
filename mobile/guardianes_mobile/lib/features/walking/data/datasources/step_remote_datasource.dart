@@ -51,8 +51,10 @@ class StepRemoteDataSourceImpl implements StepRemoteDataSource {
   }
 
   @override
-  Future<CurrentStepCountResponseDto> getCurrentStepCount(int guardianId) async {
-    final url = Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/current');
+  Future<CurrentStepCountResponseDto> getCurrentStepCount(
+      int guardianId) async {
+    final url =
+        Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/current');
     final response = await client.get(
       url,
       headers: {
@@ -63,7 +65,8 @@ class StepRemoteDataSourceImpl implements StepRemoteDataSource {
     if (response.statusCode == 200) {
       return CurrentStepCountResponseDto.fromJson(json.decode(response.body));
     } else {
-      throw Exception('Failed to get current step count: ${response.statusCode}');
+      throw Exception(
+          'Failed to get current step count: ${response.statusCode}');
     }
   }
 
@@ -73,7 +76,8 @@ class StepRemoteDataSourceImpl implements StepRemoteDataSource {
     String fromDate,
     String toDate,
   ) async {
-    final url = Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate');
+    final url = Uri.parse(
+        '$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate');
     final response = await client.get(
       url,
       headers: {

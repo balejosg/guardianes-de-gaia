@@ -63,7 +63,8 @@ void main() {
           totalSteps: 7000,
         ),
       ];
-      when(mockStepBloc.state).thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
+      when(mockStepBloc.state)
+          .thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -80,7 +81,8 @@ void main() {
     testWidgets('should display empty state when no history available',
         (WidgetTester tester) async {
       // Arrange
-      when(mockStepBloc.state).thenReturn(const StepHistoryLoaded(stepHistory: []));
+      when(mockStepBloc.state)
+          .thenReturn(const StepHistoryLoaded(stepHistory: []));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -90,7 +92,8 @@ void main() {
       expect(find.byIcon(Icons.history), findsOneWidget);
     });
 
-    testWidgets('should display goal reached indicator for days with 8000+ steps',
+    testWidgets(
+        'should display goal reached indicator for days with 8000+ steps',
         (WidgetTester tester) async {
       // Arrange
       const stepHistory = [
@@ -110,13 +113,15 @@ void main() {
           totalSteps: 10000,
         ),
       ];
-      when(mockStepBloc.state).thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
+      when(mockStepBloc.state)
+          .thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
 
       // Assert
-      expect(find.byIcon(Icons.check_circle), findsNWidgets(2)); // Only last 2 days reached goal
+      expect(find.byIcon(Icons.check_circle),
+          findsNWidgets(2)); // Only last 2 days reached goal
     });
 
     testWidgets('should display energy calculation correctly',
@@ -134,20 +139,24 @@ void main() {
           totalSteps: 5000,
         ),
       ];
-      when(mockStepBloc.state).thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
+      when(mockStepBloc.state)
+          .thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
 
       // Assert
-      expect(find.text('250 energy'), findsOneWidget); // 2509 steps = 250 energy
-      expect(find.text('500 energy'), findsOneWidget); // 5000 steps = 500 energy
+      expect(
+          find.text('250 energy'), findsOneWidget); // 2509 steps = 250 energy
+      expect(
+          find.text('500 energy'), findsOneWidget); // 5000 steps = 500 energy
     });
 
     testWidgets('should display error message when state is StepError',
         (WidgetTester tester) async {
       // Arrange
-      when(mockStepBloc.state).thenReturn(const StepError(message: 'Network error'));
+      when(mockStepBloc.state)
+          .thenReturn(const StepError(message: 'Network error'));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -180,7 +189,8 @@ void main() {
           totalSteps: (index + 1) * 1000,
         ),
       );
-      when(mockStepBloc.state).thenReturn(StepHistoryLoaded(stepHistory: stepHistory));
+      when(mockStepBloc.state)
+          .thenReturn(StepHistoryLoaded(stepHistory: stepHistory));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -191,8 +201,7 @@ void main() {
       expect(find.text('1,000 steps'), findsOneWidget);
     });
 
-    testWidgets('should format dates correctly',
-        (WidgetTester tester) async {
+    testWidgets('should format dates correctly', (WidgetTester tester) async {
       // Arrange
       const stepHistory = [
         DailyStepAggregate(
@@ -206,7 +215,8 @@ void main() {
           totalSteps: 6000,
         ),
       ];
-      when(mockStepBloc.state).thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
+      when(mockStepBloc.state)
+          .thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -226,7 +236,8 @@ void main() {
           totalSteps: 0,
         ),
       ];
-      when(mockStepBloc.state).thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
+      when(mockStepBloc.state)
+          .thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -248,7 +259,8 @@ void main() {
         DailyStepAggregate(guardianId: 1, date: '2025-07-19', totalSteps: 9000),
         DailyStepAggregate(guardianId: 1, date: '2025-07-20', totalSteps: 6000),
       ];
-      when(mockStepBloc.state).thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
+      when(mockStepBloc.state)
+          .thenReturn(const StepHistoryLoaded(stepHistory: stepHistory));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());

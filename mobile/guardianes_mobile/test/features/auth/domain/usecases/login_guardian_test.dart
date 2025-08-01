@@ -21,7 +21,7 @@ void main() {
   group('LoginGuardian UseCase', () {
     const tUsernameOrEmail = 'test_guardian';
     const tPassword = 'test_password';
-    
+
     final tGuardian = Guardian(
       id: 1,
       username: 'test_guardian',
@@ -38,9 +38,9 @@ void main() {
       lastActiveAt: DateTime.parse('2025-07-17T09:00:00Z'),
       isChild: true,
     );
-    
+
     const tToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token';
-    
+
     final tAuthResult = AuthResult(
       token: tToken,
       guardian: tGuardian,

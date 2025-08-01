@@ -158,7 +158,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -187,7 +189,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -239,14 +243,14 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _selectBirthDate() async {
     final now = DateTime.now();
     final initialDate = _selectedBirthDate ?? DateTime(now.year - 10);
-    
+
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: DateTime(now.year - 100),
       lastDate: now,
     );
-    
+
     if (pickedDate != null) {
       setState(() {
         _selectedBirthDate = pickedDate;
@@ -267,14 +271,14 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       context.read<AuthBloc>().add(
-        AuthRegisterRequested(
-          username: _usernameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          name: _nameController.text.trim(),
-          birthDate: _selectedBirthDate!,
-        ),
-      );
+            AuthRegisterRequested(
+              username: _usernameController.text.trim(),
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+              name: _nameController.text.trim(),
+              birthDate: _selectedBirthDate!,
+            ),
+          );
     }
   }
 }

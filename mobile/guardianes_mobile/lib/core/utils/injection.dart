@@ -47,7 +47,7 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton<AuthLocalDataSource>(
     () => AuthLocalDataSourceImpl(sharedPreferences: getIt()),
   );
-  
+
   getIt.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(client: getIt()),
   );
@@ -94,7 +94,7 @@ Future<void> configureDependencies() async {
       authRepository: getIt(),
     ),
   );
-  
+
   getIt.registerFactory(
     () => StepBloc(
       getCurrentSteps: getIt(),
@@ -102,7 +102,7 @@ Future<void> configureDependencies() async {
       submitSteps: getIt(),
     ),
   );
-  
+
   getIt.registerFactory(
     () => GuardianProfileBloc(
       getGuardianProfile: getIt(),

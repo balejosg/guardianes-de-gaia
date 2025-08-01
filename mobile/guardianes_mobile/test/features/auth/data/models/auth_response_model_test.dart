@@ -34,7 +34,8 @@ void main() {
       expect(tAuthResponseModel, isA<AuthResult>());
     });
 
-    test('should return a valid model when fromJson is called with valid JSON', () {
+    test('should return a valid model when fromJson is called with valid JSON',
+        () {
       // arrange
       final Map<String, dynamic> jsonMap = {
         'token': tToken,
@@ -204,7 +205,8 @@ void main() {
       expect(result.guardian.totalSteps, equals(0));
     });
 
-    test('should throw exception when fromJson is called with invalid JSON', () {
+    test('should throw exception when fromJson is called with invalid JSON',
+        () {
       // arrange
       final invalidJsonMap = {
         'token': 123, // Should be string

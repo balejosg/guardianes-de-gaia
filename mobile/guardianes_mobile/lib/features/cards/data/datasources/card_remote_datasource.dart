@@ -15,7 +15,8 @@ abstract class CardRemoteDataSource {
     CardRarity? rarity,
   });
   Future<CollectionStatisticsModel> getCollectionStatistics(int guardianId);
-  Future<List<CollectedCardModel>> getRecentlyCollected(int guardianId, int limit);
+  Future<List<CollectedCardModel>> getRecentlyCollected(
+      int guardianId, int limit);
   Future<CollectedCardModel?> getRarestCard(int guardianId);
   Future<List<CardModel>> searchCards({
     String? name,
@@ -47,7 +48,8 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
       return CardScanResultModel.fromJson(json.decode(response.body));
     } else if (response.statusCode == 400 || response.statusCode == 404) {
       // Handle error responses from new endpoint
-      final errorResult = CardScanResultModel.fromJson(json.decode(response.body));
+      final errorResult =
+          CardScanResultModel.fromJson(json.decode(response.body));
       throw Exception(errorResult.message);
     } else {
       throw Exception('Failed to scan QR code: ${response.statusCode}');
@@ -77,7 +79,8 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
   }
 
   @override
-  Future<CollectionStatisticsModel> getCollectionStatistics(int guardianId) async {
+  Future<CollectionStatisticsModel> getCollectionStatistics(
+      int guardianId) async {
     final response = await client.get(
       Uri.parse('$baseUrl/api/cards/collection/$guardianId/stats'),
       headers: {'Content-Type': 'application/json'},
@@ -95,14 +98,17 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
         throw Exception(apiResponse.message);
       }
     } else {
-      throw Exception('Failed to get collection statistics: ${response.statusCode}');
+      throw Exception(
+          'Failed to get collection statistics: ${response.statusCode}');
     }
   }
 
   @override
-  Future<List<CollectedCardModel>> getRecentlyCollected(int guardianId, int limit) async {
+  Future<List<CollectedCardModel>> getRecentlyCollected(
+      int guardianId, int limit) async {
     final response = await client.get(
-      Uri.parse('$baseUrl/api/cards/collection/$guardianId/recent?limit=$limit'),
+      Uri.parse(
+          '$baseUrl/api/cards/collection/$guardianId/recent?limit=$limit'),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -120,7 +126,8 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
         throw Exception(apiResponse.message);
       }
     } else {
-      throw Exception('Failed to get recently collected cards: ${response.statusCode}');
+      throw Exception(
+          'Failed to get recently collected cards: ${response.statusCode}');
     }
   }
 
@@ -138,7 +145,7 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
       );
 
       if (apiResponse.success) {
-        return apiResponse.data != null 
+        return apiResponse.data != null
             ? CollectedCardModel.fromJson(apiResponse.data!)
             : null;
       } else {
@@ -157,7 +164,7 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
   }) async {
     final uri = Uri.parse('$baseUrl/api/cards/search');
     final params = <String, String>{};
-    
+
     if (name != null && name.isNotEmpty) {
       params['name'] = name;
     }

@@ -51,7 +51,8 @@ void main() {
         date: '2025-07-16',
         totalSteps: 5000,
       );
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -69,14 +70,16 @@ void main() {
         date: '2025-07-16',
         totalSteps: 2509,
       );
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
 
       // Assert
       expect(find.text('2,509 Steps'), findsOneWidget);
-      expect(find.text('250 Energy'), findsOneWidget); // 2509 steps = 250 energy (rounded down)
+      expect(find.text('250 Energy'),
+          findsOneWidget); // 2509 steps = 250 energy (rounded down)
     });
 
     testWidgets('should display goal reached indicator when steps >= 8000',
@@ -87,7 +90,8 @@ void main() {
         date: '2025-07-16',
         totalSteps: 8000,
       );
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -105,7 +109,8 @@ void main() {
         date: '2025-07-16',
         totalSteps: 4000,
       );
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -125,7 +130,8 @@ void main() {
         date: '2025-07-16',
         totalSteps: 0,
       );
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -138,7 +144,8 @@ void main() {
     testWidgets('should display error message when state is StepError',
         (WidgetTester tester) async {
       // Arrange
-      when(mockStepBloc.state).thenReturn(const StepError(message: 'Network error'));
+      when(mockStepBloc.state)
+          .thenReturn(const StepError(message: 'Network error'));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -169,7 +176,8 @@ void main() {
         date: '2025-07-16',
         totalSteps: 15000,
       );
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -187,7 +195,8 @@ void main() {
         date: '2025-07-16',
         totalSteps: 999999,
       );
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: dailyStepAggregate));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
@@ -210,13 +219,14 @@ void main() {
         date: '2025-07-16',
         totalSteps: 2000,
       );
-      
+
       // Set up stream to emit states
-      when(mockStepBloc.state).thenReturn(const StepLoaded(currentSteps: initialAggregate));
+      when(mockStepBloc.state)
+          .thenReturn(const StepLoaded(currentSteps: initialAggregate));
       when(mockStepBloc.stream).thenAnswer((_) => Stream.fromIterable([
-        const StepLoaded(currentSteps: initialAggregate),
-        const StepLoaded(currentSteps: updatedAggregate),
-      ]));
+            const StepLoaded(currentSteps: initialAggregate),
+            const StepLoaded(currentSteps: updatedAggregate),
+          ]));
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());

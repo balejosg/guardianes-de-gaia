@@ -16,7 +16,8 @@ class MockStepRepository implements StepRepository {
   Future<DailyStepAggregate> getCurrentStepCount(int guardianId) async {
     final today = DateTime.now().toIso8601String().split('T')[0];
     return _dailyAggregates.firstWhere(
-      (aggregate) => aggregate.guardianId == guardianId && aggregate.date == today,
+      (aggregate) =>
+          aggregate.guardianId == guardianId && aggregate.date == today,
       orElse: () => DailyStepAggregate(
         guardianId: guardianId,
         date: today,
@@ -32,11 +33,10 @@ class MockStepRepository implements StepRepository {
     String toDate,
   ) async {
     return _dailyAggregates
-        .where((aggregate) => 
-          aggregate.guardianId == guardianId &&
-          aggregate.date.compareTo(fromDate) >= 0 &&
-          aggregate.date.compareTo(toDate) <= 0
-        )
+        .where((aggregate) =>
+            aggregate.guardianId == guardianId &&
+            aggregate.date.compareTo(fromDate) >= 0 &&
+            aggregate.date.compareTo(toDate) <= 0)
         .toList();
   }
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_bloc.dart';
-import 'package:guardianes_mobile/features/walking/presentation/bloc/step_state.dart' as step_state;
+import 'package:guardianes_mobile/features/walking/presentation/bloc/step_state.dart'
+    as step_state;
 import 'package:guardianes_mobile/features/walking/domain/entities/daily_step_aggregate.dart';
 import 'package:intl/intl.dart';
 
@@ -49,7 +50,7 @@ class StepHistoryWidget extends StatelessWidget {
   Widget _buildHistoryItem(DailyStepAggregate dayData) {
     final isGoalReached = dayData.isGoalReached();
     final energy = dayData.calculateTotalEnergy();
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Padding(
@@ -185,7 +186,6 @@ class StepHistoryWidget extends StatelessWidget {
     );
   }
 
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -247,7 +247,6 @@ class StepHistoryWidget extends StatelessWidget {
       ),
     );
   }
-
 
   String _formatDayOfWeek(String dateString) {
     try {

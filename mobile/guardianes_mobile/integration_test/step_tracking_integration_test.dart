@@ -43,7 +43,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Step Tracking Integration Tests', () {
-    testWidgets('should display current step count', (WidgetTester tester) async {
+    testWidgets('should display current step count',
+        (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();
@@ -56,7 +57,8 @@ void main() {
       expect(find.byKey(const Key('energy_balance')), findsOneWidget);
     });
 
-    testWidgets('should submit steps successfully', (WidgetTester tester) async {
+    testWidgets('should submit steps successfully',
+        (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();
@@ -93,7 +95,8 @@ void main() {
       expect(find.byKey(const Key('step_history_list')), findsOneWidget);
     });
 
-    testWidgets('should show energy conversion calculation', (WidgetTester tester) async {
+    testWidgets('should show energy conversion calculation',
+        (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();
@@ -108,12 +111,13 @@ void main() {
       // Check energy conversion ratio (1 energy = 10 steps)
       final stepCountWidget = find.byKey(const Key('current_step_count'));
       final energyBalanceWidget = find.byKey(const Key('energy_balance'));
-      
+
       expect(stepCountWidget, findsOneWidget);
       expect(energyBalanceWidget, findsOneWidget);
     });
 
-    testWidgets('should handle offline step tracking', (WidgetTester tester) async {
+    testWidgets('should handle offline step tracking',
+        (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();
@@ -135,7 +139,8 @@ void main() {
       expect(find.textContaining('Sin conexión'), findsOneWidget);
     });
 
-    testWidgets('should validate step count limits', (WidgetTester tester) async {
+    testWidgets('should validate step count limits',
+        (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();

@@ -19,8 +19,9 @@ class GuardianProfilePage extends StatelessWidget {
               final authState = context.read<AuthBloc>().state;
               if (authState is AuthAuthenticated) {
                 context.read<GuardianProfileBloc>().add(
-                  RefreshGuardianProfileEvent(guardianId: authState.guardian.id),
-                );
+                      RefreshGuardianProfileEvent(
+                          guardianId: authState.guardian.id),
+                    );
               }
             },
             icon: const Icon(Icons.refresh),
@@ -60,8 +61,9 @@ class GuardianProfilePage extends StatelessWidget {
                       final authState = context.read<AuthBloc>().state;
                       if (authState is AuthAuthenticated) {
                         context.read<GuardianProfileBloc>().add(
-                          LoadGuardianProfileEvent(guardianId: authState.guardian.id),
-                        );
+                              LoadGuardianProfileEvent(
+                                  guardianId: authState.guardian.id),
+                            );
                       }
                     },
                     child: const Text('Intentar de nuevo'),
@@ -78,8 +80,9 @@ class GuardianProfilePage extends StatelessWidget {
                 final authState = context.read<AuthBloc>().state;
                 if (authState is AuthAuthenticated) {
                   context.read<GuardianProfileBloc>().add(
-                    RefreshGuardianProfileEvent(guardianId: authState.guardian.id),
-                  );
+                        RefreshGuardianProfileEvent(
+                            guardianId: authState.guardian.id),
+                      );
                 }
               },
               child: SingleChildScrollView(
@@ -99,7 +102,8 @@ class GuardianProfilePage extends StatelessWidget {
                               children: [
                                 CircleAvatar(
                                   radius: 40,
-                                  backgroundColor: Theme.of(context).primaryColor,
+                                  backgroundColor:
+                                      Theme.of(context).primaryColor,
                                   child: Text(
                                     guardian.name.substring(0, 1).toUpperCase(),
                                     style: const TextStyle(
@@ -112,7 +116,8 @@ class GuardianProfilePage extends StatelessWidget {
                                 const SizedBox(width: 20),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         guardian.name,
@@ -141,7 +146,7 @@ class GuardianProfilePage extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 20),
-                            
+
                             // Age and Child Status
                             Row(
                               children: [
@@ -158,8 +163,12 @@ class GuardianProfilePage extends StatelessWidget {
                                   child: _InfoCard(
                                     title: 'Tipo',
                                     value: guardian.isChild ? 'Niño' : 'Adulto',
-                                    icon: guardian.isChild ? Icons.child_care : Icons.person,
-                                    color: guardian.isChild ? Colors.blue : Colors.green,
+                                    icon: guardian.isChild
+                                        ? Icons.child_care
+                                        : Icons.person,
+                                    color: guardian.isChild
+                                        ? Colors.blue
+                                        : Colors.green,
                                   ),
                                 ),
                               ],
@@ -168,9 +177,9 @@ class GuardianProfilePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Level and Experience Card
                     Card(
                       child: Padding(
@@ -187,9 +196,12 @@ class GuardianProfilePage extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Progreso del Guardián',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                               ],
                             ),
@@ -216,7 +228,7 @@ class GuardianProfilePage extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            
+
                             // Progress bar for next level
                             Text(
                               'Próximo Nivel',
@@ -228,11 +240,15 @@ class GuardianProfilePage extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             LinearProgressIndicator(
-                              value: guardian.experienceToNextLevel > 0 
-                                  ? 1.0 - (guardian.experienceToNextLevel / (guardian.experiencePoints + guardian.experienceToNextLevel))
+                              value: guardian.experienceToNextLevel > 0
+                                  ? 1.0 -
+                                      (guardian.experienceToNextLevel /
+                                          (guardian.experiencePoints +
+                                              guardian.experienceToNextLevel))
                                   : 1.0,
                               backgroundColor: Colors.grey[300],
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.purple),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -246,9 +262,9 @@ class GuardianProfilePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Activity Stats Card
                     Card(
                       child: Padding(
@@ -265,9 +281,12 @@ class GuardianProfilePage extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Estadísticas de Actividad',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                               ],
                             ),
@@ -297,9 +316,9 @@ class GuardianProfilePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Account Info Card
                     Card(
                       child: Padding(
@@ -316,28 +335,34 @@ class GuardianProfilePage extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Información de la Cuenta',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 16),
                             _AccountInfoRow(
                               label: 'Fecha de Nacimiento',
-                              value: '${guardian.birthDate.day}/${guardian.birthDate.month}/${guardian.birthDate.year}',
+                              value:
+                                  '${guardian.birthDate.day}/${guardian.birthDate.month}/${guardian.birthDate.year}',
                               icon: Icons.cake,
                             ),
                             const SizedBox(height: 8),
                             _AccountInfoRow(
                               label: 'Miembro desde',
-                              value: '${guardian.createdAt.day}/${guardian.createdAt.month}/${guardian.createdAt.year}',
+                              value:
+                                  '${guardian.createdAt.day}/${guardian.createdAt.month}/${guardian.createdAt.year}',
                               icon: Icons.calendar_today,
                             ),
                             const SizedBox(height: 8),
                             _AccountInfoRow(
                               label: 'Última actividad',
-                              value: '${guardian.lastActiveAt.day}/${guardian.lastActiveAt.month}/${guardian.lastActiveAt.year}',
+                              value:
+                                  '${guardian.lastActiveAt.day}/${guardian.lastActiveAt.month}/${guardian.lastActiveAt.year}',
                               icon: Icons.access_time,
                             ),
                           ],

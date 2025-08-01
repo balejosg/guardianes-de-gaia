@@ -23,5 +23,6 @@ class StepSubmissionResponseDto extends Equatable {
   Map<String, dynamic> toJson() => _$StepSubmissionResponseDtoToJson(this);
 
   @override
-  List<Object?> get props => [guardianId, totalDailySteps, energyEarned, message];
+  List<Object?> get props =>
+      [guardianId, totalDailySteps, energyEarned, message];
 }

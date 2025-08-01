@@ -27,10 +27,10 @@ void main() {
     mockStepBloc = MockStepBloc();
     mockPedometerService = MockPedometerService();
     mockAuthBloc = MockAuthBloc();
-    
+
     // Clear GetIt and register mocks
     getIt.reset();
-    
+
     // Setup default guardian for AuthBloc
     final testGuardian = Guardian(
       id: 1,
@@ -52,15 +52,19 @@ void main() {
     // Setup default mock behavior first
     when(mockStepBloc.stream).thenAnswer((_) => Stream.value(StepInitial()));
     when(mockStepBloc.state).thenReturn(StepInitial());
-    when(mockAuthBloc.stream).thenAnswer((_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
-    when(mockAuthBloc.state).thenReturn(AuthAuthenticated(guardian: testGuardian));
+    when(mockAuthBloc.stream).thenAnswer(
+        (_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
+    when(mockAuthBloc.state)
+        .thenReturn(AuthAuthenticated(guardian: testGuardian));
     when(mockPedometerService.initialize()).thenAnswer((_) async => true);
     when(mockPedometerService.getCurrentStepCount()).thenAnswer((_) async => 0);
-    when(mockPedometerService.stepCountStream).thenAnswer((_) => Stream.value(0));
-    when(mockPedometerService.requestPermissions()).thenAnswer((_) async => true);
+    when(mockPedometerService.stepCountStream)
+        .thenAnswer((_) => Stream.value(0));
+    when(mockPedometerService.requestPermissions())
+        .thenAnswer((_) async => true);
     when(mockPedometerService.hasPermissions()).thenAnswer((_) async => true);
     when(mockPedometerService.dispose()).thenReturn(null);
-    
+
     // Register the mock service
     getIt.registerSingleton<PedometerService>(mockPedometerService);
   });
@@ -236,7 +240,10 @@ void main() {
       // Arrange
       when(mockStepBloc.state).thenReturn(StepInitial());
       when(mockStepBloc.stream).thenAnswer(
-        (_) => Stream.fromIterable([StepInitial(), const StepSubmissionError(message: 'Network error')]),
+        (_) => Stream.fromIterable([
+          StepInitial(),
+          const StepSubmissionError(message: 'Network error')
+        ]),
       );
 
       // Act
@@ -261,11 +268,13 @@ void main() {
 
       // Act
       await tester.pumpWidget(createWidgetUnderTest());
-      await tester.fling(find.byType(RefreshIndicator), const Offset(0, 300), 1000);
+      await tester.fling(
+          find.byType(RefreshIndicator), const Offset(0, 300), 1000);
       await tester.pumpAndSettle();
 
       // Assert
-      verify(mockStepBloc.add(any)).called(1); // Refresh call (initial load happens in initState)
+      verify(mockStepBloc.add(any))
+          .called(1); // Refresh call (initial load happens in initState)
     });
 
     testWidgets('should handle different guardian IDs correctly',
@@ -291,7 +300,8 @@ void main() {
 
     // Note: StepLoading state is handled by StepHistoryWidget, not at page level
 
-    testWidgets('should trigger GetStepHistoryEvent when history tab is selected',
+    testWidgets(
+        'should trigger GetStepHistoryEvent when history tab is selected',
         (WidgetTester tester) async {
       // Arrange
       when(mockStepBloc.state).thenReturn(StepInitial());
@@ -302,7 +312,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Assert
-      verify(mockStepBloc.add(argThat(isA<GetStepHistoryEvent>()))).called(2); // Tab change can trigger multiple events
+      verify(mockStepBloc.add(argThat(isA<GetStepHistoryEvent>())))
+          .called(2); // Tab change can trigger multiple events
     });
 
     testWidgets('should close manual entry dialog when cancelled',

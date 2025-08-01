@@ -79,7 +79,8 @@ void main() {
       int totalEnergy = dailyStepAggregate.calculateTotalEnergy();
 
       // Assert
-      expect(totalEnergy, equals(500)); // 5009 steps = 500 energy (rounded down)
+      expect(
+          totalEnergy, equals(500)); // 5009 steps = 500 energy (rounded down)
     });
 
     test('should handle zero steps', () {

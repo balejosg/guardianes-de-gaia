@@ -11,11 +11,11 @@ class SubmitSteps {
     if (stepRecord.guardianId <= 0) {
       throw ArgumentError('Guardian ID must be positive');
     }
-    
+
     if (stepRecord.stepCount <= 0) {
       throw ArgumentError('Step count must be positive');
     }
-    
+
     if (stepRecord.timestamp.isEmpty) {
       throw ArgumentError('Timestamp cannot be empty');
     }

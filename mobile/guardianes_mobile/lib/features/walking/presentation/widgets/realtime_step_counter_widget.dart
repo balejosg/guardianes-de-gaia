@@ -12,7 +12,7 @@ import 'package:intl/intl.dart';
 class RealtimeStepCounterWidget extends StatefulWidget {
   final int guardianId;
   final PedometerService? pedometerService; // For testing
-  
+
   const RealtimeStepCounterWidget({
     Key? key,
     this.guardianId = 1, // TODO: Get from auth context
@@ -20,13 +20,14 @@ class RealtimeStepCounterWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<RealtimeStepCounterWidget> createState() => _RealtimeStepCounterWidgetState();
+  State<RealtimeStepCounterWidget> createState() =>
+      _RealtimeStepCounterWidgetState();
 }
 
 class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
   PedometerService? _pedometerService;
   StreamSubscription<int>? _stepSubscription;
-  
+
   int _realtimeSteps = 0;
   int _lastSyncedSteps = 0;
   bool _isInitialized = false;
@@ -64,10 +65,10 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
 
   Future<void> _initializePedometer() async {
     if (_pedometerService == null) return;
-    
+
     try {
       final hasPermissions = await _pedometerService!.requestPermissions();
-      
+
       if (!hasPermissions) {
         setState(() {
           _hasPermissions = false;
@@ -77,11 +78,11 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
       }
 
       final initialized = await _pedometerService!.initialize();
-      
+
       if (initialized) {
         // Get initial step count
         final currentSteps = await _pedometerService!.getCurrentStepCount();
-        
+
         setState(() {
           _isInitialized = true;
           _hasPermissions = true;
@@ -128,7 +129,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
     if (_realtimeSteps > _lastSyncedSteps) {
       final newSteps = _realtimeSteps - _lastSyncedSteps;
       final timestamp = DateTime.now().toIso8601String();
-      
+
       // Validate step submission before sending to backend
       final validationResult = StepValidator.validateCompleteSubmission(
         stepCount: newSteps,
@@ -143,7 +144,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
           stepCount: newSteps,
           timestamp: timestamp,
         );
-        
+
         context.read<StepBloc>().add(SubmitStepsEvent(stepRecord: stepRecord));
         _lastSyncedSteps = _realtimeSteps;
 
@@ -162,7 +163,8 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Validation Error: ${validationResult.errorMessage}'),
+              content:
+                  Text('Validation Error: ${validationResult.errorMessage}'),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 3),
             ),
@@ -187,11 +189,11 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
     if (!_hasPermissions) {
       return _buildPermissionCard();
     }
-    
+
     if (!_isInitialized) {
       return _buildLoadingCard();
     }
-    
+
     if (_errorMessage.isNotEmpty) {
       return _buildErrorCard();
     }
@@ -311,7 +313,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
     final energy = (_realtimeSteps / 10).floor();
     final progress = (_realtimeSteps / 8000).clamp(0.0, 1.0);
     final isGoalReached = _realtimeSteps >= 8000;
-    
+
     return Card(
       elevation: 4,
       margin: const EdgeInsets.all(16),
@@ -488,7 +490,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
 
   Widget _buildSyncButton() {
     final hasNewSteps = _realtimeSteps > _lastSyncedSteps;
-    
+
     return ElevatedButton.icon(
       onPressed: hasNewSteps ? _manualSync : null,
       icon: Icon(
@@ -496,9 +498,9 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
         size: 16,
       ),
       label: Text(
-        hasNewSteps 
-          ? 'Sync ${_realtimeSteps - _lastSyncedSteps} New Steps'
-          : 'Steps Synced',
+        hasNewSteps
+            ? 'Sync ${_realtimeSteps - _lastSyncedSteps} New Steps'
+            : 'Steps Synced',
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: hasNewSteps ? Colors.blue[600] : Colors.grey[400],

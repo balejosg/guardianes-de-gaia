@@ -31,21 +31,22 @@ class GuardianesApp extends StatelessWidget {
           '/home': (context) => const HomePage(),
           '/login': (context) => const LoginPage(),
           '/step-tracking': (context) => BlocProvider(
-            create: (context) => getIt<StepBloc>(),
-            child: const StepTrackingPage(),
-          ),
+                create: (context) => getIt<StepBloc>(),
+                child: const StepTrackingPage(),
+              ),
           '/profile': (context) => BlocProvider(
-            create: (context) {
-              final bloc = getIt<GuardianProfileBloc>();
-              // Auto-load profile when the page is opened
-              final authState = context.read<AuthBloc>().state;
-              if (authState is AuthAuthenticated) {
-                bloc.add(LoadGuardianProfileEvent(guardianId: authState.guardian.id));
-              }
-              return bloc;
-            },
-            child: const GuardianProfilePage(),
-          ),
+                create: (context) {
+                  final bloc = getIt<GuardianProfileBloc>();
+                  // Auto-load profile when the page is opened
+                  final authState = context.read<AuthBloc>().state;
+                  if (authState is AuthAuthenticated) {
+                    bloc.add(LoadGuardianProfileEvent(
+                        guardianId: authState.guardian.id));
+                  }
+                  return bloc;
+                },
+                child: const GuardianProfilePage(),
+              ),
         },
       ),
     );

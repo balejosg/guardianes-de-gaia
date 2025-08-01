@@ -80,7 +80,7 @@ void main() {
         () => usecase.call(guardianId, fromDate, toDate),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.getStepHistory(any, any, any));
     });
 
@@ -95,7 +95,7 @@ void main() {
         () => usecase.call(guardianId, fromDate, toDate),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.getStepHistory(any, any, any));
     });
 
@@ -110,7 +110,7 @@ void main() {
         () => usecase.call(guardianId, fromDate, toDate),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.getStepHistory(any, any, any));
     });
 
@@ -125,7 +125,7 @@ void main() {
         () => usecase.call(guardianId, fromDate, toDate),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.getStepHistory(any, any, any));
     });
 
@@ -158,7 +158,7 @@ void main() {
         () => usecase.call(guardianId, fromDate, toDate),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.getStepHistory(any, any, any));
     });
   });

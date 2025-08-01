@@ -33,10 +33,10 @@ class CardBloc extends Bloc<CardEvent, CardState> {
     Emitter<CardState> emit,
   ) async {
     emit(CardLoading());
-    
+
     try {
       final result = await scanQRCode(event.guardianId, event.qrCode);
-      
+
       if (result.success) {
         emit(CardScanSuccess(result: result));
       } else {
@@ -52,7 +52,7 @@ class CardBloc extends Bloc<CardEvent, CardState> {
     Emitter<CardState> emit,
   ) async {
     emit(CardLoading());
-    
+
     try {
       final collection = await getCardCollection(event.guardianId);
       emit(CollectionLoaded(collection: collection));
@@ -66,7 +66,7 @@ class CardBloc extends Bloc<CardEvent, CardState> {
     Emitter<CardState> emit,
   ) async {
     emit(CardLoading());
-    
+
     try {
       final statistics = await getCollectionStatistics(event.guardianId);
       emit(CollectionStatisticsLoaded(statistics: statistics));
@@ -80,7 +80,7 @@ class CardBloc extends Bloc<CardEvent, CardState> {
     Emitter<CardState> emit,
   ) async {
     emit(CardLoading());
-    
+
     try {
       final cards = await searchCards(
         name: event.name,
@@ -98,7 +98,7 @@ class CardBloc extends Bloc<CardEvent, CardState> {
     Emitter<CardState> emit,
   ) async {
     emit(CardLoading());
-    
+
     try {
       final recentCards = await cardRepository.getRecentlyCollected(
         event.guardianId,

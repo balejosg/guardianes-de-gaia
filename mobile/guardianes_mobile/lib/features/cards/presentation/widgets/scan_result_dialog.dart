@@ -95,7 +95,7 @@ class ScanResultDialog extends StatelessWidget {
 
   Widget _buildCardInfo(CardScanResult result) {
     final card = result.card!;
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -195,7 +195,7 @@ class ScanResultDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                result.isNew 
+                result.isNew
                     ? 'Primera vez coleccionada'
                     : 'Tienes ${result.count} copias',
                 style: TextStyle(

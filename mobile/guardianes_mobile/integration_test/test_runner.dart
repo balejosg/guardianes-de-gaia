@@ -12,10 +12,10 @@ void main() {
   group('All Integration Tests', () {
     // Run authentication tests
     auth_tests.main();
-    
+
     // Run step tracking tests
     step_tests.main();
-    
+
     // Run complete app flow tests
     flow_tests.main();
   });

@@ -30,15 +30,18 @@ void main() {
       expect(tGuardian.username, equals('test_guardian'));
       expect(tGuardian.email, equals('test@example.com'));
       expect(tGuardian.name, equals('Test Guardian'));
-      expect(tGuardian.birthDate, equals(DateTime.parse('2015-01-01T00:00:00Z')));
+      expect(
+          tGuardian.birthDate, equals(DateTime.parse('2015-01-01T00:00:00Z')));
       expect(tGuardian.age, equals(9));
       expect(tGuardian.level, equals('BEGINNER'));
       expect(tGuardian.experiencePoints, equals(150));
       expect(tGuardian.experienceToNextLevel, equals(350));
       expect(tGuardian.totalSteps, equals(5000));
       expect(tGuardian.totalEnergyGenerated, equals(500));
-      expect(tGuardian.createdAt, equals(DateTime.parse('2025-01-01T00:00:00Z')));
-      expect(tGuardian.lastActiveAt, equals(DateTime.parse('2025-07-17T09:00:00Z')));
+      expect(
+          tGuardian.createdAt, equals(DateTime.parse('2025-01-01T00:00:00Z')));
+      expect(tGuardian.lastActiveAt,
+          equals(DateTime.parse('2025-07-17T09:00:00Z')));
       expect(tGuardian.isChild, equals(true));
     });
 

@@ -62,7 +62,7 @@ void main() {
         () => usecase.call(guardianId),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.getCurrentStepCount(any));
     });
 
@@ -75,7 +75,7 @@ void main() {
         () => usecase.call(guardianId),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.getCurrentStepCount(any));
     });
 

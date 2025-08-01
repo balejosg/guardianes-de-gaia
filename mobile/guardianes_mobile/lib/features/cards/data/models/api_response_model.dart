@@ -19,7 +19,8 @@ class ApiResponseModel<T> {
   factory ApiResponseModel.fromJson(
     Map<String, dynamic> json,
     T Function(Object? json) fromJsonT,
-  ) => _$ApiResponseModelFromJson(json, fromJsonT);
+  ) =>
+      _$ApiResponseModelFromJson(json, fromJsonT);
 
   Map<String, dynamic> toJson(Object Function(T value) toJsonT) =>
       _$ApiResponseModelToJson(this, toJsonT);

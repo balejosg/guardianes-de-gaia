@@ -5,7 +5,8 @@ import 'package:guardianes_mobile/features/walking/domain/entities/step_record.d
 import 'package:guardianes_mobile/features/walking/domain/validators/step_validation.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_bloc.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_event.dart';
-import 'package:guardianes_mobile/features/walking/presentation/bloc/step_state.dart' as step_state;
+import 'package:guardianes_mobile/features/walking/presentation/bloc/step_state.dart'
+    as step_state;
 import 'package:guardianes_mobile/features/walking/presentation/widgets/realtime_step_counter_widget.dart';
 import 'package:guardianes_mobile/features/walking/presentation/widgets/step_history_widget.dart';
 
@@ -26,13 +27,15 @@ class _StepTrackingPageState extends State<StepTrackingPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    
+
     // Load initial data with guardian ID from auth state
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
+      context
+          .read<StepBloc>()
+          .add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
     }
-    
+
     // Listen for tab changes
     _tabController.addListener(() {
       if (_tabController.index == 1) {
@@ -42,10 +45,10 @@ class _StepTrackingPageState extends State<StepTrackingPage>
           final now = DateTime.now();
           final weekAgo = now.subtract(const Duration(days: 7));
           context.read<StepBloc>().add(GetStepHistoryEvent(
-            guardianId: authState.guardian.id,
-            fromDate: weekAgo.toIso8601String().split('T')[0],
-            toDate: now.toIso8601String().split('T')[0],
-          ));
+                guardianId: authState.guardian.id,
+                fromDate: weekAgo.toIso8601String().split('T')[0],
+                toDate: now.toIso8601String().split('T')[0],
+              ));
         }
       }
     });
@@ -88,7 +91,9 @@ class _StepTrackingPageState extends State<StepTrackingPage>
             // Refresh current data
             final authState = context.read<AuthBloc>().state;
             if (authState is AuthAuthenticated) {
-              context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
+              context
+                  .read<StepBloc>()
+                  .add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
             }
           } else if (state is step_state.StepSubmissionError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -127,7 +132,8 @@ class _StepTrackingPageState extends State<StepTrackingPage>
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, authState) {
               if (authState is AuthAuthenticated) {
-                return RealtimeStepCounterWidget(guardianId: authState.guardian.id);
+                return RealtimeStepCounterWidget(
+                    guardianId: authState.guardian.id);
               }
               return const SizedBox.shrink();
             },
@@ -152,7 +158,7 @@ class _StepTrackingPageState extends State<StepTrackingPage>
           final steps = state.currentSteps;
           final energy = steps.calculateTotalEnergy();
           final goalProgress = (steps.totalSteps / 8000).clamp(0.0, 1.0);
-          
+
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             child: Padding(
@@ -197,7 +203,8 @@ class _StepTrackingPageState extends State<StepTrackingPage>
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+      String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
@@ -293,16 +300,18 @@ class _StepTrackingPageState extends State<StepTrackingPage>
   Future<void> _handleRefresh() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<StepBloc>().add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
-      
+      context
+          .read<StepBloc>()
+          .add(GetCurrentStepsEvent(guardianId: authState.guardian.id));
+
       if (_tabController.index == 1) {
         final now = DateTime.now();
         final weekAgo = now.subtract(const Duration(days: 7));
         context.read<StepBloc>().add(GetStepHistoryEvent(
-          guardianId: authState.guardian.id,
-          fromDate: weekAgo.toIso8601String().split('T')[0],
-          toDate: now.toIso8601String().split('T')[0],
-        ));
+              guardianId: authState.guardian.id,
+              fromDate: weekAgo.toIso8601String().split('T')[0],
+              toDate: now.toIso8601String().split('T')[0],
+            ));
       }
     }
   }
@@ -368,7 +377,7 @@ class _StepTrackingPageState extends State<StepTrackingPage>
     if (_stepFormKey.currentState?.validate() ?? false) {
       final stepCount = int.parse(_stepController.text);
       final timestamp = DateTime.now().toIso8601String();
-      
+
       final authState = context.read<AuthBloc>().state;
       if (authState is AuthAuthenticated) {
         // Get current daily total from StepBloc state
@@ -377,7 +386,7 @@ class _StepTrackingPageState extends State<StepTrackingPage>
         if (stepState is step_state.StepLoaded) {
           currentDailyTotal = stepState.currentSteps.totalSteps;
         }
-        
+
         // Validate step submission before sending
         final validationResult = StepValidator.validateStepSubmission(
           stepCount: stepCount,
@@ -392,8 +401,10 @@ class _StepTrackingPageState extends State<StepTrackingPage>
             stepCount: stepCount,
             timestamp: timestamp,
           );
-        
-          context.read<StepBloc>().add(SubmitStepsEvent(stepRecord: stepRecord));
+
+          context
+              .read<StepBloc>()
+              .add(SubmitStepsEvent(stepRecord: stepRecord));
           Navigator.of(context).pop();
           _stepController.clear();
 

@@ -21,10 +21,10 @@ class CardScanResult extends Equatable {
     required int count,
     required bool isNew,
   }) {
-    final message = isNew 
+    final message = isNew
         ? '¡Nueva carta coleccionada!'
         : '¡Carta ya poseída - cantidad aumentada!';
-    
+
     return CardScanResult(
       success: true,
       message: message,

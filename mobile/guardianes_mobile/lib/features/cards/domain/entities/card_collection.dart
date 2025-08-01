@@ -30,12 +30,12 @@ class CardCollection extends Equatable {
     for (final element in CardElement.values) {
       counts[element] = 0;
     }
-    
+
     for (final collectedCard in cards) {
-      counts[collectedCard.card.element] = 
+      counts[collectedCard.card.element] =
           (counts[collectedCard.card.element] ?? 0) + collectedCard.count;
     }
-    
+
     return counts;
   }
 
@@ -44,30 +44,32 @@ class CardCollection extends Equatable {
     for (final rarity in CardRarity.values) {
       counts[rarity] = 0;
     }
-    
+
     for (final collectedCard in cards) {
-      counts[collectedCard.card.rarity] = 
+      counts[collectedCard.card.rarity] =
           (counts[collectedCard.card.rarity] ?? 0) + collectedCard.count;
     }
-    
+
     return counts;
   }
 
   bool get hasElementalBalance {
     final elementCounts = cardCountsByElement;
-    return CardElement.values.every((element) => 
+    return CardElement.values.every((element) =>
         elementCounts[element] != null && elementCounts[element]! > 0);
   }
 
   int get totalTradeValue {
-    return cards.fold(0, (sum, collectedCard) => 
-        sum + (collectedCard.card.rarity.tradeValue * collectedCard.count));
+    return cards.fold(
+        0,
+        (sum, collectedCard) =>
+            sum + (collectedCard.card.rarity.tradeValue * collectedCard.count));
   }
 
   CollectedCard? get rarestCard {
     if (cards.isEmpty) return null;
-    
-    return cards.reduce((curr, next) => 
+
+    return cards.reduce((curr, next) =>
         curr.card.rarity.index > next.card.rarity.index ? curr : next);
   }
 

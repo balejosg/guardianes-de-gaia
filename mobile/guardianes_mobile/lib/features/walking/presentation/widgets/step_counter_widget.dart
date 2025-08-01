@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:guardianes_mobile/features/walking/presentation/bloc/step_bloc.dart';
-import 'package:guardianes_mobile/features/walking/presentation/bloc/step_state.dart' as step_state;
+import 'package:guardianes_mobile/features/walking/presentation/bloc/step_state.dart'
+    as step_state;
 import 'package:intl/intl.dart';
 
 class StepCounterWidget extends StatelessWidget {
@@ -62,7 +63,7 @@ class StepCounterWidget extends StatelessWidget {
     if (state is step_state.StepLoading) {
       return const CircularProgressIndicator();
     }
-    
+
     if (state is step_state.StepError) {
       return Column(
         children: [
@@ -83,7 +84,7 @@ class StepCounterWidget extends StatelessWidget {
         ],
       );
     }
-    
+
     return Column(
       children: [
         Text(

@@ -147,7 +147,8 @@ void main() {
             .thenAnswer((_) async => responseDto);
 
         // Act
-        final result = await repository.getStepHistory(guardianId, fromDate, toDate);
+        final result =
+            await repository.getStepHistory(guardianId, fromDate, toDate);
 
         // Assert
         expect(result, isA<List<DailyStepAggregate>>());
@@ -157,7 +158,8 @@ void main() {
         expect(result[0].totalSteps, equals(5000));
         expect(result[1].totalSteps, equals(6000));
         expect(result[2].totalSteps, equals(7000));
-        verify(mockRemoteDataSource.getStepHistory(guardianId, fromDate, toDate));
+        verify(
+            mockRemoteDataSource.getStepHistory(guardianId, fromDate, toDate));
       });
 
       test('should return empty list when no data found', () async {
@@ -174,12 +176,14 @@ void main() {
             .thenAnswer((_) async => responseDto);
 
         // Act
-        final result = await repository.getStepHistory(guardianId, fromDate, toDate);
+        final result =
+            await repository.getStepHistory(guardianId, fromDate, toDate);
 
         // Assert
         expect(result, isA<List<DailyStepAggregate>>());
         expect(result, isEmpty);
-        verify(mockRemoteDataSource.getStepHistory(guardianId, fromDate, toDate));
+        verify(
+            mockRemoteDataSource.getStepHistory(guardianId, fromDate, toDate));
       });
 
       test('should handle remote data source errors', () async {
@@ -200,7 +204,8 @@ void main() {
     });
 
     group('Data Mapping', () {
-      test('should correctly map StepRecord to StepSubmissionRequestDto', () async {
+      test('should correctly map StepRecord to StepSubmissionRequestDto',
+          () async {
         // Arrange
         const stepRecord = StepRecord(
           guardianId: 1,
@@ -231,7 +236,9 @@ void main() {
         expect(capturedRequest.timestamp, equals('2025-07-16T14:30:00'));
       });
 
-      test('should correctly map CurrentStepCountResponseDto to DailyStepAggregate', () async {
+      test(
+          'should correctly map CurrentStepCountResponseDto to DailyStepAggregate',
+          () async {
         // Arrange
         const guardianId = 1;
         const responseDto = CurrentStepCountResponseDto(

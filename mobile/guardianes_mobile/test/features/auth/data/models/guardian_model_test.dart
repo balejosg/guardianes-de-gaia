@@ -26,7 +26,8 @@ void main() {
       expect(tGuardianModel, isA<Guardian>());
     });
 
-    test('should return a valid model when fromJson is called with valid JSON', () {
+    test('should return a valid model when fromJson is called with valid JSON',
+        () {
       // arrange
       final Map<String, dynamic> jsonMap = {
         'id': 1,
@@ -180,7 +181,8 @@ void main() {
       expect(result.level, equals('MENTOR'));
     });
 
-    test('should throw exception when fromJson is called with invalid JSON', () {
+    test('should throw exception when fromJson is called with invalid JSON',
+        () {
       // arrange
       final invalidJsonMap = {
         'id': 'invalid_id', // Should be int

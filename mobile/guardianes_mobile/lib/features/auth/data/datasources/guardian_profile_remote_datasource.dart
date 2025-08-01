@@ -4,10 +4,12 @@ import '../models/guardian_model.dart';
 
 abstract class GuardianProfileRemoteDataSource {
   Future<GuardianModel> getGuardianProfile(int guardianId);
-  Future<GuardianModel> updateGuardianProfile(int guardianId, Map<String, dynamic> updates);
+  Future<GuardianModel> updateGuardianProfile(
+      int guardianId, Map<String, dynamic> updates);
 }
 
-class GuardianProfileRemoteDataSourceImpl implements GuardianProfileRemoteDataSource {
+class GuardianProfileRemoteDataSourceImpl
+    implements GuardianProfileRemoteDataSource {
   final http.Client client;
   final String baseUrl;
 
@@ -33,7 +35,8 @@ class GuardianProfileRemoteDataSourceImpl implements GuardianProfileRemoteDataSo
   }
 
   @override
-  Future<GuardianModel> updateGuardianProfile(int guardianId, Map<String, dynamic> updates) async {
+  Future<GuardianModel> updateGuardianProfile(
+      int guardianId, Map<String, dynamic> updates) async {
     final response = await client.put(
       Uri.parse('$baseUrl/api/v1/guardians/$guardianId'),
       headers: {'Content-Type': 'application/json'},
@@ -45,7 +48,8 @@ class GuardianProfileRemoteDataSourceImpl implements GuardianProfileRemoteDataSo
     } else if (response.statusCode == 404) {
       throw Exception('Guardian not found');
     } else {
-      throw Exception('Failed to update guardian profile: ${response.statusCode}');
+      throw Exception(
+          'Failed to update guardian profile: ${response.statusCode}');
     }
   }
 }

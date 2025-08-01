@@ -24,7 +24,7 @@ void main() {
     const tPassword = 'secure_password';
     const tName = 'New Guardian';
     final tBirthDate = DateTime.parse('2015-01-01T00:00:00Z');
-    
+
     final tGuardian = Guardian(
       id: 1,
       username: tUsername,
@@ -41,9 +41,9 @@ void main() {
       lastActiveAt: DateTime.parse('2025-07-17T09:00:00Z'),
       isChild: true,
     );
-    
+
     const tToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new.token';
-    
+
     final tAuthResult = AuthResult(
       token: tToken,
       guardian: tGuardian,
@@ -144,7 +144,8 @@ void main() {
 
     test('should handle child registration correctly', () async {
       // arrange
-      final tChildBirthDate = DateTime.parse('2018-01-01T00:00:00Z'); // 6 years old
+      final tChildBirthDate =
+          DateTime.parse('2018-01-01T00:00:00Z'); // 6 years old
       final tChildGuardian = Guardian(
         id: 2,
         username: 'child_guardian',
@@ -161,7 +162,7 @@ void main() {
         lastActiveAt: DateTime.parse('2025-07-17T09:00:00Z'),
         isChild: true,
       );
-      
+
       final tChildAuthResult = AuthResult(
         token: 'child.jwt.token',
         guardian: tChildGuardian,

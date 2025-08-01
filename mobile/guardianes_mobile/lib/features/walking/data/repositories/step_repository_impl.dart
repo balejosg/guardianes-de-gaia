@@ -31,7 +31,8 @@ class StepRepositoryImpl implements StepRepository {
     String fromDate,
     String toDate,
   ) async {
-    final response = await remoteDataSource.getStepHistory(guardianId, fromDate, toDate);
+    final response =
+        await remoteDataSource.getStepHistory(guardianId, fromDate, toDate);
     return response.toDomainEntities();
   }
 }

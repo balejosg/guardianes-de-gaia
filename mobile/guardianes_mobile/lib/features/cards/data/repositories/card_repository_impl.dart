@@ -27,11 +27,12 @@ class CardRepositoryImpl implements CardRepository {
   Future<CardCollection> getGuardianCollection(int guardianId) async {
     final cards = await remoteDataSource.getGuardianCards(guardianId);
     final collectedCards = cards.map((model) => model.toEntity()).toList();
-    
+
     return CardCollection(
       guardianId: guardianId,
       cards: collectedCards,
-      createdAt: DateTime.now(), // This would come from API in real implementation
+      createdAt:
+          DateTime.now(), // This would come from API in real implementation
     );
   }
 
@@ -56,8 +57,10 @@ class CardRepositoryImpl implements CardRepository {
   }
 
   @override
-  Future<List<CollectedCard>> getRecentlyCollected(int guardianId, int limit) async {
-    final cards = await remoteDataSource.getRecentlyCollected(guardianId, limit);
+  Future<List<CollectedCard>> getRecentlyCollected(
+      int guardianId, int limit) async {
+    final cards =
+        await remoteDataSource.getRecentlyCollected(guardianId, limit);
     return cards.map((model) => model.toEntity()).toList();
   }
 

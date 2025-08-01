@@ -16,7 +16,8 @@ class StepValidationResult {
     );
   }
 
-  factory StepValidationResult.invalid(String errorMessage, {List<String> warnings = const []}) {
+  factory StepValidationResult.invalid(String errorMessage,
+      {List<String> warnings = const []}) {
     return StepValidationResult(
       isValid: false,
       errorMessage: errorMessage,
@@ -29,8 +30,9 @@ class StepValidator {
   static const int MIN_STEP_COUNT = 1;
   static const int MAX_STEP_COUNT = 50000;
   static const int MAX_DAILY_STEPS = 100000;
-  static const int ANOMALY_THRESHOLD = 15000; // Steps that seem unusually high for single submission
-  
+  static const int ANOMALY_THRESHOLD =
+      15000; // Steps that seem unusually high for single submission
+
   /// Validates a single step submission
   static StepValidationResult validateStepSubmission({
     required int stepCount,
@@ -47,11 +49,13 @@ class StepValidator {
 
     // Validate step count range
     if (stepCount < MIN_STEP_COUNT) {
-      return StepValidationResult.invalid('Step count must be at least $MIN_STEP_COUNT');
+      return StepValidationResult.invalid(
+          'Step count must be at least $MIN_STEP_COUNT');
     }
 
     if (stepCount > MAX_STEP_COUNT) {
-      return StepValidationResult.invalid('Step count cannot exceed $MAX_STEP_COUNT');
+      return StepValidationResult.invalid(
+          'Step count cannot exceed $MAX_STEP_COUNT');
     }
 
     // Validate timestamp format
@@ -62,10 +66,11 @@ class StepValidator {
     try {
       final parsedTime = DateTime.parse(timestamp);
       final now = DateTime.now();
-      
+
       // Check if timestamp is in the future
       if (parsedTime.isAfter(now)) {
-        return StepValidationResult.invalid('Timestamp cannot be in the future');
+        return StepValidationResult.invalid(
+            'Timestamp cannot be in the future');
       }
 
       // Check if timestamp is too old (more than 24 hours)
@@ -80,7 +85,8 @@ class StepValidator {
     // Check daily totals
     final newDailyTotal = currentDailyTotal + stepCount;
     if (newDailyTotal > MAX_DAILY_STEPS) {
-      return StepValidationResult.invalid('Daily step count would exceed $MAX_DAILY_STEPS');
+      return StepValidationResult.invalid(
+          'Daily step count would exceed $MAX_DAILY_STEPS');
     }
 
     // Anomaly detection
@@ -97,22 +103,24 @@ class StepValidator {
     required Duration timePeriod,
   }) {
     final warnings = <String>[];
-    
+
     if (timePeriod.inMinutes == 0) {
       return StepValidationResult.valid();
     }
 
     final stepsPerMinute = stepCount / timePeriod.inMinutes;
-    
+
     // Normal walking pace is about 100-120 steps per minute
     // Running can be 160-180 steps per minute
     // Anything above 200 is suspicious
     if (stepsPerMinute > 200) {
-      return StepValidationResult.invalid('Step rate too high (${stepsPerMinute.toInt()} steps/min)');
+      return StepValidationResult.invalid(
+          'Step rate too high (${stepsPerMinute.toInt()} steps/min)');
     }
 
     if (stepsPerMinute > 180) {
-      warnings.add('High step rate detected (${stepsPerMinute.toInt()} steps/min)');
+      warnings
+          .add('High step rate detected (${stepsPerMinute.toInt()} steps/min)');
     }
 
     return StepValidationResult.valid(warnings: warnings);
@@ -125,7 +133,7 @@ class StepValidator {
   }) {
     const int STEPS_PER_ENERGY = 10;
     final calculatedEnergy = stepCount ~/ STEPS_PER_ENERGY;
-    
+
     if (calculatedEnergy != expectedEnergy) {
       return StepValidationResult.invalid(
         'Energy calculation mismatch. Expected: $calculatedEnergy, Got: $expectedEnergy',
@@ -143,7 +151,7 @@ class StepValidator {
   }) {
     final now = DateTime.now();
     final windowStart = now.subtract(timeWindow);
-    
+
     final recentCount = recentSubmissions
         .where((submission) => submission.isAfter(windowStart))
         .length;

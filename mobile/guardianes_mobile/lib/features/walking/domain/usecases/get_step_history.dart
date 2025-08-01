@@ -6,16 +6,17 @@ class GetStepHistory {
 
   GetStepHistory(this.repository);
 
-  Future<List<DailyStepAggregate>> call(int guardianId, String fromDate, String toDate) async {
+  Future<List<DailyStepAggregate>> call(
+      int guardianId, String fromDate, String toDate) async {
     // Validate input
     if (guardianId <= 0) {
       throw ArgumentError('Guardian ID must be positive');
     }
-    
+
     if (fromDate.isEmpty) {
       throw ArgumentError('From date cannot be empty');
     }
-    
+
     if (toDate.isEmpty) {
       throw ArgumentError('To date cannot be empty');
     }
@@ -25,7 +26,7 @@ class GetStepHistory {
     if (!dateRegex.hasMatch(fromDate)) {
       throw ArgumentError('From date must be in format YYYY-MM-DD');
     }
-    
+
     if (!dateRegex.hasMatch(toDate)) {
       throw ArgumentError('To date must be in format YYYY-MM-DD');
     }

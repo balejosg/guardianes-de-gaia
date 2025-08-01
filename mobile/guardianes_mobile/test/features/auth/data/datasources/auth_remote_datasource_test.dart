@@ -56,7 +56,8 @@ void main() {
         201,
       );
 
-      test('should perform POST request to /auth/register with correct data', () async {
+      test('should perform POST request to /auth/register with correct data',
+          () async {
         // arrange
         when(mockHttpClient.post(
           any,
@@ -89,7 +90,8 @@ void main() {
         ));
       });
 
-      test('should return AuthResponseModel when registration is successful', () async {
+      test('should return AuthResponseModel when registration is successful',
+          () async {
         // arrange
         when(mockHttpClient.post(
           any,
@@ -132,8 +134,9 @@ void main() {
             birthDate: tBirthDate,
           ),
           throwsA(
-            predicate((e) => 
-              e is Exception && e.toString().contains('Username already exists')),
+            predicate((e) =>
+                e is Exception &&
+                e.toString().contains('Username already exists')),
           ),
         );
       });
@@ -160,13 +163,15 @@ void main() {
             birthDate: tBirthDate,
           ),
           throwsA(
-            predicate((e) => 
-              e is Exception && e.toString().contains('Internal server error')),
+            predicate((e) =>
+                e is Exception &&
+                e.toString().contains('Internal server error')),
           ),
         );
       });
 
-      test('should throw generic exception when error response has no message', () async {
+      test('should throw generic exception when error response has no message',
+          () async {
         // arrange
         final tErrorResponse = http.Response('{}', 400);
         when(mockHttpClient.post(
@@ -185,8 +190,8 @@ void main() {
             birthDate: tBirthDate,
           ),
           throwsA(
-            predicate((e) => 
-              e is Exception && e.toString().contains('Registration failed')),
+            predicate((e) =>
+                e is Exception && e.toString().contains('Registration failed')),
           ),
         );
       });
@@ -230,7 +235,8 @@ void main() {
         200,
       );
 
-      test('should perform POST request to /auth/login with correct data', () async {
+      test('should perform POST request to /auth/login with correct data',
+          () async {
         // arrange
         when(mockHttpClient.post(
           any,
@@ -257,7 +263,8 @@ void main() {
         ));
       });
 
-      test('should return AuthResponseModel when login is successful', () async {
+      test('should return AuthResponseModel when login is successful',
+          () async {
         // arrange
         when(mockHttpClient.post(
           any,
@@ -320,8 +327,8 @@ void main() {
             password: tPassword,
           ),
           throwsA(
-            predicate((e) => 
-              e is Exception && e.toString().contains('Invalid credentials')),
+            predicate((e) =>
+                e is Exception && e.toString().contains('Invalid credentials')),
           ),
         );
       });
@@ -345,13 +352,14 @@ void main() {
             password: tPassword,
           ),
           throwsA(
-            predicate((e) => 
-              e is Exception && e.toString().contains('Guardian not found')),
+            predicate((e) =>
+                e is Exception && e.toString().contains('Guardian not found')),
           ),
         );
       });
 
-      test('should throw generic exception when error response has no message', () async {
+      test('should throw generic exception when error response has no message',
+          () async {
         // arrange
         final tErrorResponse = http.Response('{}', 401);
         when(mockHttpClient.post(
@@ -367,8 +375,8 @@ void main() {
             password: tPassword,
           ),
           throwsA(
-            predicate((e) => 
-              e is Exception && e.toString().contains('Login failed')),
+            predicate(
+                (e) => e is Exception && e.toString().contains('Login failed')),
           ),
         );
       });
@@ -388,9 +396,9 @@ void main() {
           headers: anyNamed('headers'),
           body: anyNamed('body'),
         )).thenAnswer((_) async => http.Response(
-          jsonEncode(tAuthResponseModel.toJson()),
-          200,
-        ));
+              jsonEncode(tAuthResponseModel.toJson()),
+              200,
+            ));
 
         // act
         await customDataSource.login(

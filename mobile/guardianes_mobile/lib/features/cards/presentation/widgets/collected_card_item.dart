@@ -15,7 +15,7 @@ class CollectedCardItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = collectedCard.card;
-    
+
     return Card(
       elevation: 2,
       clipBehavior: Clip.antiAlias,
@@ -75,7 +75,7 @@ class CollectedCardItem extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Card Content
             Expanded(
               child: Padding(
@@ -94,7 +94,7 @@ class CollectedCardItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    
+
                     // Rarity Badge
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -124,16 +124,19 @@ class CollectedCardItem extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     const Spacer(),
-                    
+
                     // Stats Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildStatChip('⚔️', card.attackPower.toString(), Colors.red),
-                        _buildStatChip('🛡️', card.defensePower.toString(), Colors.blue),
-                        _buildStatChip('⚡', card.energyCost.toString(), Colors.orange),
+                        _buildStatChip(
+                            '⚔️', card.attackPower.toString(), Colors.red),
+                        _buildStatChip(
+                            '🛡️', card.defensePower.toString(), Colors.blue),
+                        _buildStatChip(
+                            '⚡', card.energyCost.toString(), Colors.orange),
                       ],
                     ),
                   ],

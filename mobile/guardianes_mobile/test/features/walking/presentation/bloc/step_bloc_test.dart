@@ -54,11 +54,11 @@ void main() {
       blocTest<StepBloc, StepState>(
         'should emit [StepSubmitting, StepSubmitted] when steps are submitted successfully',
         build: () {
-          when(mockSubmitSteps.call(any))
-              .thenAnswer((_) async => {});
+          when(mockSubmitSteps.call(any)).thenAnswer((_) async => {});
           return stepBloc;
         },
-        act: (bloc) => bloc.add(const SubmitStepsEvent(stepRecord: tStepRecord)),
+        act: (bloc) =>
+            bloc.add(const SubmitStepsEvent(stepRecord: tStepRecord)),
         expect: () => [
           StepSubmitting(),
           StepSubmitted(),
@@ -71,14 +71,15 @@ void main() {
       blocTest<StepBloc, StepState>(
         'should emit [StepSubmitting, StepSubmissionError] when submission fails',
         build: () {
-          when(mockSubmitSteps.call(any))
-              .thenThrow(Exception('Network error'));
+          when(mockSubmitSteps.call(any)).thenThrow(Exception('Network error'));
           return stepBloc;
         },
-        act: (bloc) => bloc.add(const SubmitStepsEvent(stepRecord: tStepRecord)),
+        act: (bloc) =>
+            bloc.add(const SubmitStepsEvent(stepRecord: tStepRecord)),
         expect: () => [
           StepSubmitting(),
-          const StepSubmissionError(message: 'Failed to submit steps: Exception: Network error'),
+          const StepSubmissionError(
+              message: 'Failed to submit steps: Exception: Network error'),
         ],
       );
 
@@ -89,10 +90,12 @@ void main() {
               .thenThrow(ArgumentError('Step count must be positive'));
           return stepBloc;
         },
-        act: (bloc) => bloc.add(const SubmitStepsEvent(stepRecord: tStepRecord)),
+        act: (bloc) =>
+            bloc.add(const SubmitStepsEvent(stepRecord: tStepRecord)),
         expect: () => [
           StepSubmitting(),
-          const StepSubmissionError(message: 'Validation error: Step count must be positive'),
+          const StepSubmissionError(
+              message: 'Validation error: Step count must be positive'),
         ],
       );
     });
@@ -112,7 +115,8 @@ void main() {
               .thenAnswer((_) async => tDailyStepAggregate);
           return stepBloc;
         },
-        act: (bloc) => bloc.add(const GetCurrentStepsEvent(guardianId: tGuardianId)),
+        act: (bloc) =>
+            bloc.add(const GetCurrentStepsEvent(guardianId: tGuardianId)),
         expect: () => [
           StepLoading(),
           const StepLoaded(currentSteps: tDailyStepAggregate),
@@ -129,10 +133,12 @@ void main() {
               .thenThrow(Exception('Network error'));
           return stepBloc;
         },
-        act: (bloc) => bloc.add(const GetCurrentStepsEvent(guardianId: tGuardianId)),
+        act: (bloc) =>
+            bloc.add(const GetCurrentStepsEvent(guardianId: tGuardianId)),
         expect: () => [
           StepLoading(),
-          const StepError(message: 'Failed to get current steps: Exception: Network error'),
+          const StepError(
+              message: 'Failed to get current steps: Exception: Network error'),
         ],
       );
 
@@ -143,10 +149,12 @@ void main() {
               .thenThrow(ArgumentError('Guardian ID must be positive'));
           return stepBloc;
         },
-        act: (bloc) => bloc.add(const GetCurrentStepsEvent(guardianId: tGuardianId)),
+        act: (bloc) =>
+            bloc.add(const GetCurrentStepsEvent(guardianId: tGuardianId)),
         expect: () => [
           StepLoading(),
-          const StepError(message: 'Validation error: Guardian ID must be positive'),
+          const StepError(
+              message: 'Validation error: Guardian ID must be positive'),
         ],
       );
     });
@@ -226,7 +234,8 @@ void main() {
         )),
         expect: () => [
           StepLoading(),
-          const StepError(message: 'Failed to get step history: Exception: Network error'),
+          const StepError(
+              message: 'Failed to get step history: Exception: Network error'),
         ],
       );
     });
@@ -237,18 +246,18 @@ void main() {
         build: () {
           when(mockGetCurrentSteps.call(1))
               .thenAnswer((_) async => const DailyStepAggregate(
-                guardianId: 1,
-                date: '2025-07-16',
-                totalSteps: 5000,
-              ));
-          when(mockSubmitSteps.call(any))
-              .thenAnswer((_) async => {});
+                    guardianId: 1,
+                    date: '2025-07-16',
+                    totalSteps: 5000,
+                  ));
+          when(mockSubmitSteps.call(any)).thenAnswer((_) async => {});
           return stepBloc;
         },
         act: (bloc) async {
           bloc.add(const GetCurrentStepsEvent(guardianId: 1));
           await Future.delayed(const Duration(milliseconds: 100));
-          bloc.add(const SubmitStepsEvent(stepRecord: StepRecord(
+          bloc.add(const SubmitStepsEvent(
+              stepRecord: StepRecord(
             guardianId: 1,
             stepCount: 1000,
             timestamp: '2025-07-16T15:00:00',
@@ -256,7 +265,8 @@ void main() {
         },
         expect: () => [
           StepLoading(),
-          const StepLoaded(currentSteps: DailyStepAggregate(
+          const StepLoaded(
+              currentSteps: DailyStepAggregate(
             guardianId: 1,
             date: '2025-07-16',
             totalSteps: 5000,
@@ -271,10 +281,10 @@ void main() {
         build: () {
           when(mockGetCurrentSteps.call(1))
               .thenAnswer((_) async => const DailyStepAggregate(
-                guardianId: 1,
-                date: '2025-07-16',
-                totalSteps: 5000,
-              ));
+                    guardianId: 1,
+                    date: '2025-07-16',
+                    totalSteps: 5000,
+                  ));
           when(mockGetStepHistory.call(1, '2025-07-14', '2025-07-16'))
               .thenAnswer((_) async => []);
           return stepBloc;
@@ -290,7 +300,8 @@ void main() {
         },
         expect: () => [
           StepLoading(),
-          const StepLoaded(currentSteps: DailyStepAggregate(
+          const StepLoaded(
+              currentSteps: DailyStepAggregate(
             guardianId: 1,
             date: '2025-07-16',
             totalSteps: 5000,

@@ -6,7 +6,8 @@ import '../../domain/usecases/get_guardian_profile.dart';
 part 'guardian_profile_event.dart';
 part 'guardian_profile_state.dart';
 
-class GuardianProfileBloc extends Bloc<GuardianProfileEvent, GuardianProfileState> {
+class GuardianProfileBloc
+    extends Bloc<GuardianProfileEvent, GuardianProfileState> {
   final GetGuardianProfile getGuardianProfile;
 
   GuardianProfileBloc({

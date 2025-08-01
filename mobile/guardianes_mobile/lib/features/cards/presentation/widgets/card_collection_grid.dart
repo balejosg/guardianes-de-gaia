@@ -58,17 +58,17 @@ class CardCollectionGrid extends StatelessWidget {
           Text(
             'No tienes cartas aún',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Escanea códigos QR para comenzar tu colección',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+                  color: Colors.grey[500],
+                ),
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(

@@ -26,8 +26,7 @@ void main() {
         timestamp: '2025-07-16T14:30:00',
       );
 
-      when(mockStepRepository.submitSteps(any))
-          .thenAnswer((_) async => {});
+      when(mockStepRepository.submitSteps(any)).thenAnswer((_) async => {});
 
       // Act
       await usecase.call(stepRecord);
@@ -68,7 +67,7 @@ void main() {
         () => usecase.call(stepRecord),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.submitSteps(any));
     });
 
@@ -85,7 +84,7 @@ void main() {
         () => usecase.call(stepRecord),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.submitSteps(any));
     });
 
@@ -102,7 +101,7 @@ void main() {
         () => usecase.call(stepRecord),
         throwsA(isA<ArgumentError>()),
       );
-      
+
       verifyNever(mockStepRepository.submitSteps(any));
     });
   });

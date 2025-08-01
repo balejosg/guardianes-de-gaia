@@ -56,9 +56,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
     // Add vibration/sound feedback here if desired
     context.read<CardBloc>().add(ScanQRCodeEvent(
-      guardianId: widget.guardianId,
-      qrCode: qrCode,
-    ));
+          guardianId: widget.guardianId,
+          qrCode: qrCode,
+        ));
   }
 
   void _showPermissionDialog() {
@@ -252,7 +252,8 @@ class QRScannerOverlayShape extends ShapeBorder {
     final left = rect.center.dx - scanSize / 2;
     final top = rect.center.dy - scanSize / 2;
     final scanRectangle = Rect.fromLTWH(left, top, scanSize, scanSize);
-    scanRect.addRRect(RRect.fromRectAndRadius(scanRectangle, Radius.circular(borderRadius)));
+    scanRect.addRRect(
+        RRect.fromRectAndRadius(scanRectangle, Radius.circular(borderRadius)));
 
     return Path.combine(PathOperation.difference, path, scanRect);
   }
@@ -275,7 +276,8 @@ class QRScannerOverlayShape extends ShapeBorder {
     final path = Path()
       ..fillType = PathFillType.evenOdd
       ..addRect(rect)
-      ..addRRect(RRect.fromRectAndRadius(scanRect, Radius.circular(borderRadius)));
+      ..addRRect(
+          RRect.fromRectAndRadius(scanRect, Radius.circular(borderRadius)));
 
     canvas.clipPath(path);
     canvas.drawRect(rect, Paint()..color = overlayColor);
@@ -283,33 +285,41 @@ class QRScannerOverlayShape extends ShapeBorder {
     // Draw corner lines
     canvas.drawPath(
       Path()
-        ..moveTo(scanRect.left - borderOffset, scanRect.top - borderOffset + borderLength)
+        ..moveTo(scanRect.left - borderOffset,
+            scanRect.top - borderOffset + borderLength)
         ..lineTo(scanRect.left - borderOffset, scanRect.top - borderOffset)
-        ..lineTo(scanRect.left - borderOffset + borderLength, scanRect.top - borderOffset),
+        ..lineTo(scanRect.left - borderOffset + borderLength,
+            scanRect.top - borderOffset),
       borderPaint,
     );
 
     canvas.drawPath(
       Path()
-        ..moveTo(scanRect.right + borderOffset, scanRect.top - borderOffset + borderLength)
+        ..moveTo(scanRect.right + borderOffset,
+            scanRect.top - borderOffset + borderLength)
         ..lineTo(scanRect.right + borderOffset, scanRect.top - borderOffset)
-        ..lineTo(scanRect.right + borderOffset - borderLength, scanRect.top - borderOffset),
+        ..lineTo(scanRect.right + borderOffset - borderLength,
+            scanRect.top - borderOffset),
       borderPaint,
     );
 
     canvas.drawPath(
       Path()
-        ..moveTo(scanRect.left - borderOffset, scanRect.bottom + borderOffset - borderLength)
+        ..moveTo(scanRect.left - borderOffset,
+            scanRect.bottom + borderOffset - borderLength)
         ..lineTo(scanRect.left - borderOffset, scanRect.bottom + borderOffset)
-        ..lineTo(scanRect.left - borderOffset + borderLength, scanRect.bottom + borderOffset),
+        ..lineTo(scanRect.left - borderOffset + borderLength,
+            scanRect.bottom + borderOffset),
       borderPaint,
     );
 
     canvas.drawPath(
       Path()
-        ..moveTo(scanRect.right + borderOffset, scanRect.bottom + borderOffset - borderLength)
+        ..moveTo(scanRect.right + borderOffset,
+            scanRect.bottom + borderOffset - borderLength)
         ..lineTo(scanRect.right + borderOffset, scanRect.bottom + borderOffset)
-        ..lineTo(scanRect.right + borderOffset - borderLength, scanRect.bottom + borderOffset),
+        ..lineTo(scanRect.right + borderOffset - borderLength,
+            scanRect.bottom + borderOffset),
       borderPaint,
     );
   }

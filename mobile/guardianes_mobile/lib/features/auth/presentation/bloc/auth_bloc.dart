@@ -24,7 +24,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>(_onLogoutRequested);
   }
 
-  Future<void> _onCheckStatus(AuthCheckStatus event, Emitter<AuthState> emit) async {
+  Future<void> _onCheckStatus(
+      AuthCheckStatus event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
       final isLoggedIn = await authRepository.isLoggedIn();
@@ -43,7 +44,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onLoginRequested(AuthLoginRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLoginRequested(
+      AuthLoginRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
       final result = await loginGuardian(
@@ -56,7 +58,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onRegisterRequested(AuthRegisterRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onRegisterRequested(
+      AuthRegisterRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
       final result = await registerGuardian(
@@ -72,7 +75,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onLogoutRequested(AuthLogoutRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLogoutRequested(
+      AuthLogoutRequested event, Emitter<AuthState> emit) async {
     try {
       await authRepository.logout();
     } catch (e) {

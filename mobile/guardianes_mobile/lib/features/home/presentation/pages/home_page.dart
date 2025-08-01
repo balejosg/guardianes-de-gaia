@@ -90,7 +90,8 @@ class HomePage extends StatelessWidget {
                                 child: _StatCard(
                                   title: 'XP',
                                   value: guardian.experiencePoints.toString(),
-                                  subtitle: '${guardian.experienceToNextLevel} para siguiente nivel',
+                                  subtitle:
+                                      '${guardian.experienceToNextLevel} para siguiente nivel',
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -98,7 +99,8 @@ class HomePage extends StatelessWidget {
                                 child: _StatCard(
                                   title: 'Pasos Totales',
                                   value: guardian.totalSteps.toString(),
-                                  subtitle: 'Energía: ${guardian.totalEnergyGenerated}',
+                                  subtitle:
+                                      'Energía: ${guardian.totalEnergyGenerated}',
                                 ),
                               ),
                             ],
@@ -147,7 +149,8 @@ class HomePage extends StatelessWidget {
                           onTap: () {
                             // TODO: Navigate to battles
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Próximamente disponible')),
+                              const SnackBar(
+                                  content: Text('Próximamente disponible')),
                             );
                           },
                         ),

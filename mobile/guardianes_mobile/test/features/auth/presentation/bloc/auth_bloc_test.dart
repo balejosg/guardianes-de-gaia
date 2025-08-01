@@ -338,8 +338,8 @@ void main() {
         )),
         expect: () => [
           AuthLoading(),
-          predicate<AuthAuthenticated>((state) => 
-            state.guardian.isChild && state.guardian.age == 6),
+          predicate<AuthAuthenticated>(
+              (state) => state.guardian.isChild && state.guardian.age == 6),
         ],
       );
     });
