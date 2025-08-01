@@ -1,0 +1,91 @@
+version: '3.9'
+
+# CI-optimized Docker Compose configuration using pre-built images
+# This configuration pulls images from GHCR instead of building locally
+# to dramatically reduce CI startup time
+
+services:
+  # ============================================
+  # Backend Service using pre-built image
+  # ============================================
+  backend-test:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-balejosg}/guardianes-backend:${IMAGE_TAG:-latest}
+    container_name: guardianes-backend-ci
+    ports:
+      - "8080:8080"    # API
+      - "9090:9090"    # Metrics
+    environment:
+      - SPRING_PROFILES_ACTIVE=ci
+      - SPRING_DATASOURCE_URL=jdbc:h2:mem:ci_testdb;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=
+      - TZ=Europe/Madrid
+      # Override external service dependencies for CI
+      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+    networks:
+      - ci-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "ci:ci_test", "http://localhost:8080/actuator/health", "||", "exit", "1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ============================================
+  # Minimal MySQL for integration tests only
+  # ============================================
+  mysql-test:
+    image: mysql:8.0
+    container_name: guardianes-mysql-ci
+    environment:
+      MYSQL_ROOT_PASSWORD: root_test_secret
+      MYSQL_DATABASE: guardianes_test
+      MYSQL_USER: guardianes_test
+      MYSQL_PASSWORD: test_secret
+      TZ: Europe/Madrid
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-ci-data:/var/lib/mysql
+    networks:
+      - ci-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_test_secret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ============================================
+  # Minimal Redis for integration tests only
+  # ============================================
+  redis-test:
+    image: redis:7-alpine
+    container_name: guardianes-redis-ci
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-ci-data:/data
+    networks:
+      - ci-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  ci-network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  mysql-ci-data:
+    driver: local
+  redis-ci-data:
+    driver: local

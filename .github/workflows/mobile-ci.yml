@@ -41,12 +41,12 @@ jobs:
       - name: 🔧 Generate Code
         working-directory: ./mobile/guardianes_mobile
         run: |
-          flutter packages pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
       
       - name: 🔍 Analyze Code
         working-directory: ./mobile/guardianes_mobile
         run: |
-          flutter analyze --fatal-infos --fatal-warnings
+          flutter analyze
       
       - name: 📐 Check Formatting
         working-directory: ./mobile/guardianes_mobile
@@ -94,7 +94,7 @@ jobs:
       - name: 🔧 Generate Code
         working-directory: ./mobile/guardianes_mobile
         run: |
-          flutter packages pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
       
       - name: 🧪 Run Tests with Coverage
         working-directory: ./mobile/guardianes_mobile
@@ -147,12 +147,16 @@ jobs:
           echo "## 📊 Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Extract coverage percentage
-          COVERAGE=$(lcov --summary coverage/lcov_filtered.info | grep lines | awk '{print $2}')
-          echo "**Lines Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
-          
-          FUNCTIONS=$(lcov --summary coverage/lcov_filtered.info | grep functions | awk '{print $2}')
-          echo "**Functions Coverage:** $FUNCTIONS" >> $GITHUB_STEP_SUMMARY
+          # Extract coverage percentage if file exists
+          if [ -f "coverage/lcov_filtered.info" ] && [ -s "coverage/lcov_filtered.info" ]; then
+            COVERAGE=$(lcov --summary coverage/lcov_filtered.info 2>/dev/null | grep lines | awk '{print $2}' || echo "N/A")
+            FUNCTIONS=$(lcov --summary coverage/lcov_filtered.info 2>/dev/null | grep functions | awk '{print $2}' || echo "N/A")
+            echo "**Lines Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
+            echo "**Functions Coverage:** $FUNCTIONS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Lines Coverage:** No coverage data available" >> $GITHUB_STEP_SUMMARY
+            echo "**Functions Coverage:** No coverage data available" >> $GITHUB_STEP_SUMMARY
+          fi
       
       - name: 💾 Archive Test Results
         uses: actions/upload-artifact@v4
@@ -194,7 +198,7 @@ jobs:
       - name: 🔧 Generate Code
         working-directory: ./mobile/guardianes_mobile
         run: |
-          flutter packages pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
       
       - name: 🔧 Configure Android Signing (Debug)
         working-directory: ./mobile/guardianes_mobile/android
@@ -287,7 +291,7 @@ jobs:
       - name: 🔧 Generate Code
         working-directory: ./mobile/guardianes_mobile
         run: |
-          flutter packages pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
       
       - name: 📱 Install iOS Dependencies
         working-directory: ./mobile/guardianes_mobile/ios

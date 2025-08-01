@@ -49,7 +49,6 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
       
       - name: 🔐 Login to GitHub Container Registry
-        if: false  # Disabled - no GHCR permissions
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY_GHCR }}
@@ -61,8 +60,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            # Disabled GHCR due to permission issues
-            # ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -77,15 +75,15 @@ jobs:
             org.opencontainers.image.vendor=Guardianes de Gaia Team
             org.opencontainers.image.licenses=MIT
       
-      - name: 🏗️ Build Docker image (no push)
+      - name: 🏗️ Build and Push Docker image
         id: build
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           file: ./backend/Dockerfile.dev
           platforms: ${{ env.PLATFORMS }}
-          push: false  # Disabled push due to registry permission issues
-          tags: guardianes-backend:latest
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -150,7 +148,6 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
       
       - name: 🔐 Login to GitHub Container Registry
-        if: false  # Disabled - no GHCR permissions
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY_GHCR }}

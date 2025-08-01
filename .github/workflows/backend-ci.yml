@@ -281,7 +281,7 @@ jobs:
     name: ⚡ Performance Tests
     runs-on: ubuntu-latest
     needs: [unit-tests]
-    timeout-minutes: 40
+    timeout-minutes: 20
     
     steps:
       - name: 📥 Checkout code
@@ -298,21 +298,31 @@ jobs:
         working-directory: ./backend
         run: mvn clean package -DskipTests
       
-      - name: 🐳 Start Test Environment
+      - name: 🔐 Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🐳 Start Optimized Test Environment
+        env:
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "🔍 Starting Docker Compose test environment..."
-          docker compose -f docker-compose.test.yml up -d
+          echo "🔍 Starting optimized CI environment with pre-built images..."
+          docker compose -f docker-compose.ci.yml up -d
           
-          echo "⏳ Waiting 180 seconds for services to initialize..."
-          sleep 180
+          echo "⏳ Waiting 60 seconds for services to initialize..."
+          sleep 60
           
           echo "🔍 Checking Docker Compose services status:"
-          docker compose -f docker-compose.test.yml ps
+          docker compose -f docker-compose.ci.yml ps
           
           echo "🔍 Checking Docker logs:"
-          docker compose -f docker-compose.test.yml logs --tail=20
+          docker compose -f docker-compose.ci.yml logs --tail=20
           
-          echo "✅ Test environment startup completed"
+          echo "✅ Optimized test environment startup completed"
       
       - name: ⚡ Run Load Tests with JMeter
         run: |
@@ -320,9 +330,9 @@ jobs:
           wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.2.tgz
           tar -xzf apache-jmeter-5.6.2.tgz
           
-          # Wait for backend to be fully ready with extended timeout
+          # Wait for backend to be fully ready with reduced timeout (using pre-built images)
           echo "🔄 Waiting for backend to be ready..."
-          timeout 480 sh -c 'until curl -f -u ci:ci_test http://localhost:8080/actuator/health; do sleep 5; done'
+          timeout 120 sh -c 'until curl -f -u ci:ci_test http://localhost:8080/actuator/health; do sleep 3; done'
           
           # Run comprehensive JMeter performance tests
           echo "📊 Running JMeter Performance Test Suite..."
@@ -367,7 +377,7 @@ jobs:
       
       - name: 🛑 Stop Test Environment
         if: always()
-        run: docker compose -f docker-compose.test.yml down
+        run: docker compose -f docker-compose.ci.yml down
       
       - name: 📤 Upload Performance Results
         uses: actions/upload-artifact@v4
