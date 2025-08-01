@@ -299,8 +299,19 @@ jobs:
       
       - name: 🐳 Start Test Environment
         run: |
+          echo "🔍 Starting Docker Compose test environment..."
           docker compose -f docker-compose.test.yml up -d
-          sleep 30  # Wait for services to start
+          
+          echo "⏳ Waiting 60 seconds for services to initialize..."
+          sleep 60
+          
+          echo "🔍 Checking Docker Compose services status:"
+          docker compose -f docker-compose.test.yml ps
+          
+          echo "🔍 Checking Docker logs:"
+          docker compose -f docker-compose.test.yml logs --tail=20
+          
+          echo "✅ Test environment startup completed"
       
       - name: ⚡ Run Load Tests with JMeter
         run: |
@@ -310,7 +321,7 @@ jobs:
           
           # Wait for backend to be fully ready
           echo "🔄 Waiting for backend to be ready..."
-          timeout 60 sh -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
+          timeout 180 sh -c 'until curl -f -u admin:test_password http://localhost:8080/actuator/health; do sleep 3; done'
           
           # Run comprehensive JMeter performance tests
           echo "📊 Running JMeter Performance Test Suite..."

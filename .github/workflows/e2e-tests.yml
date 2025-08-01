@@ -101,33 +101,33 @@ jobs:
           echo "Waiting for H2 in-memory backend to be ready..."
           echo "Backend PID: $BACKEND_PID"
           
-          # Optimistic timeout for ultra-fast JAR startup (12 attempts * 5s = 1 minute max)
-          for i in {1..12}; do
+          # Extended timeout for reliable JAR startup (24 attempts * 5s = 2 minutes max)
+          for i in {1..24}; do
             # Check if backend process is still running
             if ! kill -0 $BACKEND_PID 2>/dev/null; then
               echo "❌ Backend process died unexpectedly"
               exit 1
             fi
             
-            if curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
+            if curl -f -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
               echo "✅ Backend is ready after ${i} attempts!"
               echo "ready=true" >> $GITHUB_OUTPUT
               
               # Display H2 database info
               echo "📊 H2 Database Status:"
-              curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health | jq '.' || echo "Health endpoint responded successfully"
+              curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health | jq '.' || echo "Health endpoint responded successfully"
               
               # Load test data now that backend is ready
               echo "🔄 Loading E2E test data..."
-              curl -f -X POST http://localhost:${{ env.BACKEND_PORT }}/api/test/load-data || echo "⚠️ Test data loading failed but continuing..."
+              curl -f -X POST -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/api/test/load-data || echo "⚠️ Test data loading failed but continuing..."
               echo "✅ E2E test data loaded"
               
               exit 0
             fi
-            echo "⏳ Attempt $i/12: Backend not ready yet, waiting 5 seconds..."
+            echo "⏳ Attempt $i/24: Backend not ready yet, waiting 5 seconds..."
             sleep 5
           done
-          echo "❌ Backend JAR failed to start within 1-minute timeout"
+          echo "❌ Backend JAR failed to start within 2-minute timeout"
           echo "ready=false" >> $GITHUB_OUTPUT
           exit 1
       
@@ -183,7 +183,7 @@ jobs:
           echo "Verifying H2 in-memory backend is ready for E2E tests..."
           
           # Quick health check
-          if curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
+          if curl -f -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
             echo "✅ Backend is ready for testing!"
           else
             echo "❌ Backend is not responding, E2E tests may fail"
@@ -207,8 +207,29 @@ jobs:
           # Extract test name for targeted execution
           TEST_NAME=$(echo "${{ matrix.test-file }}" | sed 's/-test\.js$//' | sed 's/\.js$//')
           
+          # Map test names to correct npm script names
+          case "$TEST_NAME" in
+            "functional-api")
+              SCRIPT_NAME="functional"
+              ;;
+            "user-journey")
+              SCRIPT_NAME="user-journey"
+              ;;
+            "simple-journey")
+              SCRIPT_NAME="simple"
+              ;;
+            "visual-journey")
+              SCRIPT_NAME="visual"
+              ;;
+            *)
+              SCRIPT_NAME="$TEST_NAME"
+              ;;
+          esac
+          
+          echo "Running test script: npm run test:$SCRIPT_NAME"
+          
           # Run the specific test using the test runner
-          timeout ${{ env.TEST_TIMEOUT }} npm run test:$TEST_NAME || {
+          timeout ${{ env.TEST_TIMEOUT }} npm run test:$SCRIPT_NAME || {
             echo "Test failed or timed out"
             exit 1
           }
@@ -233,9 +254,9 @@ jobs:
           mkdir -p logs
           
           # Backend logs and metrics
-          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/loggers > logs/backend-loggers.json || echo "Could not get backend loggers"
-          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/metrics > logs/backend-metrics.json || echo "Could not get backend metrics"
-          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health > logs/backend-health.json || echo "Could not get backend health"
+          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/loggers > logs/backend-loggers.json || echo "Could not get backend loggers"
+          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/metrics > logs/backend-metrics.json || echo "Could not get backend metrics"
+          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health > logs/backend-health.json || echo "Could not get backend health"
           
           # H2 database info (if accessible)
           echo "H2 Database URL: jdbc:h2:mem:e2e_testdb;MODE=MySQL" > logs/h2-info.txt

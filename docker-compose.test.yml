@@ -2,26 +2,27 @@ version: '3.9'
 
 services:
   # ============================================
-  # Backend Test Service
+  # Backend Service for Integration Testing
   # ============================================
   backend-test:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-      target: builder
     container_name: guardianes-backend-test
+    ports:
+      - "8080:8080"    # API
+      - "9090:9090"    # Metrics
     environment:
-      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_PROFILES_ACTIVE=ci
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-test:3306/guardianes_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${DB_USER:-guardianes_test}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-test_secret}
+      - SPRING_DATASOURCE_USERNAME=guardianes_test
+      - SPRING_DATASOURCE_PASSWORD=test_secret
       - SPRING_REDIS_HOST=redis-test
       - SPRING_REDIS_PORT=6379
       - SPRING_RABBITMQ_HOST=rabbitmq-test
       - SPRING_RABBITMQ_PORT=5672
       - TZ=Europe/Madrid
     volumes:
-      - ./backend:/app
       - maven-cache:/root/.m2
     depends_on:
       mysql-test:
@@ -32,7 +33,47 @@ services:
         condition: service_healthy
     networks:
       - test-network
-    command: ["./mvnw", "test", "-Dspring.profiles.active=test"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health", "||", "exit", "1"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+  # ============================================
+  # Backend Test Runner (runs tests against backend-test)
+  # ============================================
+  test-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+      target: builder
+    container_name: guardianes-test-runner
+    environment:
+      - SPRING_PROFILES_ACTIVE=ci
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-test:3306/guardianes_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=guardianes_test
+      - SPRING_DATASOURCE_PASSWORD=test_secret
+      - SPRING_REDIS_HOST=redis-test
+      - SPRING_REDIS_PORT=6379
+      - SPRING_RABBITMQ_HOST=rabbitmq-test
+      - SPRING_RABBITMQ_PORT=5672
+      - TZ=Europe/Madrid
+    volumes:
+      - ./backend:/app
+      - maven-cache:/root/.m2
+    depends_on:
+      backend-test:
+        condition: service_healthy
+    networks:
+      - test-network
+    command: >
+      bash -c "
+        echo '🔄 Waiting for backend to be ready...' &&
+        sleep 10 &&
+        echo '🧪 Running tests against backend...' &&
+        ./mvnw test -Dspring.profiles.active=test
+      "
 
   # ============================================
   # MySQL Database for Testing
@@ -86,9 +127,9 @@ services:
     image: rabbitmq:3.12-management-alpine
     container_name: guardianes-rabbitmq-test
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guardian_test}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-rabbit_test_secret}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/test}
+      RABBITMQ_DEFAULT_USER: guardian_test
+      RABBITMQ_DEFAULT_PASS: rabbit_test_secret
+      RABBITMQ_DEFAULT_VHOST: /test
     ports:
       - "5673:5672"    # AMQP
       - "15673:15672"  # Management UI
