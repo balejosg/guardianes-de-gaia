@@ -25,69 +25,69 @@ INSERT IGNORE INTO energy_balances (guardian_id, current_balance) VALUES
 (2, 500),
 (3, 1000);
 
--- Sample step records for testing (last 7 days) - MySQL compatible
+-- Sample step records for testing (last 7 days) - H2/MySQL compatible using CURRENT_TIMESTAMP offsets
 INSERT IGNORE INTO step_records (guardian_id, step_count, recorded_at) VALUES
 -- Test Guardian data (Guardian ID 1)
-(1, 3000, DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(1, 4500, DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(1, 2800, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(1, 5200, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(1, 3700, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(1, 4100, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(1, 2900, NOW()),
+(1, 3000, CURRENT_TIMESTAMP - INTERVAL '6' DAY),
+(1, 4500, CURRENT_TIMESTAMP - INTERVAL '5' DAY),
+(1, 2800, CURRENT_TIMESTAMP - INTERVAL '4' DAY),
+(1, 5200, CURRENT_TIMESTAMP - INTERVAL '3' DAY),
+(1, 3700, CURRENT_TIMESTAMP - INTERVAL '2' DAY),
+(1, 4100, CURRENT_TIMESTAMP - INTERVAL '1' DAY),
+(1, 2900, CURRENT_TIMESTAMP),
 
 -- Demo Guardian data (Guardian ID 2)
-(2, 2500, DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(2, 3800, DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(2, 4200, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 3100, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(2, 4700, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(2, 3300, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(2, 3900, NOW()),
+(2, 2500, CURRENT_TIMESTAMP - INTERVAL '6' DAY),
+(2, 3800, CURRENT_TIMESTAMP - INTERVAL '5' DAY),
+(2, 4200, CURRENT_TIMESTAMP - INTERVAL '4' DAY),
+(2, 3100, CURRENT_TIMESTAMP - INTERVAL '3' DAY),
+(2, 4700, CURRENT_TIMESTAMP - INTERVAL '2' DAY),
+(2, 3300, CURRENT_TIMESTAMP - INTERVAL '1' DAY),
+(2, 3900, CURRENT_TIMESTAMP),
 
 -- Sample Guardian data (Guardian ID 3)
-(3, 4800, DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(3, 5500, DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(3, 3200, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(3, 4900, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(3, 5100, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(3, 4600, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(3, 4300, NOW());
+(3, 4800, CURRENT_TIMESTAMP - INTERVAL '6' DAY),
+(3, 5500, CURRENT_TIMESTAMP - INTERVAL '5' DAY),
+(3, 3200, CURRENT_TIMESTAMP - INTERVAL '4' DAY),
+(3, 4900, CURRENT_TIMESTAMP - INTERVAL '3' DAY),
+(3, 5100, CURRENT_TIMESTAMP - INTERVAL '2' DAY),
+(3, 4600, CURRENT_TIMESTAMP - INTERVAL '1' DAY),
+(3, 4300, CURRENT_TIMESTAMP);
 
--- Build daily aggregates for the sample data - MySQL compatible
+-- Build daily aggregates for the sample data - H2/MySQL compatible
 INSERT IGNORE INTO daily_step_aggregates (guardian_id, date, total_steps, energy_earned)
 SELECT 
     guardian_id,
-    DATE(recorded_at) as date,
+    CAST(recorded_at AS DATE) as date,
     SUM(step_count) as total_steps,
-    FLOOR(SUM(step_count) / 10) as energy_earned
+    CAST(SUM(step_count) / 10 AS INTEGER) as energy_earned
 FROM step_records
-WHERE DATE(recorded_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-GROUP BY guardian_id, DATE(recorded_at);
+WHERE CAST(recorded_at AS DATE) >= CURRENT_DATE - INTERVAL '7' DAY
+GROUP BY guardian_id, CAST(recorded_at AS DATE);
 
--- Sample energy transactions - MySQL compatible
+-- Sample energy transactions - H2/MySQL compatible
 INSERT IGNORE INTO energy_transactions (guardian_id, transaction_type, amount, source, recorded_at) VALUES
 -- Energy earned from steps
-(1, 'EARNED', 300, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(1, 'EARNED', 450, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(1, 'EARNED', 280, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(1, 'EARNED', 520, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(1, 'SPENT', 100, 'BATTLE', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(1, 'EARNED', 370, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(1, 'SPENT', 50, 'CHALLENGE', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(1, 'EARNED', 410, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(1, 'EARNED', 290, 'DAILY_STEPS', NOW()),
+(1, 'EARNED', 300, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '6' DAY),
+(1, 'EARNED', 450, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '5' DAY),
+(1, 'EARNED', 280, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '4' DAY),
+(1, 'EARNED', 520, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '3' DAY),
+(1, 'SPENT', 100, 'BATTLE', CURRENT_TIMESTAMP - INTERVAL '3' DAY),
+(1, 'EARNED', 370, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '2' DAY),
+(1, 'SPENT', 50, 'CHALLENGE', CURRENT_TIMESTAMP - INTERVAL '2' DAY),
+(1, 'EARNED', 410, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '1' DAY),
+(1, 'EARNED', 290, 'DAILY_STEPS', CURRENT_TIMESTAMP),
 
 -- Demo Guardian transactions
-(2, 'EARNED', 250, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(2, 'EARNED', 380, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(2, 'EARNED', 420, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 'SPENT', 75, 'SHOP', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 'EARNED', 310, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(2, 'EARNED', 470, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(2, 'SPENT', 125, 'BATTLE', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(2, 'EARNED', 330, 'DAILY_STEPS', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(2, 'EARNED', 390, 'DAILY_STEPS', NOW());
+(2, 'EARNED', 250, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '6' DAY),
+(2, 'EARNED', 380, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '5' DAY),
+(2, 'EARNED', 420, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '4' DAY),
+(2, 'SPENT', 75, 'SHOP', CURRENT_TIMESTAMP - INTERVAL '4' DAY),
+(2, 'EARNED', 310, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '3' DAY),
+(2, 'EARNED', 470, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '2' DAY),
+(2, 'SPENT', 125, 'BATTLE', CURRENT_TIMESTAMP - INTERVAL '1' DAY),
+(2, 'EARNED', 330, 'DAILY_STEPS', CURRENT_TIMESTAMP - INTERVAL '1' DAY),
+(2, 'EARNED', 390, 'DAILY_STEPS', CURRENT_TIMESTAMP);
 
 -- Update energy balances based on transactions
 UPDATE energy_balances eb
@@ -114,13 +114,13 @@ SELECT
     eb.current_balance,
     COALESCE(das.total_steps_today, 0) as steps_today,
     COALESCE(das.energy_earned_today, 0) as energy_earned_today,
-    (SELECT COUNT(*) FROM step_records sr WHERE sr.guardian_id = g.id AND DATE(sr.recorded_at) = CURDATE()) as submissions_today
+    (SELECT COUNT(*) FROM step_records sr WHERE sr.guardian_id = g.id AND CAST(sr.recorded_at AS DATE) = CURRENT_DATE) as submissions_today
 FROM guardians g
 LEFT JOIN energy_balances eb ON g.id = eb.guardian_id
 LEFT JOIN (
     SELECT guardian_id, total_steps as total_steps_today, energy_earned as energy_earned_today
     FROM daily_step_aggregates
-    WHERE date = CURDATE()
+    WHERE date = CURRENT_DATE
 ) das ON g.id = das.guardian_id;
 
 -- Database health monitoring view - MySQL compatible
