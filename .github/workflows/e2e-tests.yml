@@ -36,20 +36,23 @@ env:
 
 jobs:
   # ============================================
-  # Backend Service Setup
+  # Consolidated E2E Test Execution with Backend Setup
   # ============================================
-  backend-setup:
-    name: 🚀 Backend Service Setup
+  e2e-tests:
+    name: 🧪 E2E Tests (${{ matrix.test-file }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     
-    outputs:
-      backend-ready: ${{ steps.health-check.outputs.ready }}
-    
-    # External services removed - using H2 in-memory database for E2E testing
-    # This eliminates external dependencies and provides faster, more reliable testing
+    strategy:
+      matrix:
+        test-file:
+          - functional-api-test.js
+          - user-journey-test.js
+          - simple-journey-test.js
+          - visual-journey-test.js
+      fail-fast: false
     
     steps:
       - name: 📥 Checkout code
@@ -61,6 +64,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       
       - name: 🏗️ Build Backend JAR
         working-directory: ./backend
@@ -112,7 +121,6 @@ jobs:
             
             if curl -f -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
               echo "✅ Backend is ready after ${i} attempts!"
-              echo "ready=true" >> $GITHUB_OUTPUT
               
               # Display H2 database info
               echo "📊 H2 Database Status:"
@@ -123,73 +131,23 @@ jobs:
               curl -f -X POST -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/api/test/load-data || echo "⚠️ Test data loading failed but continuing..."
               echo "✅ E2E test data loaded"
               
-              exit 0
+              break
             fi
             echo "⏳ Attempt $i/24: Backend not ready yet, waiting 5 seconds..."
             sleep 5
           done
-          echo "❌ Backend JAR failed to start within 2-minute timeout"
-          echo "ready=false" >> $GITHUB_OUTPUT
-          exit 1
+          
+          # Final verification
+          if ! curl -f -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
+            echo "❌ Backend JAR failed to start within 2-minute timeout"
+            exit 1
+          fi
       
-      - name: 📊 Backend Status Check
-        if: always()
-        run: |
-          echo "## 🚀 Backend Service Status" >> $GITHUB_STEP_SUMMARY
-          echo "- **Health Check**: ${{ steps.health-check.outputs.ready == 'true' && '✅ Ready' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Database**: H2 In-Memory (MySQL Mode)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Port**: ${{ env.BACKEND_PORT }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Profile**: e2e" >> $GITHUB_STEP_SUMMARY
-          echo "- **H2 Console**: http://localhost:${{ env.BACKEND_PORT }}/h2-console" >> $GITHUB_STEP_SUMMARY
-
-  # ============================================
-  # E2E Test Execution
-  # ============================================
-  e2e-tests:
-    name: 🧪 E2E Tests (${{ matrix.test-file }})
-    runs-on: ubuntu-latest
-    needs: [backend-setup]
-    if: needs.backend-setup.outputs.backend-ready == 'true'
-    permissions:
-      contents: read
-    
-    strategy:
-      matrix:
-        test-file:
-          - functional-api-test.js
-          - user-journey-test.js
-          - simple-journey-test.js
-          - visual-journey-test.js
-      fail-fast: false
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-      
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      
-      - name: 📦 Install Dependencies
+      - name: 📦 Install Node Dependencies
         run: |
           npm install
           # Install additional dependencies if needed
           npm list puppeteer || npm install puppeteer
-      
-      - name: 🚀 Verify Backend Readiness
-        run: |
-          # Verify backend is still running and ready for E2E tests
-          echo "Verifying H2 in-memory backend is ready for E2E tests..."
-          
-          # Quick health check
-          if curl -f -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
-            echo "✅ Backend is ready for testing!"
-          else
-            echo "❌ Backend is not responding, E2E tests may fail"
-            exit 1
-          fi
       
       - name: 🧪 Run E2E Test - ${{ matrix.test-file }}
         id: test-execution
@@ -291,7 +249,7 @@ jobs:
   e2e-summary:
     name: 📋 E2E Test Summary
     runs-on: ubuntu-latest
-    needs: [backend-setup, e2e-tests]
+    needs: [e2e-tests]
     if: always()
     permissions:
       contents: read
@@ -307,16 +265,16 @@ jobs:
           echo "- **External Services**: None (fully self-contained)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📈 Test Execution Status:" >> $GITHUB_STEP_SUMMARY
-          echo "- **Backend Setup**: ${{ needs.backend-setup.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **E2E Tests**: ${{ needs.e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "${{ needs.backend-setup.result }}" == "success" && "${{ needs.e2e-tests.result }}" == "success" ]]; then
+          if [[ "${{ needs.e2e-tests.result }}" == "success" ]]; then
             echo "✅ **All E2E tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "The complete user journey validation has been verified using H2 in-memory database." >> $GITHUB_STEP_SUMMARY
             echo "- Fast execution with zero external dependencies" >> $GITHUB_STEP_SUMMARY
             echo "- MySQL compatibility mode ensures production-like behavior" >> $GITHUB_STEP_SUMMARY
+            echo "- Consolidated architecture with backend setup and tests in same runner" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Some E2E tests failed.**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -334,6 +292,5 @@ jobs:
         if: always()
         run: |
           echo "E2E test pipeline completed. Results:"
-          echo "- Backend Setup: ${{ needs.backend-setup.result }}"
-          echo "- E2E Tests: ${{ needs.e2e-tests.result }}"
+          echo "- E2E Tests (consolidated): ${{ needs.e2e-tests.result }}"
           echo "Check GitHub Actions for detailed test reports and screenshots."

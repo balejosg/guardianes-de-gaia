@@ -25,7 +25,7 @@ services:
     networks:
       - ci-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "-u", "ci:ci_test", "http://localhost:8080/actuator/health", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -f -u ci:ci_test http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 10
