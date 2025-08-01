@@ -9,7 +9,7 @@ services:
   # Backend Service using pre-built image
   # ============================================
   backend-test:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-balejosg}/guardianes-backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-balejosg}/guardianes-backend:main
     container_name: guardianes-backend-ci
     ports:
       - "8080:8080"    # API
