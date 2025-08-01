@@ -13,6 +13,7 @@ jobs:
   code-quality:
     name: 📊 Code Quality Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
@@ -63,6 +64,7 @@ jobs:
   security-scan:
     name: 🛡️ Basic Security Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
