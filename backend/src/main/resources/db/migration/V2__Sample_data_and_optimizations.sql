@@ -25,34 +25,34 @@ INSERT IGNORE INTO energy_balances (guardian_id, current_balance) VALUES
 (2, 500),
 (3, 1000);
 
--- Sample step records for testing (last 7 days) - H2/MySQL compatible using simple dates
+-- Sample step records for testing (last 7 days) - Universal SQL compatibility
 INSERT IGNORE INTO step_records (guardian_id, step_count, recorded_at) VALUES
--- Test Guardian data (Guardian ID 1) - using static recent dates for compatibility
-(1, 3000, TIMESTAMP '2024-07-26 09:00:00'),
-(1, 4500, TIMESTAMP '2024-07-27 10:30:00'),
-(1, 2800, TIMESTAMP '2024-07-28 08:15:00'),
-(1, 5200, TIMESTAMP '2024-07-29 11:45:00'),
-(1, 3700, TIMESTAMP '2024-07-30 14:20:00'),
-(1, 4100, TIMESTAMP '2024-07-31 16:10:00'),
-(1, 2900, CURRENT_TIMESTAMP),
+-- Test Guardian data (Guardian ID 1) - using basic string timestamps
+(1, 3000, '2024-07-26 09:00:00'),
+(1, 4500, '2024-07-27 10:30:00'),
+(1, 2800, '2024-07-28 08:15:00'),
+(1, 5200, '2024-07-29 11:45:00'),
+(1, 3700, '2024-07-30 14:20:00'),
+(1, 4100, '2024-07-31 16:10:00'),
+(1, 2900, NOW()),
 
 -- Demo Guardian data (Guardian ID 2)
-(2, 2500, TIMESTAMP '2024-07-26 08:30:00'),
-(2, 3800, TIMESTAMP '2024-07-27 09:45:00'),
-(2, 4200, TIMESTAMP '2024-07-28 12:20:00'),
-(2, 3100, TIMESTAMP '2024-07-29 15:10:00'),
-(2, 4700, TIMESTAMP '2024-07-30 07:55:00'),
-(2, 3300, TIMESTAMP '2024-07-31 13:25:00'),
-(2, 3900, CURRENT_TIMESTAMP),
+(2, 2500, '2024-07-26 08:30:00'),
+(2, 3800, '2024-07-27 09:45:00'),
+(2, 4200, '2024-07-28 12:20:00'),
+(2, 3100, '2024-07-29 15:10:00'),
+(2, 4700, '2024-07-30 07:55:00'),
+(2, 3300, '2024-07-31 13:25:00'),
+(2, 3900, NOW()),
 
 -- Sample Guardian data (Guardian ID 3)
-(3, 4800, TIMESTAMP '2024-07-26 07:20:00'),
-(3, 5500, TIMESTAMP '2024-07-27 11:15:00'),
-(3, 3200, TIMESTAMP '2024-07-28 14:40:00'),
-(3, 4900, TIMESTAMP '2024-07-29 09:30:00'),
-(3, 5100, TIMESTAMP '2024-07-30 16:45:00'),
-(3, 4600, TIMESTAMP '2024-07-31 12:05:00'),
-(3, 4300, CURRENT_TIMESTAMP);
+(3, 4800, '2024-07-26 07:20:00'),
+(3, 5500, '2024-07-27 11:15:00'),
+(3, 3200, '2024-07-28 14:40:00'),
+(3, 4900, '2024-07-29 09:30:00'),
+(3, 5100, '2024-07-30 16:45:00'),
+(3, 4600, '2024-07-31 12:05:00'),
+(3, 4300, NOW());
 
 -- Build daily aggregates for the sample data - H2/MySQL compatible using simple date logic
 INSERT IGNORE INTO daily_step_aggregates (guardian_id, date, total_steps, energy_earned)

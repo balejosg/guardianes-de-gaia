@@ -302,8 +302,8 @@ jobs:
           echo "🔍 Starting Docker Compose test environment..."
           docker compose -f docker-compose.test.yml up -d
           
-          echo "⏳ Waiting 60 seconds for services to initialize..."
-          sleep 60
+          echo "⏳ Waiting 90 seconds for services to initialize..."
+          sleep 90
           
           echo "🔍 Checking Docker Compose services status:"
           docker compose -f docker-compose.test.yml ps

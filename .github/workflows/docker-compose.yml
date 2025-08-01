@@ -190,7 +190,7 @@ jobs:
           docker compose -f docker-compose.test.yml up -d
           
           echo "⏳ Waiting for services to be ready..."
-          sleep 60
+          sleep 90
           
           echo "🔍 Checking Docker Compose services status:"
           docker compose -f docker-compose.test.yml ps
@@ -251,10 +251,10 @@ jobs:
           
           # Restart backend service
           docker compose -f docker-compose.test.yml restart backend-test
-          sleep 20
+          sleep 30
           
           # Check if it comes back up
-          timeout 120 bash -c 'until curl -f -u ci:ci_test http://localhost:8080/actuator/health; do sleep 3; done'
+          timeout 180 bash -c 'until curl -f -u ci:ci_test http://localhost:8080/actuator/health; do sleep 5; done'
           echo "✅ Backend restart successful"
       
       - name: 📊 Generate performance metrics

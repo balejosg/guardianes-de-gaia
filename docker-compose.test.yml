@@ -34,11 +34,11 @@ services:
     networks:
       - test-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health", "||", "exit", "1"]
-      interval: 15s
-      timeout: 10s
-      retries: 12
-      start_period: 60s
+      test: ["CMD", "curl", "-f", "-u", "ci:ci_test", "http://localhost:8080/actuator/health", "||", "exit", "1"]
+      interval: 20s
+      timeout: 15s
+      retries: 20
+      start_period: 120s
 
   # ============================================
   # Backend Test Runner (runs tests against backend-test)

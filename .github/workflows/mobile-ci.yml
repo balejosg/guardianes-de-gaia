@@ -199,8 +199,12 @@ jobs:
       - name: 🔧 Configure Android Signing (Debug)
         working-directory: ./mobile/guardianes_mobile/android
         run: |
+          # Create .android directory if it doesn't exist
+          mkdir -p ~/.android
+          
           # Create debug keystore if it doesn't exist
           if [ ! -f ~/.android/debug.keystore ]; then
+            echo "Creating debug keystore..."
             keytool -genkey -v \
               -keystore ~/.android/debug.keystore \
               -storepass android \
@@ -209,7 +213,10 @@ jobs:
               -keyalg RSA \
               -keysize 2048 \
               -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -noprompt
+          else
+            echo "Debug keystore already exists"
           fi
       
       - name: 🏗️ Build Android APK
@@ -392,7 +399,11 @@ jobs:
       
       - name: 🏗️ Build Backend
         working-directory: ./backend
-        run: mvn clean package -DskipTests
+        run: |
+          echo "📦 Building backend JAR..."
+          ./mvnw clean package -DskipTests -B
+          echo "✅ Backend JAR built successfully"
+          ls -la target/*.jar
       
       - name: 🚀 Start Backend Application
         working-directory: ./backend
@@ -404,15 +415,38 @@ jobs:
           SPRING_REDIS_HOST: localhost
           SPRING_REDIS_PORT: 6379
         run: |
-          # Start backend in background
-          java -jar target/*.jar &
+          echo "🚀 Starting backend application..."
+          
+          # Find and start the JAR file
+          JAR_FILE=$(ls target/*.jar | head -1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "❌ No JAR file found in target directory"
+            exit 1
+          fi
+          echo "📦 Found JAR: $JAR_FILE"
+          
+          # Start backend in background with proper logging
+          nohup java -jar "$JAR_FILE" > backend.log 2>&1 &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+          echo "🔄 Backend started with PID: $BACKEND_PID"
           
-          # Wait for backend to be ready
-          echo "🔄 Waiting for backend to start..."
-          timeout 120 sh -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
-          echo "✅ Backend is ready!"
+          # Wait for backend to be ready with more verbose checking
+          echo "🔄 Waiting for backend to start (up to 3 minutes)..."
+          for i in {1..90}; do
+            if curl -s http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "✅ Backend is ready after ${i}0 seconds!"
+              break
+            fi
+            if [ $i -eq 90 ]; then
+              echo "❌ Backend failed to start within 15 minutes"
+              echo "📋 Backend logs:"
+              cat backend.log
+              exit 1
+            fi
+            echo "⏳ Attempt $i/90 - Backend not ready yet..."
+            sleep 10
+          done
       
       - name: 🧪 Run Guardian Authentication Integration Tests
         working-directory: ./mobile/guardianes_mobile
