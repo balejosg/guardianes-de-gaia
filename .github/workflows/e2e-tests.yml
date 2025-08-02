@@ -71,58 +71,60 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       
-      - name: 🏗️ Build Backend JAR
-        working-directory: ./backend
+      - name: 🐳 Pull Pre-built Backend Image
         run: |
-          echo "Building backend JAR for E2E testing..."
-          # Build JAR directly for faster startup - skipping quality checks
-          mvn clean package -DskipTests -Dspotless.apply.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Ddependency-check.skip=true
-          ls -la target/*.jar
-          echo "✅ Backend JAR built successfully"
+          echo "🚀 Using optimized pre-built Docker image for ultra-fast startup..."
+          # Pull the latest pre-built backend image from GHCR
+          docker pull ghcr.io/${{ github.repository_owner }}/guardianes-backend:main
+          docker images | grep guardianes-backend
+          echo "✅ Pre-built backend image ready for instant deployment"
       
-      - name: 🚀 Start Backend Service (H2 In-Memory)
-        working-directory: ./backend
+      - name: 🚀 Start Backend Container (Ultra-Fast)
         env:
-          SPRING_PROFILES_ACTIVE: e2e
-          SERVER_PORT: ${{ env.BACKEND_PORT }}
-          JAVA_OPTS: '-Xmx768m -Xms768m -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Djava.awt.headless=true -XX:+UnlockExperimentalVMOptions -XX:+UseJVMCICompiler -XX:+EagerJVMCI -Dspring.backgroundpreinitializer.ignore=true -Dspring.output.ansi.enabled=NEVER'
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
-          echo "Starting backend JAR with H2 in-memory database for E2E testing..."
-          echo "JVM Options: $JAVA_OPTS"
+          echo "🐳 Starting optimized backend container with instant H2 database..."
           
-          # Find the JAR file
-          JAR_FILE=$(ls target/guardianes-backend-*.jar | head -1)
-          echo "Using JAR: $JAR_FILE"
+          # Use docker-compose.ci.yml for optimized container deployment
+          docker compose -f docker-compose.ci.yml up -d backend-test
           
-          # Start backend JAR with ultra-optimized CI profile
-          java $JAVA_OPTS -Dspring.profiles.active=ci -jar "$JAR_FILE" &
-          BACKEND_PID=$!
-          echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
-          echo "Backend JAR started with PID: $BACKEND_PID at $(date)"
-          echo "H2 Console will be available at: http://localhost:${{ env.BACKEND_PORT }}/h2-console"
+          # Get container ID for monitoring
+          CONTAINER_ID=$(docker compose -f docker-compose.ci.yml ps -q backend-test)
+          echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
+          echo "✅ Backend container started: $CONTAINER_ID"
+          echo "🏥 H2 Console available at: http://localhost:${{ env.BACKEND_PORT }}/h2-console"
           
-          # Give it a moment to start
-          sleep 5
-          echo "Initial JAR startup phase completed"
+          # Show container status
+          docker compose -f docker-compose.ci.yml ps
+          echo "🚀 Container startup initiated at $(date)"
       
-      - name: ⏳ Wait for Backend Health
+      - name: ⏳ Wait for Container Health (Docker Native)
         id: health-check
         run: |
-          echo "Waiting for H2 in-memory backend to be ready..."
-          echo "Backend PID: $BACKEND_PID"
+          echo "🏥 Waiting for Docker container healthcheck to pass..."
+          echo "Container ID: $CONTAINER_ID"
           
-          # Realistic timeout for CI JAR startup (24 attempts * 5s = 2 minutes max)
-          for i in {1..24}; do
-            # Check if backend process is still running
-            if ! kill -0 $BACKEND_PID 2>/dev/null; then
-              echo "❌ Backend process died unexpectedly"
+          # Use Docker's native healthcheck with optimized timing (12 attempts * 5s = 1 minute max)
+          for i in {1..12}; do
+            # Check container status and health
+            CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' $CONTAINER_ID)
+            HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' $CONTAINER_ID 2>/dev/null || echo "none")
+            
+            echo "🔍 Container Status: $CONTAINER_STATUS, Health: $HEALTH_STATUS"
+            
+            if [ "$CONTAINER_STATUS" != "running" ]; then
+              echo "❌ Container stopped unexpectedly"
+              docker compose -f docker-compose.ci.yml logs backend-test
               exit 1
             fi
             
-            if curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
-              echo "✅ Backend is ready after ${i} attempts!"
+            if [ "$HEALTH_STATUS" = "healthy" ] || curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
+              echo "✅ Backend container is healthy after ${i} attempts!"
+              echo "ready=true" >> $GITHUB_OUTPUT
               
-              # Display H2 database info
+              # Display container and H2 database info
+              echo "📊 Container Health Status:"
+              docker inspect --format='{{.State.Health}}' $CONTAINER_ID
               echo "📊 H2 Database Status:"
               curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health | jq '.' || echo "Health endpoint responded successfully"
               
@@ -131,17 +133,15 @@ jobs:
               curl -f -X POST http://localhost:${{ env.BACKEND_PORT }}/api/test/load-data || echo "⚠️ Test data loading failed but continuing..."
               echo "✅ E2E test data loaded"
               
-              break
+              exit 0
             fi
-            echo "⏳ Attempt $i/24: Backend not ready yet, waiting 5 seconds..."
+            echo "⏳ Attempt $i/12: Container not healthy yet, waiting 5 seconds..."
             sleep 5
           done
           
-          # Final verification
-          if ! curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
-            echo "❌ Backend JAR failed to start within 2-minute timeout"
-            exit 1
-          fi
+          echo "❌ Backend container failed to become healthy within 1-minute timeout"
+          docker compose -f docker-compose.ci.yml logs backend-test
+          exit 1
       
       - name: 📦 Install Node Dependencies
         run: |
@@ -235,13 +235,18 @@ jobs:
       - name: 🛑 Cleanup
         if: always()
         run: |
-          # Stop any running Spring Boot processes
-          pkill -f "spring-boot:run" || echo "No Spring Boot processes to kill"
+          echo "🧹 Cleaning up Docker containers and resources..."
           
-          # Clean up any remaining Java processes related to our tests
-          pkill -f "guardianes-backend" || echo "No guardian backend processes to kill"
+          # Stop and remove Docker containers
+          docker compose -f docker-compose.ci.yml down || echo "No containers to stop"
           
-          echo "✅ Cleanup completed - H2 in-memory database automatically disposed"
+          # Remove any dangling containers
+          docker container prune -f || echo "No containers to prune"
+          
+          # Show final Docker status
+          docker ps -a | grep guardianes || echo "No guardianes containers remaining"
+          
+          echo "✅ Docker cleanup completed - H2 in-memory database automatically disposed"
 
   # ============================================
   # E2E Test Summary
