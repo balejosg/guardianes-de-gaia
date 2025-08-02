@@ -126,7 +126,7 @@ jobs:
           echo "After basic exclusions:"
           echo "$FILTERED_PASSWORDS"
           
-          SUSPICIOUS_PASSWORDS=$(echo "$FILTERED_PASSWORDS" | grep -v "  grafana-admin-password: ZGV2X2dyYWZhbmVfYWRtaW4=" || true)
+          SUSPICIOUS_PASSWORDS=$(echo "$FILTERED_PASSWORDS" | grep -v -E "grafana-admin-password:.*ZGV2X2dyYWZhbmVfYWRtaW4=" || true)
           echo "After Grafana exclusion:"
           echo "$SUSPICIOUS_PASSWORDS"
           
