@@ -117,7 +117,7 @@ jobs:
           
           # Check for hardcoded secrets (exclude test values, secret references, and empty values)
           # Allow known test passwords: dGVzdA== (test) and ZGV2X2dyYWZhbmVfYWRtaW4= (dev_grafana_admin)
-          if grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v -E "(passwordRef|secretKeyRef|dGVzdA==|password:\s*$|password:\s*\"\"\s*$|ZGV2X2dyYWZhbmVfYWRtaW4=)"; then
+          if grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v "passwordRef\|secretKeyRef\|dGVzdA==\|ZGV2X2dyYWZhbmVfYWRtaW4=" | grep -v "password:\s*$\|password:\s*\"\"\s*$"; then
             echo "❌ Found potential hardcoded passwords (excluding known test values)"
             exit 1
           fi
