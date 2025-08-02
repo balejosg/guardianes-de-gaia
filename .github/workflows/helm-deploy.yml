@@ -219,7 +219,16 @@ jobs:
       
       - name: 🔐 Configure Kubernetes access
         run: |
+          # Check if development Kubernetes config is available
+          if [ -z "${{ secrets.KUBECONFIG_DEV }}" ]; then
+            echo "⚠️ KUBECONFIG_DEV secret not configured"
+            echo "This is expected for demo/test environments"
+            echo "In development, configure the KUBECONFIG_DEV secret with your cluster credentials"
+            exit 1
+          fi
+          
           # Configure kubectl for development cluster
+          mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
           kubectl config use-context development
           
@@ -327,7 +336,16 @@ jobs:
       
       - name: 🔐 Configure Kubernetes access
         run: |
+          # Check if production Kubernetes config is available
+          if [ -z "${{ secrets.KUBECONFIG_PROD }}" ]; then
+            echo "⚠️ KUBECONFIG_PROD secret not configured"
+            echo "This is expected for demo/test environments"
+            echo "In production, configure the KUBECONFIG_PROD secret with your cluster credentials"
+            exit 1
+          fi
+          
           # Configure kubectl for production cluster
+          mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
           kubectl config use-context production
           
