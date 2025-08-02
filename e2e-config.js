@@ -164,7 +164,8 @@ CONFIG.waitForBackend = async (maxAttempts = 30, interval = 2000) => {
                     method: 'GET',
                     timeout: 5000,
                     headers: {
-                        'User-Agent': 'E2E-HealthCheck/1.0'
+                        'User-Agent': 'E2E-HealthCheck/1.0',
+                        'Authorization': 'Basic ' + Buffer.from('ci:ci_test').toString('base64')
                     }
                 };
 
