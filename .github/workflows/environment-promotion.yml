@@ -92,7 +92,7 @@ jobs:
           esac
           
           # Get current version from source environment
-          SOURCE_VERSION=$(curl -s "$SOURCE_URL/actuator/info" | jq -r '.build.version // "unknown"' || echo "unknown")
+          # SOURCE_VERSION=$(curl -s "$SOURCE_URL/actuator/info" | jq -r '.build.version // "unknown"' || echo "unknown")
           
           echo "source-version=$SOURCE_VERSION" >> $GITHUB_OUTPUT
           echo "promotion-allowed=$PROMOTION_ALLOWED" >> $GITHUB_OUTPUT

@@ -41,7 +41,7 @@ on:
         type: string
 
 env:
-  KUBECTL_VERSION: "1.28.0"
+  KUBECTL_VERSION: "1.30.0"
   HELM_VERSION: "3.13.0"
   ISTIO_VERSION: "1.19.0"
 

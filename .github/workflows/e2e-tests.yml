@@ -130,7 +130,7 @@ jobs:
               
               # Load test data now that backend is ready
               echo "🔄 Loading E2E test data..."
-              curl -f -X POST http://localhost:${{ env.BACKEND_PORT }}/api/test/load-data || echo "⚠️ Test data loading failed but continuing..."
+              curl -f -u ci:ci_test -X POST http://localhost:${{ env.BACKEND_PORT }}/api/test/load-data || echo "⚠️ Test data loading failed but continuing..."
               echo "✅ E2E test data loaded"
               
               exit 0

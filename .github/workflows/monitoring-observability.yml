@@ -617,7 +617,7 @@ jobs:
       - name: 🔧 Setup kubectl
         uses: azure/setup-kubectl@v3
         with:
-          version: "1.28.0"
+                    version: "1.30.0" 
       
       - name: 🔐 Configure Kubernetes access
         env:
@@ -738,7 +738,7 @@ jobs:
       - name: 🔧 Setup kubectl
         uses: azure/setup-kubectl@v3
         with:
-          version: "1.28.0"
+                    version: "1.30.0" 
       
       - name: 🔐 Configure Kubernetes access
         env:
