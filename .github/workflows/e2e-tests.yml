@@ -111,8 +111,8 @@ jobs:
           echo "Waiting for H2 in-memory backend to be ready..."
           echo "Backend PID: $BACKEND_PID"
           
-          # Optimistic timeout for ultra-fast JAR startup (12 attempts * 5s = 1 minute max)
-          for i in {1..12}; do
+          # Realistic timeout for CI JAR startup (24 attempts * 5s = 2 minutes max)
+          for i in {1..24}; do
             # Check if backend process is still running
             if ! kill -0 $BACKEND_PID 2>/dev/null; then
               echo "❌ Backend process died unexpectedly"
@@ -133,13 +133,13 @@ jobs:
               
               break
             fi
-            echo "⏳ Attempt $i/12: Backend not ready yet, waiting 5 seconds..."
+            echo "⏳ Attempt $i/24: Backend not ready yet, waiting 5 seconds..."
             sleep 5
           done
           
           # Final verification
           if ! curl -f -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health; then
-            echo "❌ Backend JAR failed to start within 1-minute timeout"
+            echo "❌ Backend JAR failed to start within 2-minute timeout"
             exit 1
           fi
       
