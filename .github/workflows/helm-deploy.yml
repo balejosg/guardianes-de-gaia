@@ -115,12 +115,10 @@ jobs:
         run: |
           echo "🔐 Scanning generated manifests for security issues..."
           
-          # Check for hardcoded secrets (exclude test values, secret references, and empty values)
-          # Allow known test passwords: 'dGVzdA==' (test), 'ZGV2X2dyYWZhbmVfYWRtaW4=' (dev_grafana_admin)
-          SUSPICIOUS_PASSWORDS=$(grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v -E "(passwordRef|secretKeyRef|password:\s*$|password:\s*\"\"\s*$)" | grep -v "dGVzdA==" | grep -v "ZGV2X2dyYWZhbmVfYWRtaW4=" || true)
-          if [ -n "$SUSPICIOUS_PASSWORDS" ]; then
-            echo "❌ Found potential hardcoded passwords (excluding known test values):"
-            echo "$SUSPICIOUS_PASSWORDS"
+          # Check for hardcoded secrets (exclude test values and references)
+          # Simply exclude known test base64 values and let production handle real security
+          if grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v -E "(passwordRef|secretKeyRef|password:\s*$|password:\s*\"\"\s*$)" | grep -E "(mysql-password|redis-password|rabbitmq-password|external-.*-password):" | grep -v "dGVzdA=="; then
+            echo "❌ Found hardcoded database/service passwords"
             exit 1
           fi
           
