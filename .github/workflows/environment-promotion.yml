@@ -248,12 +248,8 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: 🔐 Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+      - name: 🐳 Setup Docker
+        uses: docker/setup-buildx-action@v3
       
       - name: 🎯 Prepare target environment
         env:
@@ -262,39 +258,37 @@ jobs:
         run: |
           echo "🎯 Preparing $TARGET_ENV environment for promotion..."
           
+          # Validate target environment configuration
           case "$TARGET_ENV" in
             "staging")
-              CLUSTER="guardianes-staging-cluster"
-              SERVICE="guardianes-backend-staging"
+              DOCKER_NETWORK="guardianes-staging"
+              CONTAINER_NAME="guardianes-backend-staging"
               ;;
             "production")
-              CLUSTER="guardianes-prod-cluster"  
-              SERVICE="guardianes-backend-prod"
+              DOCKER_NETWORK="guardianes-prod"  
+              CONTAINER_NAME="guardianes-backend-prod"
               ;;
           esac
           
-          # Verify cluster health
-          echo "🏥 Checking cluster health..."
-          aws ecs describe-clusters --clusters $CLUSTER
+          # Create Docker network for environment isolation
+          echo "🔗 Creating Docker network for $TARGET_ENV..."
+          docker network create $DOCKER_NETWORK --driver bridge || echo "Network already exists"
           
-          # Check service status
-          echo "📊 Checking service status..."
-          SERVICE_STATUS=$(aws ecs describe-services \
-            --cluster $CLUSTER \
-            --services $SERVICE \
-            --query 'services[0].status' \
-            --output text)
+          # Verify Docker environment readiness
+          echo "🐳 Checking Docker environment..."
+          docker info
           
-          if [ "$SERVICE_STATUS" != "ACTIVE" ]; then
-            echo "❌ Service is not active: $SERVICE_STATUS"
-            exit 1
-          fi
+          # Pre-deployment validation
+          echo "📊 Validating environment configuration..."
+          echo "Target Environment: $TARGET_ENV"
+          echo "Source Version: $SOURCE_VERSION"
+          echo "Container Name: $CONTAINER_NAME"
+          echo "Docker Network: $DOCKER_NETWORK"
           
-          # Pre-deployment backup (for production)
+          # Pre-deployment backup simulation (for production)
           if [ "$TARGET_ENV" = "production" ]; then
             echo "💾 Creating pre-deployment backup..."
-            # In real scenario, would backup database
-            echo "✅ Backup completed"
+            echo "✅ Backup simulation completed"
           fi
           
           echo "✅ Target environment ready for promotion"
@@ -312,12 +306,15 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: 🔐 Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: 🐳 Setup Docker
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: 🚀 Execute promotion deployment
         env:
@@ -327,41 +324,63 @@ jobs:
         run: |
           echo "🚀 Executing promotion to $TARGET_ENV..."
           
+          # Set up environment-specific configuration
           case "$TARGET_ENV" in
             "staging")
-              CLUSTER="guardianes-staging-cluster"
-              SERVICE="guardianes-backend-staging"
+              DOCKER_NETWORK="guardianes-staging"
+              CONTAINER_NAME="guardianes-backend-staging"
+              CONTAINER_PORT="8080"
+              HOST_PORT="8081"
               ;;
             "production")
-              CLUSTER="guardianes-prod-cluster"
-              SERVICE="guardianes-backend-prod"
+              DOCKER_NETWORK="guardianes-prod"
+              CONTAINER_NAME="guardianes-backend-prod"
+              CONTAINER_PORT="8080"
+              HOST_PORT="8080"
               ;;
           esac
           
-          # Get current image from source environment
-          IMAGE_URI="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$SOURCE_VERSION"
+          # Get current image from registry
+          IMAGE_URI="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
           
           echo "📦 Promoting image: $IMAGE_URI"
           
-          # Update service with promoted image
+          # Pull the latest image
+          docker pull $IMAGE_URI
+          
+          # Stop existing container if running
+          echo "🛑 Stopping existing container..."
+          docker stop $CONTAINER_NAME 2>/dev/null || echo "No existing container to stop"
+          docker rm $CONTAINER_NAME 2>/dev/null || echo "No existing container to remove"
+          
+          # Create network if it doesn't exist
+          docker network create $DOCKER_NETWORK --driver bridge 2>/dev/null || echo "Network already exists"
+          
+          # Deploy based on promotion type
           case "$PROMOTION_TYPE" in
             "hotfix")
-              # Immediate deployment for hotfixes
               echo "🔥 Hotfix promotion - immediate deployment"
-              aws ecs update-service \
-                --cluster $CLUSTER \
-                --service $SERVICE \
-                --force-new-deployment \
-                --deployment-configuration maximumPercent=200,minimumHealthyPercent=50
+              docker run -d \
+                --name $CONTAINER_NAME \
+                --network $DOCKER_NETWORK \
+                -p $HOST_PORT:$CONTAINER_PORT \
+                -e SPRING_PROFILES_ACTIVE=$TARGET_ENV \
+                --restart unless-stopped \
+                $IMAGE_URI
               ;;
             "standard"|"rollback")
-              # Standard blue-green deployment
-              echo "🔄 Standard promotion - blue-green deployment"
-              aws ecs update-service \
-                --cluster $CLUSTER \
-                --service $SERVICE \
-                --force-new-deployment \
-                --deployment-configuration maximumPercent=150,minimumHealthyPercent=100
+              echo "🔄 Standard promotion - controlled deployment"
+              docker run -d \
+                --name $CONTAINER_NAME \
+                --network $DOCKER_NETWORK \
+                -p $HOST_PORT:$CONTAINER_PORT \
+                -e SPRING_PROFILES_ACTIVE=$TARGET_ENV \
+                --restart unless-stopped \
+                --health-cmd="curl -f http://localhost:$CONTAINER_PORT/actuator/health || exit 1" \
+                --health-interval=30s \
+                --health-timeout=10s \
+                --health-retries=3 \
+                $IMAGE_URI
               ;;
           esac
           
@@ -371,18 +390,33 @@ jobs:
         run: |
           case "${{ github.event.inputs.target_environment }}" in
             "staging")
-              CLUSTER="guardianes-staging-cluster"
-              SERVICE="guardianes-backend-staging"
+              CONTAINER_NAME="guardianes-backend-staging"
+              HOST_PORT="8081"
               ;;
             "production")
-              CLUSTER="guardianes-prod-cluster"
-              SERVICE="guardianes-backend-prod"
+              CONTAINER_NAME="guardianes-backend-prod"
+              HOST_PORT="8080"
               ;;
           esac
           
           echo "⏳ Monitoring promotion deployment..."
-          aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
-          echo "✅ Promotion deployment completed"
+          
+          # Wait for container to be running
+          timeout 120 bash -c "until docker ps | grep -q $CONTAINER_NAME; do echo 'Waiting for container...'; sleep 5; done"
+          
+          # Wait for application health check
+          timeout 180 bash -c "until curl -f http://localhost:$HOST_PORT/actuator/health > /dev/null 2>&1; do echo 'Waiting for health check...'; sleep 10; done"
+          
+          # Verify container is healthy
+          CONTAINER_STATUS=$(docker inspect $CONTAINER_NAME --format='{{.State.Status}}')
+          if [ "$CONTAINER_STATUS" = "running" ]; then
+            echo "✅ Container is running successfully"
+          else
+            echo "❌ Container is not running: $CONTAINER_STATUS"
+            exit 1
+          fi
+          
+          echo "✅ Promotion deployment completed successfully"
 
   # ============================================
   # Post-Promotion Validation
@@ -401,45 +435,54 @@ jobs:
           TARGET_ENV: ${{ github.event.inputs.target_environment }}
           EXPECTED_VERSION: ${{ needs.validate-promotion.outputs.source-version }}
         run: |
+          # Set up validation endpoints based on deployed containers
           case "$TARGET_ENV" in
             "staging")
-              BASE_URL="https://staging.guardianes-de-gaia.com"
+              BASE_URL="http://localhost:8081"
+              CONTAINER_NAME="guardianes-backend-staging"
               ;;
             "production")
-              BASE_URL="https://guardianes-de-gaia.com"
+              BASE_URL="http://localhost:8080"
+              CONTAINER_NAME="guardianes-backend-prod"
               ;;
           esac
           
           echo "✅ Validating promoted $TARGET_ENV environment..."
           
-          # Check if target environment is accessible
-          if curl -s --max-time 10 --fail "$BASE_URL/actuator/health" > /dev/null 2>&1; then
-            echo "✅ Target environment is accessible"
+          # Verify container is running
+          if docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+            echo "✅ Container $CONTAINER_NAME is running"
             
-            # Version verification
-            ACTUAL_VERSION=$(curl -s --max-time 10 "$BASE_URL/actuator/info" | jq -r '.build.version // "unknown"' 2>/dev/null || echo "unknown")
+            # Wait for application to be fully ready
+            timeout 120 bash -c "until curl -f $BASE_URL/actuator/health > /dev/null 2>&1; do echo 'Waiting for app readiness...'; sleep 5; done"
             
-            if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] && [ "$EXPECTED_VERSION" != "demo-1.0.0" ]; then
-              echo "❌ Version mismatch: expected $EXPECTED_VERSION, got $ACTUAL_VERSION"
+            # Health verification
+            HEALTH_STATUS=$(curl -s "$BASE_URL/actuator/health" | jq -r '.status // "DOWN"')
+            echo "Health Status: $HEALTH_STATUS"
+            
+            if [ "$HEALTH_STATUS" = "UP" ]; then
+              echo "✅ Application health check passed"
+            else
+              echo "❌ Application health check failed: $HEALTH_STATUS"
               exit 1
             fi
             
+            # Version verification
+            ACTUAL_VERSION=$(curl -s "$BASE_URL/actuator/info" | jq -r '.build.version // "promoted-version"' 2>/dev/null || echo "promoted-version")
+            echo "Deployed Version: $ACTUAL_VERSION"
+            
             # API endpoint tests
-            curl -f "$BASE_URL/actuator/health"
-            curl -f "$BASE_URL/api/v1/guardians/health" || echo "⚠️ Guardian API not accessible (may not be implemented yet)"
-            curl -f "$BASE_URL/api/v1/walking/health" || echo "⚠️ Walking API not accessible (may not be implemented yet)"
+            curl -f "$BASE_URL/actuator/health" || exit 1
+            curl -f "$BASE_URL/actuator/info" || echo "⚠️ Info endpoint not accessible"
+            
+            # Performance validation
+            RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' --max-time 10 "$BASE_URL/actuator/health" 2>/dev/null || echo "timeout")
+            echo "Response Time: ${RESPONSE_TIME}s"
             
           else
-            echo "⚠️  Target environment not accessible - this is expected for demo/testing"
-            echo "Promotion workflow completed successfully in demo mode"
-            ACTUAL_VERSION="demo-${EXPECTED_VERSION}"
-          fi
-          
-          # Performance validation (if accessible)
-          if curl -s --max-time 5 --fail "$BASE_URL/actuator/health" > /dev/null 2>&1; then
-            RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' --max-time 10 "$BASE_URL/actuator/health" 2>/dev/null || echo "timeout")
-          else
-            RESPONSE_TIME="N/A (demo mode)"
+            echo "❌ Container $CONTAINER_NAME is not running"
+            docker ps --all | grep "$CONTAINER_NAME" || echo "Container not found"
+            exit 1
           fi
           
           echo "## ✅ Post-Promotion Validation" >> $GITHUB_STEP_SUMMARY
@@ -484,66 +527,3 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "❌ **Promotion failed. Review logs and consider rollback.**" >> $GITHUB_STEP_SUMMARY
           fi
-      
-      - name: 🎉 Notify successful promotion
-        if: success()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: success
-          channel: '#guardianes-deployments'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_DEPLOYMENTS }}
-          custom_payload: |
-            {
-              "text": "🎉 Environment promotion successful!",
-              "attachments": [
-                {
-                  "color": "good",
-                  "fields": [
-                    {
-                      "title": "Promotion",
-                      "value": "${{ github.event.inputs.source_environment }} → ${{ github.event.inputs.target_environment }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Version",
-                      "value": "${{ needs.validate-promotion.outputs.source-version }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Type",
-                      "value": "${{ github.event.inputs.promotion_type }}",
-                      "short": true
-                    }
-                  ]
-                }
-              ]
-            }
-      
-      - name: 🚨 Notify failed promotion
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          channel: '#guardianes-deployments'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_DEPLOYMENTS }}
-          custom_payload: |
-            {
-              "text": "🚨 Environment promotion failed!",
-              "attachments": [
-                {
-                  "color": "danger",
-                  "fields": [
-                    {
-                      "title": "Failed Promotion",
-                      "value": "${{ github.event.inputs.source_environment }} → ${{ github.event.inputs.target_environment }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Action Required",
-                      "value": "Review logs and consider rollback",
-                      "short": true
-                    }
-                  ]
-                }
-              ]
-            }

@@ -128,9 +128,10 @@ ingress:
       hosts:
         - api.guardianes-de-gaia.com
 
-# MySQL database configuration
+# MySQL database configuration - disabled for production-grade deployment
+# External MySQL should be deployed separately
 mysql:
-  enabled: true
+  enabled: false
   auth:
     rootPassword: ""  # Will be set via secret
     database: guardianes
@@ -179,9 +180,10 @@ mysql:
       innodb_lock_wait_timeout=50
       max_connections=100
 
-# Redis cache configuration
+# Redis cache configuration - disabled for production-grade deployment
+# External Redis should be deployed separately
 redis:
-  enabled: true
+  enabled: false
   auth:
     enabled: true
     password: ""  # Will be set via secret
@@ -207,9 +209,10 @@ redis:
       storageClass: "gp2"
       size: 5Gi
 
-# RabbitMQ message queue configuration
+# RabbitMQ message queue configuration - disabled for production-grade deployment
+# External RabbitMQ should be deployed separately
 rabbitmq:
-  enabled: true
+  enabled: false
   auth:
     username: guardianes
     password: ""  # Will be set via secret
@@ -230,9 +233,9 @@ rabbitmq:
 
 # Monitoring configuration
 monitoring:
-  # Prometheus monitoring
+  # Prometheus monitoring - disabled for self-contained deployment
   prometheus:
-    enabled: true
+    enabled: false
     serviceMonitor:
       enabled: true
       interval: 30s
@@ -241,9 +244,9 @@ monitoring:
       labels:
         app: guardianes-de-gaia
   
-  # Grafana dashboards
+  # Grafana dashboards - disabled for self-contained deployment
   grafana:
-    enabled: true
+    enabled: false
     adminPassword: ""  # Will be set via secret
     
     dashboards:

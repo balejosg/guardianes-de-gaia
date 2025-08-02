@@ -67,12 +67,6 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
       
-      - name: 📦 Update Helm dependencies
-        run: |
-          echo "📦 Updating Helm chart dependencies..."
-          cd helm/
-          helm dependency update
-          
       - name: 🔍 Lint Helm chart
         run: |
           echo "🔍 Linting Helm chart..."
