@@ -115,9 +115,11 @@ jobs:
         run: |
           echo "🔐 Scanning generated manifests for security issues..."
           
-          # Check for hardcoded secrets (exclude base64 encoded test values, secret references, and empty values)
-          if grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v -E "(passwordRef|secretKeyRef|dGVzdA==|password:\s*$|password:\s*\"\"\s*$|ZGV2X2dyYWZhbmVfYWRtaW4=)"; then
-            echo "❌ Found potential hardcoded passwords"
+          # Check for hardcoded secrets (exclude test values, secret references, and empty values)
+          SUSPICIOUS_PASSWORDS=$(grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v -E "(passwordRef|secretKeyRef|dGVzdA==|password:\s*$|password:\s*\"\"\s*$)" | grep -v "ZGV2X2dyYWZhbmVfYWRtaW4=")
+          if [ -n "$SUSPICIOUS_PASSWORDS" ]; then
+            echo "❌ Found potential hardcoded passwords:"
+            echo "$SUSPICIOUS_PASSWORDS"
             exit 1
           fi
           
