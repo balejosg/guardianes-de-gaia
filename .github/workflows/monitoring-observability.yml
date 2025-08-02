@@ -113,8 +113,8 @@ jobs:
         run: |
           echo "🔍 Validating Grafana dashboards..."
           
-          # Install jq for JSON validation
-          sudo apt-get update && sudo apt-get install -y jq
+          # jq is pre-installed on GitHub Actions runners
+          # No need to install it
           
           # Validate JSON dashboards
           if [ -d "monitoring/dashboards" ]; then
