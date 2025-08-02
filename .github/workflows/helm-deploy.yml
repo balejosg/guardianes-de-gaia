@@ -115,12 +115,13 @@ jobs:
         run: |
           echo "🔐 Scanning generated manifests for security issues..."
           
-          # Check for hardcoded secrets (exclude test values, secret references, and empty values)
-          # Allow known test passwords: dGVzdA== (test) and ZGV2X2dyYWZhbmVfYWRtaW4= (dev_grafana_admin)
-          FOUND_PASSWORDS=$(grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v "passwordRef" | grep -v "secretKeyRef" | grep -v "dGVzdA==" | grep -v "ZGV2X2dyYWZhbmVfYWRtaW4=" | grep -v "password:\s*$" | grep -v "password:\s*\"\"\s*$" || true)
-          if [ -n "$FOUND_PASSWORDS" ]; then
-            echo "❌ Found potential hardcoded passwords (excluding known test values):"
-            echo "$FOUND_PASSWORDS"
+          # Check for hardcoded secrets - allow only known test passwords
+          # Known safe passwords: dGVzdA== (test), ZGV2X2dyYWZhbmVfYWRtaW4= (dev_grafana_admin), empty values
+          echo "🔍 Checking for hardcoded passwords..."
+          
+          # Find all password lines and check if they contain only safe values
+          if grep -r "password.*:" ./generated-dev/ ./generated-prod/ | grep -v "passwordRef\|secretKeyRef" | grep -v ": dGVzdA==" | grep -v ": ZGV2X2dyYWZhbmVfYWRtaW4=" | grep -v "password:\s*$" | grep -v "password: \"\""; then
+            echo "❌ Found potential hardcoded passwords. Only test values should be present."
             exit 1
           fi
           
