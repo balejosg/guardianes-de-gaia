@@ -143,11 +143,36 @@ jobs:
           docker compose -f docker-compose.ci.yml logs backend-test
           exit 1
       
-      - name: 📦 Install Node Dependencies
+      - name: 📦 Install Node Dependencies (Robust)
         run: |
-          npm install
-          # Install additional dependencies if needed
-          npm list puppeteer || npm install puppeteer
+          echo "🔧 Installing Node.js dependencies with clean install..."
+          
+          # Clear npm cache to avoid corruption issues
+          npm cache clean --force
+          
+          # Use npm ci for deterministic, reliable, faster installs for CI environments
+          npm ci
+          
+          # Verify critical dependencies are properly installed
+          echo "🔍 Verifying dependency installation..."
+          npm list puppeteer || (echo "❌ Puppeteer not found, installing..." && npm install puppeteer)
+          
+          # Specifically verify lines-and-columns module is properly installed
+          if [ ! -f "node_modules/lines-and-columns/build/index.js" ]; then
+            echo "❌ lines-and-columns module incomplete, reinstalling..."
+            npm uninstall lines-and-columns
+            npm install lines-and-columns
+          fi
+          
+          # Final verification of all dependencies
+          echo "✅ Node.js dependencies installed and verified successfully"
+          npm list --depth=0
+          
+          # Debug dependency paths (for troubleshooting)
+          echo "🔍 Debug: Node.js module resolution paths:"
+          node -e "console.log(require.resolve.paths('puppeteer'))"
+          echo "🔍 Debug: lines-and-columns module path:"
+          node -e "console.log(require.resolve('lines-and-columns'))" || echo "⚠️ lines-and-columns not found in require.resolve"
       
       - name: 🧪 Run E2E Test - ${{ matrix.test-file }}
         id: test-execution
