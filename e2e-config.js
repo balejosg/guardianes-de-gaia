@@ -144,41 +144,68 @@ CONFIG.log = {
     }
 };
 
-// Health check utility
+// Health check utility - Ultra-fast HTTP-based approach
 CONFIG.waitForBackend = async (maxAttempts = 30, interval = 2000) => {
-    const puppeteer = require('puppeteer');
+    const http = require('http');
+    const https = require('https');
+    const { URL } = require('url');
     
     for (let i = 1; i <= maxAttempts; i++) {
         try {
-            const browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-            const page = await browser.newPage();
+            const healthUrl = `${CONFIG.baseUrl}/actuator/health`;
+            const parsedUrl = new URL(healthUrl);
+            const client = parsedUrl.protocol === 'https:' ? https : http;
             
-            const response = await page.goto(`${CONFIG.baseUrl}/actuator/health`, {
-                waitUntil: 'networkidle0',
-                timeout: 10000
+            const result = await new Promise((resolve, reject) => {
+                const options = {
+                    hostname: parsedUrl.hostname,
+                    port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                    path: parsedUrl.pathname,
+                    method: 'GET',
+                    timeout: 5000,
+                    headers: {
+                        'User-Agent': 'E2E-HealthCheck/1.0'
+                    }
+                };
+
+                const req = client.request(options, (res) => {
+                    if (res.statusCode >= 200 && res.statusCode < 400) {
+                        CONFIG.log.success(`✅ Backend is ready at ${CONFIG.baseUrl} (HTTP ${res.statusCode})`);
+                        resolve(true);
+                    } else {
+                        CONFIG.log.debug(`Health check attempt ${i}/${maxAttempts}: HTTP ${res.statusCode}`);
+                        resolve(false);
+                    }
+                });
+
+                req.on('error', (error) => {
+                    CONFIG.log.debug(`Health check attempt ${i}/${maxAttempts} failed: ${error.message}`);
+                    resolve(false);
+                });
+
+                req.on('timeout', () => {
+                    CONFIG.log.debug(`Health check attempt ${i}/${maxAttempts} timed out`);
+                    req.destroy();
+                    resolve(false);
+                });
+
+                req.end();
             });
             
-            if (response && response.ok()) {
-                CONFIG.log.success(`Backend is ready at ${CONFIG.baseUrl}`);
-                await browser.close();
+            if (result) {
                 return true;
             }
-            
-            await browser.close();
         } catch (error) {
             CONFIG.log.debug(`Health check attempt ${i}/${maxAttempts} failed: ${error.message}`);
         }
         
         if (i < maxAttempts) {
-            CONFIG.log.info(`Waiting ${interval}ms before next health check...`);
+            CONFIG.log.info(`⏳ Waiting ${interval}ms before next health check...`);
             await new Promise(resolve => setTimeout(resolve, interval));
         }
     }
     
-    CONFIG.log.error(`Backend health check failed after ${maxAttempts} attempts`);
+    CONFIG.log.error(`❌ Backend health check failed after ${maxAttempts} attempts`);
     return false;
 };
 

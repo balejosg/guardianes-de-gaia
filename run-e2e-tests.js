@@ -90,7 +90,7 @@ class E2ETestRunner {
 
         // Ensure backend is ready before starting tests
         CONFIG.log.info('🔍 Checking backend availability...');
-        const backendReady = await CONFIG.waitForBackend(15, 5000); // 15 attempts, 5 seconds apart
+        const backendReady = await CONFIG.waitForBackend(24, 2500); // 24 attempts, 2.5 seconds apart = 60 seconds max
         
         if (!backendReady) {
             CONFIG.log.error('❌ Backend is not available. Cannot run E2E tests.');

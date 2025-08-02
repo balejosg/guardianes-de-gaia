@@ -19,7 +19,7 @@ class FunctionalAPITest {
         CONFIG.log.info('Starting Functional API Test for Guardianes...');
         
         // Wait for backend to be ready
-        const backendReady = await CONFIG.waitForBackend();
+        const backendReady = await CONFIG.waitForBackend(24, 2500); // 24 attempts, 2.5 seconds apart = 60 seconds max
         if (!backendReady) {
             throw new Error('Backend is not available for testing');
         }
