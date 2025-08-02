@@ -23,6 +23,10 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
+  # RBAC configuration
+  rbac:
+    # Specifies whether RBAC resources should be created
+    create: true
 
 # Backend service configuration
 backend:
@@ -132,6 +136,14 @@ ingress:
 # External MySQL should be deployed separately
 mysql:
   enabled: false
+
+# External database configuration for production
+externalDatabase:
+  host: mysql.guardianes-prod.svc.cluster.local
+  port: 3306
+  database: guardianes
+  username: guardianes
+  # Password should be set via secret
   auth:
     rootPassword: ""  # Will be set via secret
     database: guardianes
@@ -184,6 +196,12 @@ mysql:
 # External Redis should be deployed separately
 redis:
   enabled: false
+
+# External Redis configuration for production
+externalRedis:
+  host: redis.guardianes-prod.svc.cluster.local
+  port: 6379
+  # Password should be set via secret
   auth:
     enabled: true
     password: ""  # Will be set via secret
@@ -213,6 +231,13 @@ redis:
 # External RabbitMQ should be deployed separately
 rabbitmq:
   enabled: false
+
+# External RabbitMQ configuration for production
+externalRabbitmq:
+  host: rabbitmq.guardianes-prod.svc.cluster.local
+  port: 5672
+  username: guardianes
+  # Password should be set via secret
   auth:
     username: guardianes
     password: ""  # Will be set via secret
