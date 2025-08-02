@@ -56,7 +56,8 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-            # Database configuration
+            # Database configuration (support both internal and external)
+            {{- if .Values.mysql.enabled }}
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:mysql://{{ include "guardianes-de-gaia.mysql.fullname" . }}:3306/{{ .Values.mysql.auth.database }}"
             - name: SPRING_DATASOURCE_USERNAME
@@ -66,7 +67,19 @@ spec:
                 secretKeyRef:
                   name: {{ include "guardianes-de-gaia.secretName" . }}
                   key: mysql-password
-            # Redis configuration
+            {{- else if .Values.externalDatabase }}
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://{{ .Values.externalDatabase.host }}:{{ .Values.externalDatabase.port }}/{{ .Values.externalDatabase.database }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.externalDatabase.username }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "guardianes-de-gaia.secretName" . }}
+                  key: external-db-password
+            {{- end }}
+            # Redis configuration (support both internal and external)
+            {{- if .Values.redis.enabled }}
             - name: SPRING_REDIS_HOST
               value: {{ include "guardianes-de-gaia.redis.fullname" . }}-master
             - name: SPRING_REDIS_PORT
@@ -78,7 +91,19 @@ spec:
                   name: {{ include "guardianes-de-gaia.secretName" . }}
                   key: redis-password
             {{- end }}
-            # RabbitMQ configuration
+            {{- else if .Values.externalRedis }}
+            - name: SPRING_REDIS_HOST
+              value: {{ .Values.externalRedis.host }}
+            - name: SPRING_REDIS_PORT
+              value: {{ .Values.externalRedis.port | quote }}
+            - name: SPRING_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "guardianes-de-gaia.secretName" . }}
+                  key: external-redis-password
+            {{- end }}
+            # RabbitMQ configuration (support both internal and external)
+            {{- if .Values.rabbitmq.enabled }}
             - name: SPRING_RABBITMQ_HOST
               value: {{ include "guardianes-de-gaia.rabbitmq.fullname" . }}
             - name: SPRING_RABBITMQ_PORT
@@ -90,6 +115,19 @@ spec:
                 secretKeyRef:
                   name: {{ include "guardianes-de-gaia.secretName" . }}
                   key: rabbitmq-password
+            {{- else if .Values.externalRabbitmq }}
+            - name: SPRING_RABBITMQ_HOST
+              value: {{ .Values.externalRabbitmq.host }}
+            - name: SPRING_RABBITMQ_PORT
+              value: {{ .Values.externalRabbitmq.port | quote }}
+            - name: SPRING_RABBITMQ_USERNAME
+              value: {{ .Values.externalRabbitmq.username }}
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "guardianes-de-gaia.secretName" . }}
+                  key: external-rabbitmq-password
+            {{- end }}
             # JWT Secret
             - name: JWT_SECRET
               valueFrom:
