@@ -84,10 +84,10 @@ jobs:
           # Get source environment version
           case "$SOURCE_ENV" in
             "development")
-              SOURCE_URL="https://dev.guardianes-de-gaia.com"
+              SOURCE_URL="https://dev-guardianes.duckdns.org"
               ;;
             "staging")
-              SOURCE_URL="https://staging.guardianes-de-gaia.com"
+              SOURCE_URL="https://stg-guardianes.duckdns.org"
               ;;
           esac
           
@@ -140,10 +140,10 @@ jobs:
         run: |
           case "$SOURCE_ENV" in
             "development")
-              BASE_URL="https://dev.guardianes-de-gaia.com"
+              BASE_URL="https://dev-guardianes.duckdns.org"
               ;;
             "staging")
-              BASE_URL="https://staging.guardianes-de-gaia.com"
+              BASE_URL="https://stg-guardianes.duckdns.org"
               ;;
           esac
           

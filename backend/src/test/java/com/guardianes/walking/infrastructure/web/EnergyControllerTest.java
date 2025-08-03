@@ -264,4 +264,14 @@ class EnergyControllerTest {
 
     verify(energyService, times(1)).spendEnergy(guardianId, largeRequest);
   }
+
+  @Test
+  @DisplayName("Should return health check successfully")
+  void shouldReturnHealthCheckSuccessfully() throws Exception {
+    // When & Then
+    mockMvc
+        .perform(get("/api/v1/guardians/1/energy/health"))
+        .andExpect(status().isOk())
+        .andExpect(content().string("Energy service is operational"));
+  }
 }

@@ -68,4 +68,16 @@ public class EnergyController {
     EnergySpendingResponse response = energyService.spendEnergy(guardianId, request);
     return ResponseEntity.ok(response);
   }
+
+  @GetMapping("/health")
+  @Operation(
+      summary = "Energy service health check",
+      description = "Simple health check endpoint for the energy management service.")
+  @ApiResponses(
+      value = {
+        @ApiResponse(responseCode = "200", description = "Energy service is healthy")
+      })
+  public ResponseEntity<String> healthCheck() {
+    return ResponseEntity.ok("Energy service is operational");
+  }
 }

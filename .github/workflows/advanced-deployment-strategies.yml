@@ -266,7 +266,7 @@ jobs:
           kubectl patch ingress guardianes-$ENVIRONMENT \
             --namespace guardianes-$ENVIRONMENT \
             --type='merge' \
-            --patch='{"spec":{"rules":[{"host":"'$ENVIRONMENT'.guardianes-de-gaia.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"guardianes-'$ENVIRONMENT'-green-backend","port":{"number":8080}}}}]}}]}}'
+            --patch='{"spec":{"rules":[{"host":"'$([[ "$ENVIRONMENT" == "staging" ]] && echo "stg" || echo "$ENVIRONMENT")'-guardianes.duckdns.org","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"guardianes-'$ENVIRONMENT'-green-backend","port":{"number":8080}}}}]}}]}}'
           
           echo "✅ Traffic switched to Green environment"
       
@@ -282,7 +282,8 @@ jobs:
           
           while [ $(date +%s) -lt $END_TIME ]; do
             # Check health
-            if ! curl -f http://$ENVIRONMENT.guardianes-de-gaia.com/actuator/health; then
+            HEALTH_URL=$([[ "$ENVIRONMENT" == "staging" ]] && echo "https://stg-guardianes.duckdns.org" || echo "https://guardianes.duckdns.org")
+            if ! curl -f $HEALTH_URL/actuator/health; then
               echo "❌ Health check failed during monitoring"
               exit 1
             fi
@@ -403,7 +404,7 @@ jobs:
             namespace: guardianes-$ENVIRONMENT
           spec:
             hosts:
-            - $ENVIRONMENT.guardianes-de-gaia.com
+            - $([[ "$ENVIRONMENT" == "staging" ]] && echo "stg-guardianes.duckdns.org" || echo "guardianes.duckdns.org")
             http:
             - match:
               - headers:
@@ -569,7 +570,7 @@ jobs:
             namespace: guardianes-$ENVIRONMENT
           spec:
             hosts:
-            - $ENVIRONMENT.guardianes-de-gaia.com
+            - $([[ "$ENVIRONMENT" == "staging" ]] && echo "stg-guardianes.duckdns.org" || echo "guardianes.duckdns.org")
             http:
             - match:
               - headers:
@@ -734,7 +735,7 @@ jobs:
               kubectl patch ingress guardianes-$ENVIRONMENT \
                 --namespace guardianes-$ENVIRONMENT \
                 --type='merge' \
-                --patch='{"spec":{"rules":[{"host":"'$ENVIRONMENT'.guardianes-de-gaia.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"guardianes-'$ENVIRONMENT'-backend","port":{"number":8080}}}}]}}]}}'
+                --patch='{"spec":{"rules":[{"host":"'$([[ "$ENVIRONMENT" == "staging" ]] && echo "stg" || echo "$ENVIRONMENT")'-guardianes.duckdns.org","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"guardianes-'$ENVIRONMENT'-backend","port":{"number":8080}}}}]}}]}}'
               
               # Clean up green deployment
               helm uninstall guardianes-$ENVIRONMENT-green --namespace guardianes-$ENVIRONMENT || true

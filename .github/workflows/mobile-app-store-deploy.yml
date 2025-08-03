@@ -441,8 +441,8 @@ jobs:
           echo "A cooperative card game that gamifies walking to school for families with children aged 6-12." > fastlane/metadata/en-US/subtitle.txt
           echo "$RELEASE_NOTES" > fastlane/metadata/en-US/description.txt
           echo "guardianes, walking, game, educational, family, cards, cooperative" > fastlane/metadata/en-US/keywords.txt
-          echo "https://guardianes-de-gaia.com/support" > fastlane/metadata/en-US/support_url.txt
-          echo "https://guardianes-de-gaia.com/privacy" > fastlane/metadata/en-US/privacy_url.txt
+          echo "https://guardianes.duckdns.org/support" > fastlane/metadata/en-US/support_url.txt
+          echo "https://guardianes.duckdns.org/privacy" > fastlane/metadata/en-US/privacy_url.txt
           
           # Create release notes
           echo "$RELEASE_NOTES" > "fastlane/metadata/en-US/release_notes.txt"
@@ -540,7 +540,7 @@ jobs:
           
           ## Support
           
-          For support, visit: https://guardianes-de-gaia.com/support
+          For support, visit: https://guardianes.duckdns.org/support
           EOF
           
           echo "✅ Release documentation created"

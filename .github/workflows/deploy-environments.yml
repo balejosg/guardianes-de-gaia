@@ -181,7 +181,7 @@ jobs:
       (needs.pre-deployment-checks.result == 'success' || needs.pre-deployment-checks.result == 'skipped')
     environment: 
       name: development
-      url: http://localhost:8080
+      url: https://dev-guardianes.duckdns.org
 
     steps:
       - name: 📥 Checkout code
@@ -199,7 +199,7 @@ jobs:
           # Give the services a moment to start up
           sleep 15
           # Health check
-          curl -f http://localhost:8080/actuator/health
+          curl -f https://dev-guardianes.duckdns.org/actuator/health
           echo "✅ Local environment is healthy."
 
   # ============================================
@@ -215,7 +215,7 @@ jobs:
       (needs.pre-deployment-checks.result == 'success' || needs.pre-deployment-checks.result == 'skipped')
     environment: 
       name: staging
-      url: https://staging.guardianes-de-gaia.com
+      url: https://stg-guardianes.duckdns.org
     
     steps:
       - name: 📥 Checkout code
@@ -234,7 +234,7 @@ jobs:
           echo "📊 Collecting pre-deployment metrics..."
           
           # Collect current metrics
-          CURRENT_VERSION=$(curl -s https://staging.guardianes-de-gaia.com/actuator/info | jq -r '.build.version // "unknown"')
+          CURRENT_VERSION=$(curl -s https://stg-guardianes.duckdns.org/actuator/info | jq -r '.build.version // "unknown"')
           
           echo "## 📊 Staging Deployment Metrics" >> $GITHUB_STEP_SUMMARY
           echo "- **Current Version**: $CURRENT_VERSION" >> $GITHUB_STEP_SUMMARY
@@ -266,15 +266,15 @@ jobs:
           echo "🧪 Running comprehensive staging tests..."
           
           # Health checks
-          curl -f https://staging.guardianes-de-gaia.com/actuator/health
+          curl -f https://stg-guardianes.duckdns.org/actuator/health
           
           # API endpoint tests
-          curl -f https://staging.guardianes-de-gaia.com/api/v1/guardians/health
-          curl -f https://staging.guardianes-de-gaia.com/api/v1/walking/health
+          curl -f https://stg-guardianes.duckdns.org/api/v1/guardians/health
+          curl -f https://stg-guardianes.duckdns.org/api/v1/walking/health
           
           # Performance test
           echo "⚡ Performance validation"
-          RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' https://staging.guardianes-de-gaia.com/actuator/health)
+          RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' https://stg-guardianes.duckdns.org/actuator/health)
           echo "- Health endpoint response time: ${RESPONSE_TIME}s" >> $GITHUB_STEP_SUMMARY
           
           echo "✅ Staging environment validated"
@@ -292,7 +292,7 @@ jobs:
       (needs.pre-deployment-checks.result == 'success' || needs.pre-deployment-checks.result == 'skipped')
     environment: 
       name: production
-      url: https://guardianes-de-gaia.com
+      url: https://guardianes.duckdns.org
     
     steps:
       - name: 📥 Checkout code
@@ -311,7 +311,7 @@ jobs:
           echo "📊 Production pre-deployment validation..."
           
           # Validate production readiness
-          CURRENT_VERSION=$(curl -s https://guardianes-de-gaia.com/actuator/info | jq -r '.build.version // "unknown"')
+          CURRENT_VERSION=$(curl -s https://guardianes.duckdns.org/actuator/info | jq -r '.build.version // "unknown"')
           
           # Check database migration status
           echo "🗄️ Validating database migrations..."
@@ -365,14 +365,14 @@ jobs:
           echo "🔍 Validating production deployment..."
           
           # Comprehensive health checks
-          timeout 300 bash -c 'until curl -f https://guardianes-de-gaia.com/actuator/health; do sleep 10; done'
+          timeout 300 bash -c 'until curl -f https://guardianes.duckdns.org/actuator/health; do sleep 10; done'
           
           # Validate critical endpoints
-          curl -f https://guardianes-de-gaia.com/actuator/info
-          curl -f https://guardianes-de-gaia.com/api/v1/guardians/health
+          curl -f https://guardianes.duckdns.org/actuator/info
+          curl -f https://guardianes.duckdns.org/api/v1/guardians/health
           
           # Check metrics endpoint
-          curl -f https://guardianes-de-gaia.com/actuator/prometheus
+          curl -f https://guardianes.duckdns.org/actuator/prometheus
           
           echo "✅ Production validation completed"
       
