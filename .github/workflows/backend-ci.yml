@@ -40,8 +40,14 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/backend:/workspace \
             -w /workspace \
+            -u $(id -u):$(id -g) \
             maven:3-openjdk-17 \
             mvn compile spotbugs:check
+      
+      - name: 🧹 Fix File Permissions
+        if: always()
+        run: |
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target || true
       
       - name: 🛡️ OWASP Dependency Check
         run: |
@@ -77,6 +83,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/backend:/workspace \
             -w /workspace \
+            -u $(id -u):$(id -g) \
             maven:3-openjdk-${{ matrix.java-version }} \
             mvn test \
               -Dtest.parallel=false \
@@ -91,8 +98,14 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/backend:/workspace \
             -w /workspace \
+            -u $(id -u):$(id -g) \
             maven:3-openjdk-${{ matrix.java-version }} \
             mvn jacoco:report
+      
+      - name: 🧹 Fix File Permissions
+        if: always()
+        run: |
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target || true
       
       - name: 📤 Upload Coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -128,6 +141,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/backend:/workspace \
             -w /workspace \
+            -u $(id -u):$(id -g) \
             -e SPRING_PROFILES_ACTIVE=test \
             maven:3-openjdk-17 \
             mvn test \
@@ -141,9 +155,15 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/backend:/workspace \
             -w /workspace \
+            -u $(id -u):$(id -g) \
             -e SPRING_PROFILES_ACTIVE=test \
             maven:3-openjdk-17 \
             mvn verify -Pcucumber || echo "Cucumber tests skipped if profile not available"
+      
+      - name: 🧹 Fix File Permissions
+        if: always()
+        run: |
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target || true
       
       - name: 💾 Archive Integration Test Results
         uses: actions/upload-artifact@v4
@@ -172,8 +192,14 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/backend:/workspace \
             -w /workspace \
+            -u $(id -u):$(id -g) \
             maven:3-openjdk-17 \
             mvn clean package -DskipTests
+      
+      - name: 🧹 Fix File Permissions
+        if: always()
+        run: |
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target || true
       
       - name: 🐳 Build Docker Image
         working-directory: ./backend
@@ -222,8 +248,14 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/backend:/workspace \
             -w /workspace \
+            -u $(id -u):$(id -g) \
             maven:3-openjdk-17 \
             mvn clean package -DskipTests
+      
+      - name: 🧹 Fix File Permissions
+        if: always()
+        run: |
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target || true
       
       - name: 🐳 Start Test Environment
         run: |
