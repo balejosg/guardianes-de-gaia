@@ -36,21 +36,26 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Reset git repository state to avoid permission issues
-          cd ${{ github.workspace }} || true
-          git reset --hard HEAD || true
-          git clean -fdx || true
+          # Use Docker container with root privileges to clean up root-owned files
+          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
           
-          # Force remove problematic directories with maximum privileges
-          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
+          # Additional cleanup with direct sudo commands
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            rm -rf ${{ github.workspace }}/backend/target || \
+            docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+              sh -c "rm -rf /workspace/backend/target" || true
+          fi
+          
+          # Reset git repository state if it exists
+          cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
+          cd ${{ github.workspace }} 2>/dev/null && git clean -fdx 2>/dev/null || true
           
           # Ensure proper ownership of workspace
-          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
-          
-          # Remove any root-owned files that might prevent checkout
-          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
-          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
+          chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || \
+          chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -105,21 +110,26 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Reset git repository state to avoid permission issues
-          cd ${{ github.workspace }} || true
-          git reset --hard HEAD || true
-          git clean -fdx || true
+          # Use Docker container with root privileges to clean up root-owned files
+          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
           
-          # Force remove problematic directories with maximum privileges
-          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
+          # Additional cleanup with direct sudo commands
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            rm -rf ${{ github.workspace }}/backend/target || \
+            docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+              sh -c "rm -rf /workspace/backend/target" || true
+          fi
+          
+          # Reset git repository state if it exists
+          cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
+          cd ${{ github.workspace }} 2>/dev/null && git clean -fdx 2>/dev/null || true
           
           # Ensure proper ownership of workspace
-          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
-          
-          # Remove any root-owned files that might prevent checkout
-          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
-          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
+          chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || \
+          chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -187,21 +197,26 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Reset git repository state to avoid permission issues
-          cd ${{ github.workspace }} || true
-          git reset --hard HEAD || true
-          git clean -fdx || true
+          # Use Docker container with root privileges to clean up root-owned files
+          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
           
-          # Force remove problematic directories with maximum privileges
-          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
+          # Additional cleanup with direct sudo commands
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            rm -rf ${{ github.workspace }}/backend/target || \
+            docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+              sh -c "rm -rf /workspace/backend/target" || true
+          fi
+          
+          # Reset git repository state if it exists
+          cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
+          cd ${{ github.workspace }} 2>/dev/null && git clean -fdx 2>/dev/null || true
           
           # Ensure proper ownership of workspace
-          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
-          
-          # Remove any root-owned files that might prevent checkout
-          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
-          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
+          chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || \
+          chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -264,21 +279,26 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Reset git repository state to avoid permission issues
-          cd ${{ github.workspace }} || true
-          git reset --hard HEAD || true
-          git clean -fdx || true
+          # Use Docker container with root privileges to clean up root-owned files
+          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
           
-          # Force remove problematic directories with maximum privileges
-          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
+          # Additional cleanup with direct sudo commands
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            rm -rf ${{ github.workspace }}/backend/target || \
+            docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+              sh -c "rm -rf /workspace/backend/target" || true
+          fi
+          
+          # Reset git repository state if it exists
+          cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
+          cd ${{ github.workspace }} 2>/dev/null && git clean -fdx 2>/dev/null || true
           
           # Ensure proper ownership of workspace
-          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
-          
-          # Remove any root-owned files that might prevent checkout
-          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
-          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
+          chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || \
+          chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -345,21 +365,26 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Reset git repository state to avoid permission issues
-          cd ${{ github.workspace }} || true
-          git reset --hard HEAD || true
-          git clean -fdx || true
+          # Use Docker container with root privileges to clean up root-owned files
+          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
           
-          # Force remove problematic directories with maximum privileges
-          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
+          # Additional cleanup with direct sudo commands
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            rm -rf ${{ github.workspace }}/backend/target || \
+            docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+              sh -c "rm -rf /workspace/backend/target" || true
+          fi
+          
+          # Reset git repository state if it exists
+          cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
+          cd ${{ github.workspace }} 2>/dev/null && git clean -fdx 2>/dev/null || true
           
           # Ensure proper ownership of workspace
-          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
-          
-          # Remove any root-owned files that might prevent checkout
-          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
-          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
+          chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || \
+          chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
