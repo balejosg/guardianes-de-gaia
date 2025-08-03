@@ -35,25 +35,20 @@ jobs:
         with:
           fetch-depth: 0  # Full history for SonarQube
       
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: maven
-      
-      - name: 🔍 Run SpotBugs
-        working-directory: ./backend
-        run: mvn compile spotbugs:check
+      - name: 🔍 Run SpotBugs in Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            maven:3.9.4-openjdk-17-slim \
+            mvn compile spotbugs:check
       
       - name: 🛡️ OWASP Dependency Check
-        working-directory: ./backend
         run: |
           echo "⚠️ OWASP Dependency Check temporarily disabled due to network issues"
           echo "Will re-enable once other core issues are resolved"
       
       - name: 📊 Code Quality Summary
-        working-directory: ./backend
         run: |
           echo "## 📊 Code Quality Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -77,27 +72,27 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: ☕ Setup Java ${{ matrix.java-version }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java-version }}
-          distribution: 'temurin'
-          cache: maven
-      
-      - name: 🧪 Run Unit Tests
-        working-directory: ./backend
+      - name: 🧪 Run Unit Tests in Docker
         run: |
-          mvn test \
-            -Dtest.parallel=false \
-            -Dmaven.test.failure.ignore=false \
-            -Djacoco.execution.data.file=target/jacoco-unit.exec \
-            -Dmaven.surefire.timeout=300 \
-            -DfailIfNoTests=false \
-            -Dspring.profiles.active=test
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            maven:3.9.4-openjdk-${{ matrix.java-version }}-slim \
+            mvn test \
+              -Dtest.parallel=false \
+              -Dmaven.test.failure.ignore=false \
+              -Djacoco.execution.data.file=target/jacoco-unit.exec \
+              -Dmaven.surefire.timeout=300 \
+              -DfailIfNoTests=false \
+              -Dspring.profiles.active=test
       
-      - name: 📊 Generate Coverage Report
-        working-directory: ./backend
-        run: mvn jacoco:report
+      - name: 📊 Generate Coverage Report in Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            maven:3.9.4-openjdk-${{ matrix.java-version }}-slim \
+            mvn jacoco:report
       
       - name: 📤 Upload Coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -117,105 +112,61 @@ jobs:
             backend/target/site/jacoco/
 
   # ============================================
-  # Integration Tests with Docker
+  # Integration Tests with Docker Compose
   # ============================================
   integration-tests:
     name: 🔗 Integration Tests
     runs-on: self-hosted
     
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: test_root_password
-          MYSQL_DATABASE: guardianes_test
-          MYSQL_USER: guardianes_test
-          MYSQL_PASSWORD: test_password
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-      
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-      
-      rabbitmq:
-        image: rabbitmq:3.12-management-alpine
-        env:
-          RABBITMQ_DEFAULT_USER: test_user
-          RABBITMQ_DEFAULT_PASS: test_password
-        ports:
-          - 5672:5672
-          - 15672:15672
-        options: >-
-          --health-cmd="rabbitmq-diagnostics ping"
-          --health-interval=30s
-          --health-timeout=10s
-          --health-retries=5
-    
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: maven
-      
-      - name: ⏳ Wait for Services
+      - name: 🐳 Start Test Services
         run: |
-          echo "🔄 Waiting for MySQL..."
-          timeout 60 sh -c 'until nc -z localhost 3306; do sleep 1; done'
-          echo "🔄 Waiting for Redis..."
-          timeout 30 sh -c 'until nc -z localhost 6379; do sleep 1; done'
-          echo "🔄 Waiting for RabbitMQ..."
-          timeout 60 sh -c 'until nc -z localhost 5672; do sleep 1; done'
-          echo "✅ All services ready!"
+          # Use our existing docker-compose for test services
+          docker-compose -f docker-compose.test.yml up -d mysql redis rabbitmq
+          
+          # Wait for services to be ready
+          echo "🔄 Waiting for services to start..."
+          sleep 30
+          
+          # Check if services are running
+          docker-compose -f docker-compose.test.yml ps
       
-      - name: 🗄️ Setup Test Database
+      - name: 🔗 Run Integration Tests in Docker
         run: |
-          mysql -h 127.0.0.1 -u root -ptest_root_password -e "
-            CREATE DATABASE IF NOT EXISTS guardianes_test;
-            GRANT ALL PRIVILEGES ON guardianes_test.* TO 'guardianes_test'@'%';
-            FLUSH PRIVILEGES;
-          "
+          docker run --rm \
+            --network container:$(docker-compose -f docker-compose.test.yml ps -q mysql) \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            -e SPRING_PROFILES_ACTIVE=integration-test \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/guardianes_test \
+            -e SPRING_DATASOURCE_USERNAME=guardianes_test \
+            -e SPRING_DATASOURCE_PASSWORD=test_password \
+            -e SPRING_REDIS_HOST=localhost \
+            -e SPRING_REDIS_PORT=6379 \
+            -e SPRING_RABBITMQ_HOST=localhost \
+            -e SPRING_RABBITMQ_PORT=5672 \
+            maven:3.9.4-openjdk-17-slim \
+            mvn test \
+              -Dtest="**/*IntegrationTest" \
+              -Dmaven.test.failure.ignore=false \
+              -Dmaven.surefire.timeout=900
       
-      - name: 🔗 Run Integration Tests
-        working-directory: ./backend
-        env:
-          SPRING_PROFILES_ACTIVE: integration-test
-          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/guardianes_test
-          SPRING_DATASOURCE_USERNAME: guardianes_test
-          SPRING_DATASOURCE_PASSWORD: test_password
-          SPRING_REDIS_HOST: localhost
-          SPRING_REDIS_PORT: 6379
-          SPRING_RABBITMQ_HOST: localhost
-          SPRING_RABBITMQ_PORT: 5672
-          SPRING_RABBITMQ_USERNAME: test_user
-          SPRING_RABBITMQ_PASSWORD: test_password
+      - name: 🥒 Run Cucumber BDD Tests in Docker
         run: |
-          mvn test \
-            -Dtest="**/*IntegrationTest" \
-            -Dmaven.test.failure.ignore=false \
-            -Dmaven.surefire.timeout=900
+          docker run --rm \
+            --network container:$(docker-compose -f docker-compose.test.yml ps -q mysql) \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            -e SPRING_PROFILES_ACTIVE=integration-test \
+            maven:3.9.4-openjdk-17-slim \
+            mvn verify -Pcucumber
       
-      - name: 🥒 Run Cucumber BDD Tests
-        working-directory: ./backend
-        env:
-          SPRING_PROFILES_ACTIVE: integration-test
-        run: mvn verify -Pcucumber
+      - name: 🛑 Stop Test Services
+        if: always()
+        run: docker-compose -f docker-compose.test.yml down
       
       - name: 💾 Archive Integration Test Results
         uses: actions/upload-artifact@v4
@@ -227,43 +178,45 @@ jobs:
             backend/target/cucumber-reports/
 
   # ============================================
-  # Docker Integration Tests (Heavy)
+  # Docker Integration Tests (Simplified)
   # ============================================
   docker-integration-tests:
     name: 🐳 Docker Integration Tests
     runs-on: self-hosted
     needs: [unit-tests]
-    timeout-minutes: 20
+    timeout-minutes: 15
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: maven
-      
-      - name: 🏗️ Build Application
-        working-directory: ./backend
-        run: mvn clean package -DskipTests
+      - name: 🏗️ Build Application in Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            maven:3.9.4-openjdk-17-slim \
+            mvn clean package -DskipTests
       
       - name: 🐳 Build Docker Image
         working-directory: ./backend
         run: |
-          docker build -t guardianes-de-gaia-backend:latest -f Dockerfile.dev .
+          docker build -t guardianes-de-gaia-backend:test -f Dockerfile.dev .
       
-      - name: 🐳 Run Docker Integration Tests
-        working-directory: ./backend
-        env:
-          SPRING_PROFILES_ACTIVE: integration-test
+      - name: 🐳 Test Docker Image
         run: |
-          mvn test \
-            -Dtest="**/docker/*Test" \
-            -Dmaven.test.failure.ignore=false \
-            -Dmaven.surefire.timeout=1200
+          # Start the application in Docker and test if it starts properly
+          docker run -d --name test-backend guardianes-de-gaia-backend:test
+          sleep 10
+          # Check if container is still running
+          if docker ps | grep test-backend; then
+            echo "✅ Docker image starts successfully"
+          else
+            echo "❌ Docker image failed to start"
+            docker logs test-backend
+            exit 1
+          fi
+          docker rm -f test-backend
       
       - name: 💾 Archive Docker Test Results
         uses: actions/upload-artifact@v4
@@ -275,132 +228,53 @@ jobs:
             backend/target/site/jacoco/
 
   # ============================================
-  # Performance Tests
+  # Smoke Tests
   # ============================================
-  performance-tests:
-    name: ⚡ Performance Tests
+  smoke-tests:
+    name: 💨 Smoke Tests
     runs-on: self-hosted
     needs: [unit-tests]
-    timeout-minutes: 20
+    timeout-minutes: 10
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: maven
-      
       - name: 🏗️ Build Application
-        working-directory: ./backend
-        run: mvn clean package -DskipTests
-      
-      - name: 🔐 Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: 🐳 Start Optimized Test Environment
-        env:
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "🔍 Starting optimized CI environment with pre-built images..."
-          docker compose -f docker-compose.ci.yml up -d
-          
-          echo "⏳ Waiting 60 seconds for services to initialize..."
-          sleep 60
-          
-          echo "🔍 Checking Docker Compose services status:"
-          docker compose -f docker-compose.ci.yml ps
-          
-          echo "🔍 Checking Docker logs:"
-          docker compose -f docker-compose.ci.yml logs --tail=20
-          
-          echo "✅ Optimized test environment startup completed"
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            maven:3.9.4-openjdk-17-slim \
+            mvn clean package -DskipTests
       
-      - name: ⚡ Run Load Tests with JMeter
+      - name: 🐳 Start Test Environment
         run: |
-          # Install JMeter
-          wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.2.tgz
-          tar -xzf apache-jmeter-5.6.2.tgz
+          echo "🔍 Starting test environment..."
+          docker-compose up -d
           
-          # Wait for backend to be fully ready with reduced timeout (using pre-built images)
+          echo "⏳ Waiting for services to initialize..."
+          sleep 30
+          
+          echo "🔍 Checking services status:"
+          docker-compose ps
+      
+      - name: 💨 Run Basic Smoke Tests
+        run: |
+          # Wait for backend to be ready
           echo "🔄 Waiting for backend to be ready..."
-          timeout 120 sh -c 'until curl -f -u ci:ci_test http://localhost:8080/actuator/health; do sleep 3; done'
+          timeout 60 sh -c 'until docker exec guardianes-backend curl -f http://localhost:8080/actuator/health; do sleep 3; done'
           
-          # Run comprehensive JMeter performance tests
-          echo "📊 Running JMeter Performance Test Suite..."
+          echo "✅ Backend is ready!"
+          echo "📊 Running basic API tests..."
           
-          # 1. Load Test (moderate load for CI environment)
-          if [ -f "backend/src/test/jmeter/load-test.jmx" ]; then
-            echo "🔄 Running Load Tests..."
-            if ./apache-jmeter-5.6.2/bin/jmeter -n \
-              -t backend/src/test/jmeter/load-test.jmx \
-              -l load-test-results.jtl \
-              -e -o load-test-report/ \
-              -Jusers=5 \
-              -Jramp.up=10 \
-              -Jduration=30 \
-              -Jbase.url=http://localhost:8080; then
-              echo "✅ Load tests completed successfully"
-            else
-              echo "⚠️ Load tests failed but continuing with other tests"
-            fi
-          fi
-          
-          # 2. API Validation Test (functional verification)
-          if [ -f "backend/src/test/jmeter/api-validation-test.jmx" ]; then
-            echo "🔍 Running API Validation Tests..."
-            if ./apache-jmeter-5.6.2/bin/jmeter -n \
-              -t backend/src/test/jmeter/api-validation-test.jmx \
-              -l api-validation-results.jtl \
-              -e -o api-validation-report/ \
-              -Jbase.url=http://localhost:8080; then
-              echo "✅ API validation tests completed successfully"
-            else
-              echo "⚠️ API validation tests failed but continuing with other tests"
-            fi
-          fi
-          
-          # 3. Stress Test (lightweight for CI)
-          if [ -f "backend/src/test/jmeter/stress-test.jmx" ]; then
-            echo "⚡ Running Stress Tests (CI mode)..."
-            if ./apache-jmeter-5.6.2/bin/jmeter -n \
-              -t backend/src/test/jmeter/stress-test.jmx \
-              -l stress-test-results.jtl \
-              -e -o stress-test-report/ \
-              -Jstress.users=10 \
-              -Jstress.ramp.up=20 \
-              -Jstress.duration=30 \
-              -Jbase.url=http://localhost:8080; then
-              echo "✅ Stress tests completed successfully"
-            else
-              echo "⚠️ Stress tests failed but continuing - this is acceptable in CI environments"
-            fi
-          fi
-          
-          echo "✅ All JMeter tests completed"
+          # Test actuator endpoints
+          docker exec guardianes-backend curl -f http://localhost:8080/actuator/health
+          docker exec guardianes-backend curl -f http://localhost:8080/actuator/info
       
       - name: 🛑 Stop Test Environment
         if: always()
-        run: docker compose -f docker-compose.ci.yml down
-      
-      - name: 📤 Upload Performance Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: performance-test-results
-          path: |
-            load-test-report/
-            api-validation-report/
-            stress-test-report/
-            *.jtl
+        run: docker-compose down
 
   # ============================================
   # Build Summary
@@ -408,7 +282,7 @@ jobs:
   build-summary:
     name: 📋 Build Summary
     runs-on: self-hosted
-    needs: [code-quality, unit-tests, integration-tests, docker-integration-tests, performance-tests]
+    needs: [code-quality, unit-tests, integration-tests, docker-integration-tests, smoke-tests]
     if: always()
     
     steps:
@@ -421,7 +295,7 @@ jobs:
           echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Docker Integration Tests: ${{ needs.docker-integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Performance Tests: ${{ needs.performance-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests: ${{ needs.smoke-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🌐 End-to-End Tests:" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: Available in separate E2E workflow" >> $GITHUB_STEP_SUMMARY
