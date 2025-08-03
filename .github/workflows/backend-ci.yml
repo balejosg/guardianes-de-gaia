@@ -42,10 +42,6 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
-          force: true
-          submodules: false
-        with:
           fetch-depth: 0  # Full history for SonarQube
           clean: true
           force: true
