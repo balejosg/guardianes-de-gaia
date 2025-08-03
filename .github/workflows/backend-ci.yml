@@ -29,7 +29,12 @@ jobs:
     name: 🔍 Code Quality & Security
     runs-on: self-hosted
     
-    steps:
+    steps: 
+      - name: 🧹 Pre-cleanup
+        run: |
+          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
@@ -75,6 +80,11 @@ jobs:
       fail-fast: false
     
     steps:
+      - name: 🧹 Pre-cleanup
+        run: |
+          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
@@ -132,6 +142,11 @@ jobs:
     runs-on: self-hosted
     
     steps:
+      - name: 🧹 Pre-cleanup
+        run: |
+          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
@@ -184,6 +199,11 @@ jobs:
     timeout-minutes: 15
     
     steps:
+      - name: 🧹 Pre-cleanup
+        run: |
+          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
@@ -240,6 +260,11 @@ jobs:
     timeout-minutes: 10
     
     steps:
+      - name: 🧹 Pre-cleanup
+        run: |
+          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
