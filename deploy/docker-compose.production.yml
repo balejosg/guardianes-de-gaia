@@ -17,7 +17,7 @@ services:
       - "9094:9090"    # Production metrics port (internal only)
     environment:
       - SPRING_PROFILES_ACTIVE=production,kubernetes
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-production:3306/guardianes_production?useSSL=true&allowPublicKeyRetrieval=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-production:3306/guardianes_production?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&createDatabaseIfNotExist=true
       - SPRING_DATASOURCE_USERNAME=${PROD_DB_USER:-guardianes_prod}
       - SPRING_DATASOURCE_PASSWORD=${PROD_DB_PASSWORD}
       - SPRING_REDIS_HOST=redis-production
@@ -197,8 +197,6 @@ services:
       - RABBITMQ_DEFAULT_VHOST=guardianes_production
       - TZ=Europe/Madrid
       - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,warning}]
-      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.7
-      - RABBITMQ_DISK_FREE_LIMIT=2GB
     volumes:
       - rabbitmq-data-production:/var/lib/rabbitmq
       - ../logs/production/rabbitmq:/var/log/rabbitmq
@@ -239,7 +237,7 @@ services:
     environment:
       - TZ=Europe/Madrid
     volumes:
-      - ../docker/prometheus/prometheus.production.yml:/etc/prometheus/prometheus.yml:ro
+      - ../docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data-production:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -387,7 +385,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.24.0.0/16
+        - subnet: 172.30.0.0/16
     labels:
       - "com.guardianes.environment=production"
       - "com.guardianes.network=backend"
@@ -395,7 +393,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.25.0.0/16
+        - subnet: 172.31.0.0/16
     labels:
       - "com.guardianes.environment=production"
       - "com.guardianes.network=monitoring"

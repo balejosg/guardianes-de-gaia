@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: guardianes-backend
     ports:
-      - "8080:8080"    # API
+      - "8090:8080"    # API (changed to avoid conflict)
       - "5005:5005"    # Debug
       - "9090:9090"    # Metrics
     environment:
@@ -59,7 +59,7 @@ services:
       - TZ=Europe/Madrid
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+# Temporarily commented out: - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     command: 
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -170,7 +170,7 @@ services:
     image: nginx:alpine
     container_name: guardianes-nginx
     ports:
-      - "80:80"
+      - "8888:80"  # Changed to avoid conflict with existing nginx
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -203,9 +203,9 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.26.0.0/16
   monitoring-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.21.0.0/16
+        - subnet: 172.27.0.0/16

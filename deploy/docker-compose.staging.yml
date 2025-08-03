@@ -17,7 +17,7 @@ services:
       - "9092:9090"    # Staging metrics port
     environment:
       - SPRING_PROFILES_ACTIVE=staging,kubernetes
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-staging:3306/guardianes_staging?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-staging:3306/guardianes_staging?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
       - SPRING_DATASOURCE_USERNAME=${STAGING_DB_USER:-guardianes_staging}
       - SPRING_DATASOURCE_PASSWORD=${STAGING_DB_PASSWORD:-staging_secret_123}
       - SPRING_REDIS_HOST=redis-staging
@@ -166,7 +166,7 @@ services:
     environment:
       - TZ=Europe/Madrid
     volumes:
-      - ../docker/prometheus/prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro
+      - ../docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data-staging:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -259,7 +259,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.22.0.0/16
+        - subnet: 172.28.0.0/16
     labels:
       - "com.guardianes.environment=staging"
       - "com.guardianes.network=backend"
@@ -267,7 +267,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.23.0.0/16
+        - subnet: 172.29.0.0/16
     labels:
       - "com.guardianes.environment=staging"
       - "com.guardianes.network=monitoring"

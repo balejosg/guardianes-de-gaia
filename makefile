@@ -36,10 +36,10 @@ up: ## Levanta todos los servicios
 	@echo "${GREEN}✅ Servicios iniciados${RESET}"
 	@echo ""
 	@echo "📋 URLs disponibles:"
-	@echo "  - Backend API: ${CYAN}http://localhost:8080${RESET}"
+	@echo "  - Backend API: ${CYAN}http://localhost:8090${RESET}"
 	@echo "  - Grafana: ${CYAN}http://localhost:3000${RESET} (admin/admin)"
 	@echo "  - Prometheus: ${CYAN}http://localhost:9090${RESET}"
-	@echo "  - Togglz: ${CYAN}http://localhost:8080/admin/toggles${RESET}"
+	@echo "  - Togglz: ${CYAN}http://localhost:8090/admin/toggles${RESET}"
 
 down: ## Detiene todos los servicios
 	@echo "${YELLOW}🛑 Deteniendo servicios...${RESET}"
@@ -171,10 +171,10 @@ monitoring: ## Abre todas las URLs de monitoreo
 	@echo "${YELLOW}📊 Abriendo dashboards...${RESET}"
 	@echo "  - Grafana: ${CYAN}http://localhost:3000${RESET}"
 	@echo "  - Prometheus: ${CYAN}http://localhost:9090${RESET}"
-	@echo "  - Backend Health: ${CYAN}http://localhost:8080/actuator/health${RESET}"
+	@echo "  - Backend Health: ${CYAN}http://localhost:8090/actuator/health${RESET}"
 
 metrics: ## Muestra métricas actuales
-	curl -s http://localhost:8080/actuator/prometheus | grep -E "guardian|walking|battle" | head -20
+	curl -s http://localhost:8090/actuator/prometheus | grep -E "guardian|walking|battle" | head -20
 
 ## ============================================================================
 ## 📦 RELEASE
