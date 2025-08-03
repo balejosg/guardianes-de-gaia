@@ -47,6 +47,15 @@ jobs:
       skip-tests: ${{ steps.strategy.outputs.skip-tests }}
     
     steps:
+      - name: 🧹 Deep Workspace Cleanup
+        run: |
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
@@ -116,6 +125,15 @@ jobs:
     if: needs.determine-strategy.outputs.skip-tests != 'true'
     
     steps:
+      - name: 🧹 Deep Workspace Cleanup
+        run: |
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
@@ -182,6 +200,15 @@ jobs:
       url: http://dev-guardianes.duckdns.org:8090
 
     steps:
+      - name: 🧹 Deep Workspace Cleanup
+        run: |
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
@@ -232,6 +259,15 @@ jobs:
       url: https://stg-guardianes.duckdns.org
     
     steps:
+      - name: 🧹 Deep Workspace Cleanup
+        run: |
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
@@ -309,6 +345,15 @@ jobs:
       url: https://guardianes.duckdns.org
     
     steps:
+      - name: 🧹 Deep Workspace Cleanup
+        run: |
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
@@ -409,6 +454,15 @@ jobs:
     environment: ${{ needs.determine-strategy.outputs.environment }}
     
     steps:
+      - name: 🧹 Deep Workspace Cleanup
+        run: |
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       

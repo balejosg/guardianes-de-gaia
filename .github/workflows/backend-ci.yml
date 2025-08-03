@@ -30,9 +30,13 @@ jobs:
     runs-on: self-hosted
     
     steps: 
-      - name: 🧹 Pre-cleanup
+      - name: 🧹 Deep Workspace Cleanup
         run: |
-          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
           sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
@@ -80,9 +84,13 @@ jobs:
       fail-fast: false
     
     steps:
-      - name: 🧹 Pre-cleanup
+      - name: 🧹 Deep Workspace Cleanup
         run: |
-          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
           sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
@@ -142,9 +150,13 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: 🧹 Pre-cleanup
+      - name: 🧹 Deep Workspace Cleanup
         run: |
-          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
           sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
@@ -199,9 +211,13 @@ jobs:
     timeout-minutes: 15
     
     steps:
-      - name: 🧹 Pre-cleanup
+      - name: 🧹 Deep Workspace Cleanup
         run: |
-          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
           sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
@@ -260,9 +276,13 @@ jobs:
     timeout-minutes: 10
     
     steps:
-      - name: 🧹 Pre-cleanup
+      - name: 🧹 Deep Workspace Cleanup
         run: |
-          sudo rm -rf ${{ github.workspace }}/backend/target || true
+          # Remove any existing workspace completely 
+          sudo rm -rf ${{ github.workspace }} || true
+          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
+          # Create fresh directory with correct permissions
+          mkdir -p ${{ github.workspace }}
           sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
