@@ -30,21 +30,26 @@ jobs:
     runs-on: self-hosted
     
     steps: 
-      - name: 🧹 Deep Workspace Cleanup
+      - name: 🧹 Ultimate Workspace Cleanup
         run: |
-          # Remove any existing workspace completely 
-          sudo rm -rf ${{ github.workspace }} || true
+          # Kill any Docker containers that might be holding files
+          docker ps -q | xargs -r docker kill || true
+          docker ps -aq | xargs -r docker rm -f || true
+          
+          # Force remove problematic directories with maximum privileges
+          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          # Create fresh directory with correct permissions
+          sudo rm -rf ${{ github.workspace }} || true
+          
+          # Create fresh workspace 
           mkdir -p ${{ github.workspace }}
-          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for SonarQube
           clean: true
-          force: true
           submodules: false
       
       - name: 🔍 Run SpotBugs in Docker
@@ -87,20 +92,25 @@ jobs:
       fail-fast: false
     
     steps:
-      - name: 🧹 Deep Workspace Cleanup
+      - name: 🧹 Ultimate Workspace Cleanup
         run: |
-          # Remove any existing workspace completely 
-          sudo rm -rf ${{ github.workspace }} || true
+          # Kill any Docker containers that might be holding files
+          docker ps -q | xargs -r docker kill || true
+          docker ps -aq | xargs -r docker rm -f || true
+          
+          # Force remove problematic directories with maximum privileges
+          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          # Create fresh directory with correct permissions
+          sudo rm -rf ${{ github.workspace }} || true
+          
+          # Create fresh workspace 
           mkdir -p ${{ github.workspace }}
-          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
-          force: true
           submodules: false
       
       - name: 🧪 Run Unit Tests in Docker
@@ -157,20 +167,25 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: 🧹 Deep Workspace Cleanup
+      - name: 🧹 Ultimate Workspace Cleanup
         run: |
-          # Remove any existing workspace completely 
-          sudo rm -rf ${{ github.workspace }} || true
+          # Kill any Docker containers that might be holding files
+          docker ps -q | xargs -r docker kill || true
+          docker ps -aq | xargs -r docker rm -f || true
+          
+          # Force remove problematic directories with maximum privileges
+          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          # Create fresh directory with correct permissions
+          sudo rm -rf ${{ github.workspace }} || true
+          
+          # Create fresh workspace 
           mkdir -p ${{ github.workspace }}
-          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
-          force: true
           submodules: false
       
       - name: 🔗 Run Integration Tests in Docker
@@ -222,20 +237,25 @@ jobs:
     timeout-minutes: 15
     
     steps:
-      - name: 🧹 Deep Workspace Cleanup
+      - name: 🧹 Ultimate Workspace Cleanup
         run: |
-          # Remove any existing workspace completely 
-          sudo rm -rf ${{ github.workspace }} || true
+          # Kill any Docker containers that might be holding files
+          docker ps -q | xargs -r docker kill || true
+          docker ps -aq | xargs -r docker rm -f || true
+          
+          # Force remove problematic directories with maximum privileges
+          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          # Create fresh directory with correct permissions
+          sudo rm -rf ${{ github.workspace }} || true
+          
+          # Create fresh workspace 
           mkdir -p ${{ github.workspace }}
-          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
-          force: true
           submodules: false
       
       - name: 🏗️ Build Application in Docker
@@ -291,20 +311,25 @@ jobs:
     timeout-minutes: 10
     
     steps:
-      - name: 🧹 Deep Workspace Cleanup
+      - name: 🧹 Ultimate Workspace Cleanup
         run: |
-          # Remove any existing workspace completely 
-          sudo rm -rf ${{ github.workspace }} || true
+          # Kill any Docker containers that might be holding files
+          docker ps -q | xargs -r docker kill || true
+          docker ps -aq | xargs -r docker rm -f || true
+          
+          # Force remove problematic directories with maximum privileges
+          sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          # Create fresh directory with correct permissions
+          sudo rm -rf ${{ github.workspace }} || true
+          
+          # Create fresh workspace 
           mkdir -p ${{ github.workspace }}
-          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
-          force: true
           submodules: false
       
       - name: 🏗️ Build Application
