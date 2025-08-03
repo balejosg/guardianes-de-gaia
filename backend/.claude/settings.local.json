@@ -69,7 +69,14 @@
       "Bash(npm run test:*)",
       "Bash(docker:*)",
       "Bash(timeout 30 mvn spring-boot:run:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(helm template:*)",
+      "Bash(./scripts/deploy.sh:*)",
+      "Bash(./scripts/monitor.sh:*)",
+      "Bash(nginx:*)",
+      "Bash(./deploy/scripts/validate.sh:*)",
+      "Bash(bash:*)",
+      "Bash(sudo nginx:*)"
     ],
     "deny": []
   }

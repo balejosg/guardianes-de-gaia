@@ -1,0 +1,401 @@
+version: '3.9'
+
+services:
+  # ============================================
+  # Backend API Service - Production
+  # ============================================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=production
+    container_name: guardianes-backend-production
+    restart: always
+    ports:
+      - "8082:8080"    # Production API port
+      - "9094:9090"    # Production metrics port (internal only)
+    environment:
+      - SPRING_PROFILES_ACTIVE=production,kubernetes
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-production:3306/guardianes_production?useSSL=true&allowPublicKeyRetrieval=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=${PROD_DB_USER:-guardianes_prod}
+      - SPRING_DATASOURCE_PASSWORD=${PROD_DB_PASSWORD}
+      - SPRING_REDIS_HOST=redis-production
+      - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${PROD_REDIS_PASSWORD}
+      - SPRING_RABBITMQ_HOST=rabbitmq-production
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${PROD_RABBITMQ_USER:-guardianes_prod}
+      - SPRING_RABBITMQ_PASSWORD=${PROD_RABBITMQ_PASSWORD}
+      - TOGGLZ_CONSOLE_SECURED=true
+      - TZ=Europe/Madrid
+      - JAVA_OPTS=-Xmx2048m -Xms1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+UseZGC
+      - LOG_LEVEL=WARN
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,prometheus
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+      - SPRING_JPA_SHOW_SQL=false
+      - SERVER_COMPRESSION_ENABLED=true
+      - SERVER_HTTP2_ENABLED=true
+    volumes:
+      - maven-cache-production:/root/.m2
+      - ../logs/production:/app/logs
+    depends_on:
+      mysql-production:
+        condition: service_healthy
+      redis-production:
+        condition: service_healthy
+      rabbitmq-production:
+        condition: service_healthy
+    networks:
+      - backend-network-production
+      - monitoring-network-production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '1.0'
+          memory: 1.5G
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.service=backend"
+      - "traefik.enable=false"  # Disable if using Traefik
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ============================================
+  # MySQL Database - Production (Primary)
+  # ============================================
+  mysql-production:
+    image: mysql:8.0
+    container_name: guardianes-mysql-production
+    restart: always
+    ports:
+      - "3308:3306"    # Production DB port
+    environment:
+      - MYSQL_ROOT_PASSWORD=${PROD_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=guardianes_production
+      - MYSQL_USER=${PROD_DB_USER:-guardianes_prod}
+      - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
+      - TZ=Europe/Madrid
+    volumes:
+      - mysql-data-production:/var/lib/mysql
+      - ../docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../logs/production/mysql:/var/log/mysql
+      - ../backup/production/mysql:/backup
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb_buffer_pool_size=1G
+      - --innodb_log_file_size=256M
+      - --innodb_flush_log_at_trx_commit=1
+      - --innodb_lock_wait_timeout=50
+      - --max_connections=200
+      - --slow_query_log=1
+      - --slow_query_log_file=/var/log/mysql/slow.log
+      - --long_query_time=2
+      - --innodb_buffer_pool_instances=4
+      - --innodb_io_capacity=1000
+      - --innodb_io_capacity_max=2000
+      - --innodb_read_io_threads=8
+      - --innodb_write_io_threads=8
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --expire_logs_days=7
+      - --max_binlog_size=100M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${PROD_DB_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network-production
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.service=database"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  # ============================================
+  # Redis Cache - Production (Master)
+  # ============================================
+  redis-production:
+    image: redis:7-alpine
+    container_name: guardianes-redis-production
+    restart: always
+    ports:
+      - "6381:6379"    # Production Redis port
+    environment:
+      - TZ=Europe/Madrid
+      - REDIS_PASSWORD=${PROD_REDIS_PASSWORD}
+    volumes:
+      - redis-data-production:/data
+      - ../docker/redis/redis.production.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${PROD_REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${PROD_REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend-network-production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.service=cache"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================
+  # RabbitMQ Message Broker - Production
+  # ============================================
+  rabbitmq-production:
+    image: rabbitmq:3.12-management-alpine
+    container_name: guardianes-rabbitmq-production
+    restart: always
+    ports:
+      - "5674:5672"     # Production AMQP port
+      - "15674:15672"   # Production Management UI port (internal only)
+    environment:
+      - RABBITMQ_DEFAULT_USER=${PROD_RABBITMQ_USER:-guardianes_prod}
+      - RABBITMQ_DEFAULT_PASS=${PROD_RABBITMQ_PASSWORD}
+      - RABBITMQ_DEFAULT_VHOST=guardianes_production
+      - TZ=Europe/Madrid
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,warning}]
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.7
+      - RABBITMQ_DISK_FREE_LIMIT=2GB
+    volumes:
+      - rabbitmq-data-production:/var/lib/rabbitmq
+      - ../logs/production/rabbitmq:/var/log/rabbitmq
+      - ../backup/production/rabbitmq:/backup
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 45s
+    networks:
+      - backend-network-production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.service=messagebroker"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================
+  # Prometheus Metrics - Production (Internal Only)
+  # ============================================
+  prometheus-production:
+    image: prom/prometheus:latest
+    container_name: guardianes-prometheus-production
+    restart: always
+    # No external ports - internal monitoring only
+    environment:
+      - TZ=Europe/Madrid
+    volumes:
+      - ../docker/prometheus/prometheus.production.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data-production:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-admin-api'
+      - '--web.listen-address=0.0.0.0:9090'
+    networks:
+      - monitoring-network-production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.service=monitoring"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ============================================
+  # Grafana Dashboards - Production (Internal Only)
+  # ============================================
+  grafana-production:
+    image: grafana/grafana:latest
+    container_name: guardianes-grafana-production
+    restart: always
+    # No external ports - internal monitoring only
+    environment:
+      - GF_SECURITY_ADMIN_USER=${PROD_GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${PROD_GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/home.json
+      - GF_SERVER_ROOT_URL=http://localhost:3000/
+      - TZ=Europe/Madrid
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - grafana-data-production:/var/lib/grafana
+      - ../docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../logs/production/grafana:/var/log/grafana
+    depends_on:
+      - prometheus-production
+    networks:
+      - monitoring-network-production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.service=monitoring"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ============================================
+  # Backup Service - Production
+  # ============================================
+  backup-service:
+    image: alpine:latest
+    container_name: guardianes-backup-production
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Madrid
+      - MYSQL_HOST=mysql-production
+      - MYSQL_USER=${PROD_DB_USER:-guardianes_prod}
+      - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
+      - MYSQL_DATABASE=guardianes_production
+      - BACKUP_SCHEDULE=0 2 * * *  # Daily at 2 AM
+      - BACKUP_RETENTION_DAYS=30
+    volumes:
+      - ../backup/production:/backup
+      - ../scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    command: sh -c "apk add --no-cache mysql-client dcron && crontab -l | { cat; echo '${BACKUP_SCHEDULE} /usr/local/bin/backup.sh'; } | crontab - && crond -f"
+    depends_on:
+      - mysql-production
+    networks:
+      - backend-network-production
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.service=backup"
+
+# ============================================
+# Volumes - Production
+# ============================================
+volumes:
+  mysql-data-production:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/production/mysql
+  redis-data-production:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/production/redis
+  rabbitmq-data-production:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/production/rabbitmq
+  prometheus-data-production:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/production/prometheus
+  grafana-data-production:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/production/grafana
+  maven-cache-production:
+    driver: local
+
+# ============================================
+# Networks - Production
+# ============================================
+networks:
+  backend-network-production:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/16
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.network=backend"
+  monitoring-network-production:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+    labels:
+      - "com.guardianes.environment=production"
+      - "com.guardianes.network=monitoring"

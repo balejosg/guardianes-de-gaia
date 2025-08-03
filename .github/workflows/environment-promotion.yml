@@ -340,8 +340,8 @@ jobs:
               ;;
           esac
           
-          # Get current image from registry
-          IMAGE_URI="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
+          # Get current image from registry  
+          IMAGE_URI="ghcr.io/balejosg/guardianes-backend:main"
           
           echo "📦 Promoting image: $IMAGE_URI"
           

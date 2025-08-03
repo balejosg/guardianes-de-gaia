@@ -1,0 +1,273 @@
+version: '3.9'
+
+services:
+  # ============================================
+  # Backend API Service - Staging
+  # ============================================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=staging
+    container_name: guardianes-backend-staging
+    restart: unless-stopped
+    ports:
+      - "8081:8080"    # Staging API port
+      - "9092:9090"    # Staging metrics port
+    environment:
+      - SPRING_PROFILES_ACTIVE=staging,kubernetes
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-staging:3306/guardianes_staging?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${STAGING_DB_USER:-guardianes_staging}
+      - SPRING_DATASOURCE_PASSWORD=${STAGING_DB_PASSWORD:-staging_secret_123}
+      - SPRING_REDIS_HOST=redis-staging
+      - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${STAGING_REDIS_PASSWORD:-staging_redis_secret}
+      - SPRING_RABBITMQ_HOST=rabbitmq-staging
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${STAGING_RABBITMQ_USER:-guardianes_staging}
+      - SPRING_RABBITMQ_PASSWORD=${STAGING_RABBITMQ_PASSWORD:-staging_rabbitmq_secret}
+      - TOGGLZ_CONSOLE_SECURED=true
+      - TZ=Europe/Madrid
+      - JAVA_OPTS=-Xmx1024m -Xms512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - LOG_LEVEL=INFO
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,prometheus,metrics
+    volumes:
+      - maven-cache-staging:/root/.m2
+      - ../logs/staging:/app/logs
+    depends_on:
+      mysql-staging:
+        condition: service_healthy
+      redis-staging:
+        condition: service_healthy
+      rabbitmq-staging:
+        condition: service_healthy
+    networks:
+      - backend-network-staging
+      - monitoring-network-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.service=backend"
+
+  # ============================================
+  # MySQL Database - Staging
+  # ============================================
+  mysql-staging:
+    image: mysql:8.0
+    container_name: guardianes-mysql-staging
+    restart: unless-stopped
+    ports:
+      - "3307:3306"    # Staging DB port
+    environment:
+      - MYSQL_ROOT_PASSWORD=${STAGING_DB_ROOT_PASSWORD:-staging_root_secret}
+      - MYSQL_DATABASE=guardianes_staging
+      - MYSQL_USER=${STAGING_DB_USER:-guardianes_staging}
+      - MYSQL_PASSWORD=${STAGING_DB_PASSWORD:-staging_secret_123}
+      - TZ=Europe/Madrid
+    volumes:
+      - mysql-data-staging:/var/lib/mysql
+      - ../docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../logs/staging/mysql:/var/log/mysql
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb_buffer_pool_size=512M
+      - --innodb_log_file_size=128M
+      - --max_connections=100
+      - --slow_query_log=1
+      - --slow_query_log_file=/var/log/mysql/slow.log
+      - --long_query_time=2
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${STAGING_DB_ROOT_PASSWORD:-staging_root_secret}"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    networks:
+      - backend-network-staging
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.service=database"
+
+  # ============================================
+  # Redis Cache - Staging
+  # ============================================
+  redis-staging:
+    image: redis:7-alpine
+    container_name: guardianes-redis-staging
+    restart: unless-stopped
+    ports:
+      - "6380:6379"    # Staging Redis port
+    environment:
+      - TZ=Europe/Madrid
+      - REDIS_PASSWORD=${STAGING_REDIS_PASSWORD:-staging_redis_secret}
+    volumes:
+      - redis-data-staging:/data
+      - ../docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${STAGING_REDIS_PASSWORD:-staging_redis_secret}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${STAGING_REDIS_PASSWORD:-staging_redis_secret}", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-network-staging
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.service=cache"
+
+  # ============================================
+  # RabbitMQ Message Broker - Staging
+  # ============================================
+  rabbitmq-staging:
+    image: rabbitmq:3.12-management-alpine
+    container_name: guardianes-rabbitmq-staging
+    restart: unless-stopped
+    ports:
+      - "5673:5672"     # Staging AMQP port
+      - "15673:15672"   # Staging Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=${STAGING_RABBITMQ_USER:-guardianes_staging}
+      - RABBITMQ_DEFAULT_PASS=${STAGING_RABBITMQ_PASSWORD:-staging_rabbitmq_secret}
+      - RABBITMQ_DEFAULT_VHOST=guardianes_staging
+      - TZ=Europe/Madrid
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,info}]
+    volumes:
+      - rabbitmq-data-staging:/var/lib/rabbitmq
+      - ../logs/staging/rabbitmq:/var/log/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend-network-staging
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.service=messagebroker"
+
+  # ============================================
+  # Prometheus Metrics - Staging
+  # ============================================
+  prometheus-staging:
+    image: prom/prometheus:latest
+    container_name: guardianes-prometheus-staging
+    restart: unless-stopped
+    ports:
+      - "9093:9090"     # Staging Prometheus port
+    environment:
+      - TZ=Europe/Madrid
+    volumes:
+      - ../docker/prometheus/prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data-staging:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-admin-api'
+    networks:
+      - monitoring-network-staging
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.service=monitoring"
+
+  # ============================================
+  # Grafana Dashboards - Staging
+  # ============================================
+  grafana-staging:
+    image: grafana/grafana:latest
+    container_name: guardianes-grafana-staging
+    restart: unless-stopped
+    ports:
+      - "3001:3000"     # Staging Grafana port
+    environment:
+      - GF_SECURITY_ADMIN_USER=${STAGING_GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${STAGING_GRAFANA_PASSWORD:-staging_grafana_admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/home.json
+      - GF_SERVER_ROOT_URL=https://stg-guardianes.duckdns.org/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - TZ=Europe/Madrid
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    volumes:
+      - grafana-data-staging:/var/lib/grafana
+      - ../docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../logs/staging/grafana:/var/log/grafana
+    depends_on:
+      - prometheus-staging
+    networks:
+      - monitoring-network-staging
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.service=monitoring"
+
+# ============================================
+# Volumes - Staging
+# ============================================
+volumes:
+  mysql-data-staging:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/staging/mysql
+  redis-data-staging:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/staging/redis
+  rabbitmq-data-staging:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/staging/rabbitmq
+  prometheus-data-staging:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/staging/prometheus
+  grafana-data-staging:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/guardianes-data/staging/grafana
+  maven-cache-staging:
+    driver: local
+
+# ============================================
+# Networks - Staging
+# ============================================
+networks:
+  backend-network-staging:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.network=backend"
+  monitoring-network-staging:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16
+    labels:
+      - "com.guardianes.environment=staging"
+      - "com.guardianes.network=monitoring"
