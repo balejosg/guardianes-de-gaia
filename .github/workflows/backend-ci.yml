@@ -42,7 +42,14 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
+          clean: true
+          force: true
+          submodules: false
+        with:
           fetch-depth: 0  # Full history for SonarQube
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🔍 Run SpotBugs in Docker
         run: |
@@ -95,6 +102,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🧪 Run Unit Tests in Docker
         run: |
@@ -161,6 +172,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🔗 Run Integration Tests in Docker
         run: |
@@ -222,6 +237,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🏗️ Build Application in Docker
         run: |
@@ -287,6 +306,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🏗️ Build Application
         run: |

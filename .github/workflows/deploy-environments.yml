@@ -58,6 +58,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🧠 Determine deployment strategy
         id: strategy
@@ -136,6 +140,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🔍 Validate image exists
         run: |
@@ -211,6 +219,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
 
       - name: 🐳 Build and run with Docker Compose
         run: |
@@ -270,6 +282,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -356,6 +372,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -465,6 +485,10 @@ jobs:
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          force: true
+          submodules: false
       
       - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
