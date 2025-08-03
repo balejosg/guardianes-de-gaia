@@ -36,20 +36,26 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
+          # Reset git repository state to avoid permission issues
+          cd ${{ github.workspace }} || true
+          git reset --hard HEAD || true
+          git clean -fdx || true
+          
           # Force remove problematic directories with maximum privileges
           sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          sudo rm -rf ${{ github.workspace }} || true
+          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           
-          # Create fresh workspace 
-          mkdir -p ${{ github.workspace }}
+          # Ensure proper ownership of workspace
           sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          
+          # Remove any root-owned files that might prevent checkout
+          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
+          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for SonarQube
-          clean: true
           submodules: false
       
       - name: 🔍 Run SpotBugs in Docker
@@ -98,19 +104,25 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
+          # Reset git repository state to avoid permission issues
+          cd ${{ github.workspace }} || true
+          git reset --hard HEAD || true
+          git clean -fdx || true
+          
           # Force remove problematic directories with maximum privileges
           sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          sudo rm -rf ${{ github.workspace }} || true
+          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           
-          # Create fresh workspace 
-          mkdir -p ${{ github.workspace }}
+          # Ensure proper ownership of workspace
           sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          
+          # Remove any root-owned files that might prevent checkout
+          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
+          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
           submodules: false
       
       - name: 🧪 Run Unit Tests in Docker
@@ -173,19 +185,25 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
+          # Reset git repository state to avoid permission issues
+          cd ${{ github.workspace }} || true
+          git reset --hard HEAD || true
+          git clean -fdx || true
+          
           # Force remove problematic directories with maximum privileges
           sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          sudo rm -rf ${{ github.workspace }} || true
+          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           
-          # Create fresh workspace 
-          mkdir -p ${{ github.workspace }}
+          # Ensure proper ownership of workspace
           sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          
+          # Remove any root-owned files that might prevent checkout
+          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
+          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
           submodules: false
       
       - name: 🔗 Run Integration Tests in Docker
@@ -243,19 +261,25 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
+          # Reset git repository state to avoid permission issues
+          cd ${{ github.workspace }} || true
+          git reset --hard HEAD || true
+          git clean -fdx || true
+          
           # Force remove problematic directories with maximum privileges
           sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          sudo rm -rf ${{ github.workspace }} || true
+          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           
-          # Create fresh workspace 
-          mkdir -p ${{ github.workspace }}
+          # Ensure proper ownership of workspace
           sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          
+          # Remove any root-owned files that might prevent checkout
+          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
+          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
           submodules: false
       
       - name: 🏗️ Build Application in Docker
@@ -317,19 +341,25 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
+          # Reset git repository state to avoid permission issues
+          cd ${{ github.workspace }} || true
+          git reset --hard HEAD || true
+          git clean -fdx || true
+          
           # Force remove problematic directories with maximum privileges
           sudo find /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/ -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-          sudo rm -rf /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia/guardianes-de-gaia || true
-          sudo rm -rf ${{ github.workspace }} || true
+          sudo find ${{ github.workspace }} -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
           
-          # Create fresh workspace 
-          mkdir -p ${{ github.workspace }}
+          # Ensure proper ownership of workspace
           sudo chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+          
+          # Remove any root-owned files that might prevent checkout
+          find ${{ github.workspace }} -type f -user root -exec sudo rm -f {} + 2>/dev/null || true
+          find ${{ github.workspace }} -type d -user root -exec sudo rmdir {} + 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
           submodules: false
       
       - name: 🏗️ Build Application
