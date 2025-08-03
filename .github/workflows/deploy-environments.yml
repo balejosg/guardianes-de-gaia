@@ -61,7 +61,7 @@ jobs:
             ENV="development"
             DEPLOY_TYPE="auto"
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            ENV="staging"
+            ENV="development"
             DEPLOY_TYPE="auto"
           elif [ "${{ github.event_name }}" = "release" ]; then
             ENV="production"
