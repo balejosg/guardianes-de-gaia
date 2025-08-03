@@ -37,7 +37,7 @@ jobs:
   # ============================================
   determine-strategy:
     name: 📋 Determine Deployment Strategy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     outputs:
       environment: ${{ steps.strategy.outputs.environment }}
@@ -111,7 +111,7 @@ jobs:
   # ============================================
   pre-deployment-checks:
     name: ✅ Pre-Deployment Validation
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [determine-strategy]
     if: needs.determine-strategy.outputs.skip-tests != 'true'
     
@@ -171,7 +171,7 @@ jobs:
   # ============================================
   deploy-development:
     name: 🏠 Deploy to Development (Local)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [determine-strategy]
     if: |
       always() && 
@@ -188,16 +188,19 @@ jobs:
       - name: 🐳 Build and run with Docker Compose
         run: |
           echo "🚀 Deploying to development environment using DuckDNS..."
-          echo "📦 Simulating Docker Compose deployment for demonstration..."
-          echo "🔧 Would normally run: docker-compose -f docker-compose.yml up --build -d"
-          echo "✅ Development deployment simulation complete."
+          echo "🔧 Starting Docker Compose deployment..."
+          make up
+          echo "✅ Development deployment complete."
 
       - name: 🧪 Post-deployment validation
         run: |
           echo "🧪 Running post-deployment validation on development environment..."
-          echo "🌐 Development environment available at: https://dev-guardianes.duckdns.org"
-          echo "🚀 Our health endpoint would be accessible at:"
-          echo "   https://dev-guardianes.duckdns.org/api/v1/guardians/1/energy/health"
+          echo "⏳ Waiting for services to start..."
+          sleep 30
+          echo "🌐 Testing development environment at: https://dev-guardianes.duckdns.org"
+          curl -f https://dev-guardianes.duckdns.org/actuator/health
+          echo "🚀 Testing our health endpoint:"
+          curl -f https://dev-guardianes.duckdns.org/api/v1/guardians/1/energy/health
           echo "✅ Development environment deployment completed successfully!"
 
   # ============================================
@@ -205,7 +208,7 @@ jobs:
   # ============================================
   deploy-staging:
     name: 🎭 Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [determine-strategy, pre-deployment-checks]
     if: |
       always() && 
@@ -282,7 +285,7 @@ jobs:
   # ============================================
   deploy-production:
     name: 🌟 Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [determine-strategy, pre-deployment-checks]
     if: |
       always() && 
@@ -387,7 +390,7 @@ jobs:
   # ============================================
   rollback-deployment:
     name: ⏪ Rollback Deployment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [determine-strategy]
     if: needs.determine-strategy.outputs.deploy-type == 'rollback'
     environment: ${{ needs.determine-strategy.outputs.environment }}
@@ -450,7 +453,7 @@ jobs:
   # ============================================
   deployment-summary:
     name: 📋 Deployment Summary
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [determine-strategy, deploy-development, deploy-staging, deploy-production, rollback-deployment]
     if: always()
     
