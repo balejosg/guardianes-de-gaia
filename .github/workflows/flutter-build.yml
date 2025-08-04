@@ -75,7 +75,6 @@ jobs:
           clean: false
           submodules: false
           fetch-depth: 0
-          ref: ${{ github.sha }}
 
       - name: 🔨 Build APK with Docker
         working-directory: .
@@ -164,7 +163,6 @@ jobs:
           clean: false
           submodules: false
           fetch-depth: 0
-          ref: ${{ github.sha }}
 
       - name: 📱 Download APK
         uses: actions/download-artifact@v4
