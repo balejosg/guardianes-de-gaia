@@ -48,8 +48,9 @@ RUN cd /opt && \
     tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz && \
     rm flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
 
-# Configure Flutter
-RUN flutter doctor --android-licenses && \
+# Configure Flutter and fix git ownership
+RUN git config --global --add safe.directory /opt/flutter && \
+    flutter doctor --android-licenses && \
     flutter config --android-sdk $ANDROID_SDK_ROOT && \
     flutter doctor
 
