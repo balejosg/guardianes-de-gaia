@@ -72,7 +72,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/mobile/guardianes_mobile:/workspace \
             -w /workspace \
-            instrumentisto/flutter:3.16-android \
+            ghcr.io/cirruslabs/flutter:3.16.0 \
             sh -c "
               echo '🔍 Checking Flutter environment...'
               flutter doctor -v
