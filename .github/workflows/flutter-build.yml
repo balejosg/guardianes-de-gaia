@@ -41,6 +41,11 @@ jobs:
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
             sh -c "find /workspace -name 'build' -type d -exec rm -rf {} + 2>/dev/null || true"
           
+          # Clean Flutter plugin symlinks and ephemeral directories that cause permission issues
+          echo "🔗 Cleaning Flutter plugin symlinks and ephemeral directories..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "find /workspace -path '*/flutter/ephemeral' -type d -exec rm -rf {} + 2>/dev/null || true"
+          
           # Additional cleanup with direct removal
           if [ -d "${{ github.workspace }}/mobile/guardianes_mobile/build" ]; then
             echo "🗑️ Removing Flutter build directory with elevated privileges..."
