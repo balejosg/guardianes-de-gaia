@@ -3,7 +3,7 @@ class IntegrationTestConfig {
   // Backend Configuration
   static const String backendUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'http://localhost:8080',
+    defaultValue: 'http://dev-guardianes.duckdns.org:8080',
   );
 
   static const String apiVersion = 'v1';
