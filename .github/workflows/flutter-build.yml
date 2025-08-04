@@ -31,6 +31,7 @@ jobs:
 
     steps:
       - name: 🧹 Ultimate Workspace Cleanup
+        working-directory: /datos_nvme/run0/actions-runner/_work
         run: |
           # Kill any Docker containers that might be holding files
           docker ps -q | xargs -r docker kill || true
