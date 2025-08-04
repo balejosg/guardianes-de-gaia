@@ -49,8 +49,7 @@ jobs:
               sh -c "rm -rf /workspace/mobile/guardianes_mobile/build" || true
           fi
           
-          # Reset git repository state if it exists
-          cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
+          # Clean git repository state if it exists (but don't reset to avoid checkout conflicts)
           cd ${{ github.workspace }} 2>/dev/null && git clean -fdx 2>/dev/null || true
           
           # Ensure proper ownership of workspace
@@ -62,6 +61,8 @@ jobs:
         with:
           clean: false
           submodules: false
+          fetch-depth: 0
+          ref: ${{ github.sha }}
 
       - name: 🔨 Build APK with Docker
         run: |
@@ -148,6 +149,8 @@ jobs:
         with:
           clean: false
           submodules: false
+          fetch-depth: 0
+          ref: ${{ github.sha }}
 
       - name: 📱 Download APK
         uses: actions/download-artifact@v4
