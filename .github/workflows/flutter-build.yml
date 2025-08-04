@@ -45,6 +45,13 @@ jobs:
           echo "🔗 Cleaning Flutter plugin symlinks and ephemeral directories..."
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
             sh -c "find /workspace -path '*/flutter/ephemeral' -type d -exec rm -rf {} + 2>/dev/null || true"
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "find /workspace -path '*/Flutter/ephemeral' -type d -exec rm -rf {} + 2>/dev/null || true"
+          
+          # Final cleanup with direct commands
+          echo "🧹 Final cleanup with elevated privileges..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work:/work alpine:latest \
+            sh -c "rm -rf /work/guardianes-de-gaia/guardianes-de-gaia/mobile/guardianes_mobile/*/flutter/ephemeral /work/guardianes-de-gaia/guardianes-de-gaia/mobile/guardianes_mobile/*/Flutter/ephemeral 2>/dev/null || echo 'Cleanup completed'"
           
           # Additional cleanup with direct removal
           if [ -d "${{ github.workspace }}/mobile/guardianes_mobile/build" ]; then
