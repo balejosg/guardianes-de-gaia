@@ -77,7 +77,7 @@ jobs:
           
           # Build our custom Flutter Docker image
           echo "🏗️ Building custom Flutter Docker image with Flutter 3.19.6..."
-          docker build -f docker/flutter/Dockerfile -t guardianes-flutter:latest .
+          docker build --no-cache -f docker/flutter/Dockerfile -t guardianes-flutter:latest .
           
           # Run comprehensive Flutter build in Docker
           docker run --rm \
