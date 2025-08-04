@@ -66,13 +66,17 @@ jobs:
       - name: 🔨 Build APK with Docker
         run: |
           BUILD_MODE="${{ github.event.inputs.build_mode || 'debug' }}"
-          echo "Building APK in $BUILD_MODE mode using Docker Flutter container..."
+          echo "Building APK in $BUILD_MODE mode using custom Flutter Docker container..."
+          
+          # Build our custom Flutter Docker image
+          echo "🏗️ Building custom Flutter Docker image with Flutter 3.19.6..."
+          docker build -f docker/flutter/Dockerfile -t guardianes-flutter:latest .
           
           # Run comprehensive Flutter build in Docker
           docker run --rm \
             -v ${{ github.workspace }}/mobile/guardianes_mobile:/workspace \
             -w /workspace \
-            ghcr.io/cirruslabs/flutter:3.16.0 \
+            guardianes-flutter:latest \
             sh -c "
               echo '🔍 Checking Flutter environment...'
               flutter doctor -v
