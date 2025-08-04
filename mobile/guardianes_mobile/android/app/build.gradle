@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId "com.guardianes.guardianes_mobile"
-        minSdk flutter.minSdkVersion
+        minSdk 21
         targetSdk flutter.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
