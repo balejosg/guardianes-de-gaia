@@ -226,7 +226,7 @@ jobs:
       - name: 🏗️ Build Android APK
         working-directory: ./mobile/guardianes_mobile
         run: |
-          flutter build apk --debug --split-per-abi
+          flutter build apk --debug --verbose
       
       - name: 🏗️ Build Android App Bundle
         working-directory: ./mobile/guardianes_mobile
