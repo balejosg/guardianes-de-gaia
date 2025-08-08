@@ -23,7 +23,8 @@ void main() {
         await dataSource.saveToken(tToken);
 
         // assert
-        final savedToken = sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
+        final savedToken =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
         expect(savedToken, equals(tToken));
       });
     });
@@ -33,7 +34,8 @@ void main() {
 
       test('should return token from SharedPreferences when present', () async {
         // arrange
-        await sharedPreferences.setString(AuthLocalDataSourceImpl.tokenKey, tToken);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.tokenKey, tToken);
 
         // act
         final result = await dataSource.getToken();
@@ -55,13 +57,15 @@ void main() {
       test('should call SharedPreferences to remove the token', () async {
         // arrange
         const tToken = 'test_token';
-        await sharedPreferences.setString(AuthLocalDataSourceImpl.tokenKey, tToken);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.tokenKey, tToken);
 
         // act
         await dataSource.removeToken();
 
         // assert
-        final token = sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
+        final token =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
         expect(token, isNull);
       });
     });
@@ -90,7 +94,8 @@ void main() {
         await dataSource.saveGuardian(tGuardianModel);
 
         // assert
-        final savedGuardianJson = sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
+        final savedGuardianJson =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
         final expectedJsonString = jsonEncode(tGuardianModel.toJson());
         expect(savedGuardianJson, equals(expectedJsonString));
       });
@@ -118,7 +123,8 @@ void main() {
           () async {
         // arrange
         final jsonString = jsonEncode(tGuardianModel.toJson());
-        await sharedPreferences.setString(AuthLocalDataSourceImpl.guardianKey, jsonString);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, jsonString);
 
         // act
         final result = await dataSource.getGuardian();
@@ -137,7 +143,8 @@ void main() {
 
       test('should handle invalid JSON gracefully', () async {
         // arrange
-        await sharedPreferences.setString(AuthLocalDataSourceImpl.guardianKey, 'invalid_json');
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, 'invalid_json');
 
         // act & assert
         expect(
@@ -151,13 +158,15 @@ void main() {
       test('should call SharedPreferences to remove the guardian', () async {
         // arrange
         const guardianJson = '{"id": 1, "name": "Test"}';
-        await sharedPreferences.setString(AuthLocalDataSourceImpl.guardianKey, guardianJson);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, guardianJson);
 
         // act
         await dataSource.removeGuardian();
 
         // assert
-        final guardian = sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
+        final guardian =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
         expect(guardian, isNull);
       });
     });
@@ -206,16 +215,20 @@ void main() {
         // arrange
         const tToken = 'test_token';
         const guardianJson = '{"id": 1, "name": "Test"}';
-        await sharedPreferences.setString(AuthLocalDataSourceImpl.tokenKey, tToken);
-        await sharedPreferences.setString(AuthLocalDataSourceImpl.guardianKey, guardianJson);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.tokenKey, tToken);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, guardianJson);
 
         // act
         await dataSource.removeToken();
         await dataSource.removeGuardian();
 
         // assert
-        final token = sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
-        final guardian = sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
+        final token =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
+        final guardian =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
         expect(token, isNull);
         expect(guardian, isNull);
       });

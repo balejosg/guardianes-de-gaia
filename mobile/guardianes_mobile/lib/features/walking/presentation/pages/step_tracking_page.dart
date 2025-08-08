@@ -414,7 +414,8 @@ class _StepTrackingPageState extends State<StepTrackingPage>
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Warning: ${validationResult.warnings.first}'),
+                    content:
+                        Text('Warning: ${validationResult.warnings.first}'),
                     backgroundColor: Colors.orange,
                     duration: const Duration(seconds: 3),
                   ),
