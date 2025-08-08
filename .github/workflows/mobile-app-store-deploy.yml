@@ -35,7 +35,7 @@ on:
         type: boolean
 
 env:
-  FLUTTER_VERSION: '3.19.0'
+  FLUTTER_VERSION: '3.19.6'
   JAVA_VERSION: '17'
   XCODE_VERSION: '15.0'
   RUBY_VERSION: '3.2'
@@ -118,7 +118,7 @@ jobs:
         run: |
           echo "🧪 Running mobile tests before release..."
           flutter pub get
-          flutter packages pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
           flutter test --coverage
           
           echo "✅ Mobile tests passed"
@@ -180,7 +180,7 @@ jobs:
         working-directory: ./mobile/guardianes_mobile
         run: |
           flutter pub get
-          flutter packages pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
       
       - name: 🔐 Setup Android signing
         working-directory: ./mobile/guardianes_mobile
@@ -326,7 +326,7 @@ jobs:
         working-directory: ./mobile/guardianes_mobile
         run: |
           flutter pub get
-          flutter packages pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
       
       - name: 🔐 Setup iOS signing
         working-directory: ./mobile/guardianes_mobile
