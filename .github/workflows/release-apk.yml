@@ -1,0 +1,231 @@
+name: 🚀 Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      build_mode:
+        description: 'Build mode'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+      prerelease:
+        description: 'Mark as pre-release'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  build-and-release:
+    name: 🏗️ Build APK and Create Release
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: mobile/guardianes_mobile
+
+    steps:
+      - name: 🧹 Pre-build Cleanup
+        run: |
+          echo "🧹 Cleaning up previous build artifacts..."
+          
+          # Clean Flutter build cache and ephemeral files with proper permissions
+          echo "🗑️ Cleaning Flutter ephemeral directories..."
+          sudo find /datos_nvme/run0/actions-runner/_work -name "ephemeral" -type d -exec rm -rf {} + 2>/dev/null || true
+          sudo find /datos_nvme/run0/actions-runner/_work -name ".plugin_symlinks" -type d -exec rm -rf {} + 2>/dev/null || true
+          sudo find /datos_nvme/run0/actions-runner/_work -name "build" -type d -path "*/mobile/guardianes_mobile/*" -exec rm -rf {} + 2>/dev/null || true
+          
+          # Ensure proper workspace ownership
+          sudo chown -R run0:run0 /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia 2>/dev/null || true
+          
+          echo "✅ Cleanup completed"
+
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          submodules: false
+          fetch-depth: 1
+
+      - name: 🔧 Setup Flutter Environment
+        run: |
+          echo "🔧 Setting up Flutter environment..."
+          export PATH="/datos_nvme/run0/guardianes-de-gaia/flutter-3.19.6/bin:$PATH"
+          flutter --version
+          flutter doctor
+
+      - name: 🔨 Build APK
+        run: |
+          BUILD_MODE="${{ github.event.inputs.build_mode }}"
+          VERSION="${{ github.event.inputs.version }}"
+          echo "🏗️ Building Android APK in $BUILD_MODE mode for release $VERSION..."
+          
+          # Set Flutter path
+          export PATH="/datos_nvme/run0/guardianes-de-gaia/flutter-3.19.6/bin:$PATH"
+          
+          # Get dependencies
+          echo "📦 Getting Flutter dependencies..."
+          flutter pub get
+          
+          # Clean previous builds
+          echo "🧹 Cleaning previous builds..."
+          flutter clean
+          
+          # Generate code if needed
+          echo "🏗️ Generating code..."
+          /datos_nvme/run0/guardianes-de-gaia/flutter-3.19.6/bin/dart run build_runner build --delete-conflicting-outputs || echo 'Code generation completed with warnings'
+          
+          # Build APK
+          if [ "$BUILD_MODE" = "release" ]; then
+            flutter build apk --release --verbose --split-per-abi
+          else
+            flutter build apk --debug --verbose --split-per-abi
+          fi
+          
+          # Verify APK was created
+          if [ ! -d "build/app/outputs/flutter-apk/" ]; then
+            echo "❌ APK build failed - output directory not found"
+            exit 1
+          fi
+          
+          echo "✅ APK build completed!"
+          ls -la build/app/outputs/flutter-apk/
+          
+          echo "📱 Renaming APK with version..."
+          cd build/app/outputs/flutter-apk/
+          if [ "$BUILD_MODE" = "release" ]; then
+            # Handle split APKs for release
+            for apk in app-*-release.apk; do
+              if [ -f "$apk" ]; then
+                new_name=$(echo "$apk" | sed "s/app-/guardianes-de-gaia-$VERSION-/")
+                mv "$apk" "$new_name" 2>/dev/null || true
+              fi
+            done
+          else
+            # Handle split APKs for debug
+            for apk in app-*-debug.apk; do
+              if [ -f "$apk" ]; then
+                new_name=$(echo "$apk" | sed "s/app-/guardianes-de-gaia-$VERSION-/")
+                mv "$apk" "$new_name" 2>/dev/null || true
+              fi
+            done
+          fi
+          ls -la
+
+      - name: 📦 Prepare Release Assets
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BUILD_MODE="${{ github.event.inputs.build_mode }}"
+          
+          echo "📦 Preparing release assets for $VERSION ($BUILD_MODE mode)..."
+          
+          # Create release directory
+          mkdir -p release-assets
+          
+          # Copy APK files
+          cd build/app/outputs/flutter-apk/
+          
+          # Copy all APK files (split APKs)
+          if [ "$BUILD_MODE" = "release" ]; then
+            # Copy all release APKs (universal and split)
+            cp guardianes-de-gaia-$VERSION-*-release.apk ../../../release-assets/ 2>/dev/null || \
+            cp app-*-release.apk ../../../release-assets/ 2>/dev/null || \
+            echo "Warning: Could not find any release APKs"
+          else
+            # Copy all debug APKs (universal and split)
+            cp guardianes-de-gaia-$VERSION-*-debug.apk ../../../release-assets/ 2>/dev/null || \
+            cp app-*-debug.apk ../../../release-assets/ 2>/dev/null || \
+            echo "Warning: Could not find any debug APKs"
+          fi
+          
+          # Copy SHA1 files if they exist
+          cp *.sha1 ../../../release-assets/ 2>/dev/null || echo "No SHA1 files found"
+          
+          cd ../../../release-assets
+          echo "📋 Release assets prepared:"
+          ls -la
+
+      - name: 📝 Generate Release Notes
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BUILD_MODE="${{ github.event.inputs.build_mode }}"
+          
+          cat > release-notes.md << EOF
+          # Guardianes de Gaia Mobile App $VERSION
+          
+          ## 📱 Release Information
+          - **Version**: $VERSION
+          - **Build Mode**: $BUILD_MODE
+          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - **Flutter Version**: 3.19.6
+          - **Minimum Android**: API 21 (Android 5.0)
+          
+          ## 🔗 Backend Configuration
+          This APK is configured to connect to:
+          - **API Base URL**: \`http://dev-guardianes.duckdns.org:8080\`
+          - **Authentication**: Development environment credentials
+          
+          ## 📥 Installation Instructions
+          1. Download the APK file from the assets below
+          2. Enable "Install from unknown sources" on your Android device
+          3. Install the APK file
+          4. Launch the Guardianes de Gaia app
+          
+          ## 🎮 App Features
+          - Guardian profile creation and management
+          - Step tracking with energy conversion (1 energy = 10 steps)
+          - QR code card scanning and collection
+          - Card battle mechanics
+          - Family group management (Pactos)
+          - Real-time synchronization with backend
+          
+          ## ⚠️ Development Build Notice
+          This is a development build connected to the development backend. 
+          For production use, a separate release targeting the production environment will be provided.
+          
+          ## 🔧 Technical Details
+          - **Target SDK**: Android API 34
+          - **Minimum SDK**: Android API 21
+          - **Architecture**: arm64-v8a, armeabi-v7a, x86_64
+          - **Permissions**: Internet, Camera (for QR scanning), Activity Recognition (for step counting)
+          
+          ---
+          
+          🤖 **Generated automatically by [Claude Code](https://claude.ai/code)**
+          EOF
+          
+          echo "📝 Release notes generated:"
+          cat release-notes.md
+
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: "Guardianes de Gaia ${{ github.event.inputs.version }}"
+          body_path: release-notes.md
+          files: release-assets/*
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Release Summary
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BUILD_MODE="${{ github.event.inputs.build_mode }}"
+          
+          echo "🎉 Release created successfully!"
+          echo "📱 Version: $VERSION"
+          echo "🔧 Build Mode: $BUILD_MODE"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/$VERSION"
+          echo ""
+          echo "📥 Users can now download the APK from:"
+          echo "   https://github.com/${{ github.repository }}/releases/latest"
+          echo ""
+          echo "✅ APK is now available in GitHub Releases!"

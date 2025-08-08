@@ -30,87 +30,70 @@ jobs:
         working-directory: mobile/guardianes_mobile
 
     steps:
-      - name: 🧹 Ultimate Workspace Cleanup
-        working-directory: /datos_nvme/run0/actions-runner/_work
+      - name: 🧹 Pre-build Cleanup
         run: |
-          # Kill any Docker containers that might be holding files
-          docker ps -q | xargs -r docker kill || true
-          docker ps -aq | xargs -r docker rm -f || true
+          echo "🧹 Cleaning up previous build artifacts..."
           
-          # Use Docker container with root privileges to clean up root-owned files
-          echo "🧹 Using Docker to clean root-owned Flutter build directories..."
-          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -name 'build' -type d -exec rm -rf {} + 2>/dev/null || true"
+          # Clean Flutter build cache and ephemeral files with proper permissions
+          echo "🗑️ Cleaning Flutter ephemeral directories..."
+          sudo find /datos_nvme/run0/actions-runner/_work -name "ephemeral" -type d -exec rm -rf {} + 2>/dev/null || true
+          sudo find /datos_nvme/run0/actions-runner/_work -name ".plugin_symlinks" -type d -exec rm -rf {} + 2>/dev/null || true
+          sudo find /datos_nvme/run0/actions-runner/_work -name "build" -type d -path "*/mobile/guardianes_mobile/*" -exec rm -rf {} + 2>/dev/null || true
           
-          # Clean Flutter plugin symlinks and ephemeral directories that cause permission issues
-          echo "🔗 Cleaning Flutter plugin symlinks and ephemeral directories..."
-          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -path '*/flutter/ephemeral' -type d -exec rm -rf {} + 2>/dev/null || true"
-          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -path '*/Flutter/ephemeral' -type d -exec rm -rf {} + 2>/dev/null || true"
+          # Ensure proper workspace ownership
+          sudo chown -R run0:run0 /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia 2>/dev/null || true
           
-          # Final cleanup with direct commands
-          echo "🧹 Final cleanup with elevated privileges..."
-          docker run --rm -v /datos_nvme/run0/actions-runner/_work:/work alpine:latest \
-            sh -c "rm -rf /work/guardianes-de-gaia/guardianes-de-gaia/mobile/guardianes_mobile/*/flutter/ephemeral /work/guardianes-de-gaia/guardianes-de-gaia/mobile/guardianes_mobile/*/Flutter/ephemeral 2>/dev/null || echo 'Cleanup completed'"
-          
-          # Additional cleanup with direct removal
-          if [ -d "${{ github.workspace }}/mobile/guardianes_mobile/build" ]; then
-            echo "🗑️ Removing Flutter build directory with elevated privileges..."
-            rm -rf ${{ github.workspace }}/mobile/guardianes_mobile/build || \
-            docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
-              sh -c "rm -rf /workspace/mobile/guardianes_mobile/build" || true
-          fi
-          
-          # Clean git repository state if it exists (but don't reset to avoid checkout conflicts)
-          cd ${{ github.workspace }} 2>/dev/null && git clean -fdx 2>/dev/null || true
-          
-          # Ensure proper ownership of workspace
-          chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || \
-          chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
+          echo "✅ Cleanup completed"
 
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: false
+          clean: true
           submodules: false
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: 🔨 Build APK with Docker
-        working-directory: .
+      - name: 🔧 Setup Flutter Environment
+        run: |
+          echo "🔧 Setting up Flutter environment..."
+          export PATH="/datos_nvme/run0/guardianes-de-gaia/flutter-3.19.6/bin:$PATH"
+          flutter --version
+          flutter doctor
+
+      - name: 🔨 Build APK
         run: |
           BUILD_MODE="${{ github.event.inputs.build_mode || 'debug' }}"
-          echo "Building APK in $BUILD_MODE mode using custom Flutter Docker container..."
+          echo "🏗️ Building Android APK in $BUILD_MODE mode..."
           
-          # Build our custom Flutter Docker image
-          echo "🏗️ Building custom Flutter Docker image with Flutter 3.19.6..."
-          docker build --no-cache -f docker/flutter/Dockerfile -t guardianes-flutter:latest .
+          # Set Flutter path
+          export PATH="/datos_nvme/run0/guardianes-de-gaia/flutter-3.19.6/bin:$PATH"
           
-          # Run comprehensive Flutter build in Docker
-          docker run --rm \
-            -v ${{ github.workspace }}/mobile/guardianes_mobile:/workspace \
-            -w /workspace \
-            guardianes-flutter:latest \
-            sh -c "
-              echo '🔍 Checking Flutter environment...'
-              flutter doctor -v
-              
-              echo '📦 Installing dependencies...'
-              flutter pub get
-              
-              echo '🏗️ Generating code...'
-              dart run build_runner build --delete-conflicting-outputs || echo 'Code generation completed with warnings'
-              
-              echo '🔨 Building APK...'
-              if [ '$BUILD_MODE' = 'release' ]; then
-                flutter build apk --release --verbose
-              else
-                flutter build apk --debug --verbose
-              fi
-              
-              echo '✅ APK build completed!'
-              ls -la build/app/outputs/flutter-apk/
-            "
+          # Get dependencies
+          echo "📦 Getting Flutter dependencies..."
+          flutter pub get
+          
+          # Clean previous builds
+          echo "🧹 Cleaning previous builds..."
+          flutter clean
+          
+          # Generate code if needed
+          echo "🏗️ Generating code..."
+          /datos_nvme/run0/guardianes-de-gaia/flutter-3.19.6/bin/dart run build_runner build --delete-conflicting-outputs || echo 'Code generation completed with warnings'
+          
+          # Build APK
+          if [ "$BUILD_MODE" = "release" ]; then
+            flutter build apk --release --verbose
+          else
+            flutter build apk --debug --verbose
+          fi
+          
+          # Verify APK was created
+          if [ ! -d "build/app/outputs/flutter-apk/" ]; then
+            echo "❌ APK build failed - output directory not found"
+            exit 1
+          fi
+          
+          echo "✅ APK build completed"
+          ls -la build/app/outputs/flutter-apk/
 
       - name: 📱 Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -151,7 +134,7 @@ jobs:
     name: 🧪 APK Integration Tests
     runs-on: self-hosted
     needs: build-apk
-    if: always()
+    if: success()
     defaults:
       run:
         working-directory: mobile/guardianes_mobile
@@ -160,9 +143,9 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: false
+          clean: true
           submodules: false
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: 📱 Download APK
         uses: actions/download-artifact@v4
