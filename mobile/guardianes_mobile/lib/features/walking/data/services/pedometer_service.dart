@@ -57,7 +57,7 @@ class PedometerServiceImpl implements PedometerService {
       _isInitialized = true;
       return true;
     } catch (e) {
-      print('Error initializing pedometer: $e');
+      // Error initializing pedometer: handled gracefully
       return false;
     }
   }
@@ -89,7 +89,7 @@ class PedometerServiceImpl implements PedometerService {
 
       return status == PermissionStatus.granted;
     } catch (e) {
-      print('Error requesting permissions: $e');
+      // Error requesting permissions: handled gracefully
       return false;
     }
   }
@@ -103,7 +103,7 @@ class PedometerServiceImpl implements PedometerService {
       return activityStatus == PermissionStatus.granted ||
           sensorStatus == PermissionStatus.granted;
     } catch (e) {
-      print('Error checking permissions: $e');
+      // Error checking permissions: handled gracefully
       return false;
     }
   }
@@ -128,18 +128,18 @@ class PedometerServiceImpl implements PedometerService {
   }
 
   void _onStepCountError(dynamic error) {
-    print('Step count error: $error');
+    // Step count error: handled by controller
     // Emit 0 on error
     _stepCountController.add(0);
   }
 
   void _onPedestrianStatusChanged(PedestrianStatus event) {
     // Handle pedestrian status changes if needed
-    print('Pedestrian status: ${event.status} at ${event.timeStamp}');
+    // Pedestrian status updated
   }
 
   void _onPedestrianStatusError(dynamic error) {
-    print('Pedestrian status error: $error');
+    // Pedestrian status error: handled by controller
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {

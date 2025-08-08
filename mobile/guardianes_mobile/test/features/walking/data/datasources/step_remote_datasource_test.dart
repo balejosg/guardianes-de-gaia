@@ -22,7 +22,7 @@ void main() {
   });
 
   group('StepRemoteDataSource', () {
-    const baseUrl = 'https://my-guardianes.duckdns.org';
+    const baseUrl = 'http://dev-guardianes.duckdns.org:8080';
     const guardianId = 1;
 
     group('submitSteps', () {
@@ -42,8 +42,10 @@ void main() {
 
         when(mockHttpClient.post(
           Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps'),
-          headers: anyNamed('headers'),
-          body: anyNamed('body'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode(request.toJson()),
         )).thenAnswer((_) async => http.Response(
               json.encode(responseDto.toJson()),
               201,
@@ -72,9 +74,11 @@ void main() {
         );
 
         when(mockHttpClient.post(
-          any,
-          headers: anyNamed('headers'),
-          body: anyNamed('body'),
+          Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode(request.toJson()),
         )).thenAnswer((_) async => http.Response(
               'Bad Request',
               400,
@@ -95,9 +99,11 @@ void main() {
         );
 
         when(mockHttpClient.post(
-          any,
-          headers: anyNamed('headers'),
-          body: anyNamed('body'),
+          Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode(request.toJson()),
         )).thenAnswer((_) async => http.Response(
               'Invalid JSON',
               201,
@@ -123,7 +129,9 @@ void main() {
 
         when(mockHttpClient.get(
           Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/current'),
-          headers: anyNamed('headers'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
         )).thenAnswer((_) async => http.Response(
               json.encode(responseDto.toJson()),
               200,
@@ -146,8 +154,10 @@ void main() {
           () async {
         // Arrange
         when(mockHttpClient.get(
-          any,
-          headers: anyNamed('headers'),
+          Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/current'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
         )).thenAnswer((_) async => http.Response(
               'Not Found',
               404,
@@ -176,7 +186,9 @@ void main() {
         when(mockHttpClient.get(
           Uri.parse(
               '$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate'),
-          headers: anyNamed('headers'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
         )).thenAnswer((_) async => http.Response(
               json.encode(responseDto.toJson()),
               200,
@@ -204,8 +216,11 @@ void main() {
         const toDate = '2025-07-16';
 
         when(mockHttpClient.get(
-          any,
-          headers: anyNamed('headers'),
+          Uri.parse(
+              '$baseUrl/api/v1/guardians/$guardianId/steps/history?from=$fromDate&to=$toDate'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
         )).thenAnswer((_) async => http.Response(
               'Bad Request',
               400,
@@ -228,9 +243,11 @@ void main() {
         );
 
         when(mockHttpClient.post(
-          any,
-          headers: anyNamed('headers'),
-          body: anyNamed('body'),
+          Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode(request.toJson()),
         )).thenThrow(Exception('Network error'));
 
         // Act & Assert
@@ -243,8 +260,10 @@ void main() {
       test('should handle timeout errors', () async {
         // Arrange
         when(mockHttpClient.get(
-          any,
-          headers: anyNamed('headers'),
+          Uri.parse('$baseUrl/api/v1/guardians/$guardianId/steps/current'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
         )).thenThrow(Exception('Timeout'));
 
         // Act & Assert

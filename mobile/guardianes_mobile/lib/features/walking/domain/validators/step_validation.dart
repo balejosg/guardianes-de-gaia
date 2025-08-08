@@ -27,10 +27,10 @@ class StepValidationResult {
 }
 
 class StepValidator {
-  static const int MIN_STEP_COUNT = 1;
-  static const int MAX_STEP_COUNT = 50000;
-  static const int MAX_DAILY_STEPS = 100000;
-  static const int ANOMALY_THRESHOLD =
+  static const int minStepCount = 1;
+  static const int maxStepCount = 50000;
+  static const int maxDailySteps = 100000;
+  static const int anomalyThreshold =
       15000; // Steps that seem unusually high for single submission
 
   /// Validates a single step submission
@@ -48,14 +48,14 @@ class StepValidator {
     }
 
     // Validate step count range
-    if (stepCount < MIN_STEP_COUNT) {
+    if (stepCount < minStepCount) {
       return StepValidationResult.invalid(
-          'Step count must be at least $MIN_STEP_COUNT');
+          'Step count must be at least $minStepCount');
     }
 
-    if (stepCount > MAX_STEP_COUNT) {
+    if (stepCount > maxStepCount) {
       return StepValidationResult.invalid(
-          'Step count cannot exceed $MAX_STEP_COUNT');
+          'Step count cannot exceed $maxStepCount');
     }
 
     // Validate timestamp format
@@ -84,13 +84,13 @@ class StepValidator {
 
     // Check daily totals
     final newDailyTotal = currentDailyTotal + stepCount;
-    if (newDailyTotal > MAX_DAILY_STEPS) {
+    if (newDailyTotal > maxDailySteps) {
       return StepValidationResult.invalid(
-          'Daily step count would exceed $MAX_DAILY_STEPS');
+          'Daily step count would exceed $maxDailySteps');
     }
 
     // Anomaly detection
-    if (stepCount > ANOMALY_THRESHOLD) {
+    if (stepCount > anomalyThreshold) {
       warnings.add('Unusually high step count detected');
     }
 

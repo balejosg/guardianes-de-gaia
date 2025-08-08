@@ -76,12 +76,13 @@ class _QRScannerPageState extends State<QRScannerPage> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              final navigator = Navigator.of(context);
+              navigator.pop();
               final granted = await QRScannerService.requestCameraPermission();
               if (granted && mounted) {
                 _initializeScanner();
-              } else {
-                Navigator.of(context).pop();
+              } else if (mounted) {
+                navigator.pop();
               }
             },
             child: const Text('Permitir'),

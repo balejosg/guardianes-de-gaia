@@ -29,7 +29,7 @@ class QRScannerService {
 
       return true;
     } catch (e) {
-      print('Error initializing QR scanner: $e');
+      // Error initializing QR scanner: handled gracefully
       return false;
     }
   }
