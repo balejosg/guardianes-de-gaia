@@ -12,6 +12,12 @@ on:
     paths:
       - 'mobile/**'
       - '.github/workflows/mobile-ci.yml'
+  workflow_dispatch:
+    inputs:
+      description:
+        description: 'Reason for manual trigger'
+        required: false
+        default: 'Manual validation run'
 
 env:
   FLUTTER_VERSION: '3.19.6'
