@@ -83,7 +83,10 @@
       "Bash(gh api:*)",
       "Bash(dart format:*)",
       "Bash(pod init:*)",
-      "Bash(gh run watch:*)"
+      "Bash(gh run watch:*)",
+      "Bash(dart run build_runner build:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(git stash:*)"
     ],
     "deny": []
   }
