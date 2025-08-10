@@ -6,7 +6,7 @@ import 'package:guardianes_mobile/main.dart' as app;
 void main() {
   // Enable integration testing with Flutter Driver
   enableFlutterDriverExtension();
-  
+
   // Run the main app
   app.main();
 }
