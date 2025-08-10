@@ -320,23 +320,23 @@ jobs:
           # Use stable simulator configuration with fallback options
           echo "🧪 Running iOS unit tests..."
           
-          # Try iPhone 14 with iOS 17.0 first (most stable)
-          if xcrun xctrace list devices | grep -q "iPhone 14.*17\."; then
-            echo "Using iPhone 14 with iOS 17.x"
+          # Try iPhone 16 with iOS 18.x first (latest available)
+          if xcrun xctrace list devices | grep -q "iPhone 16.*18\."; then
+            echo "Using iPhone 16 with iOS 18.x"
+            xcodebuild test \
+              -workspace Runner.xcworkspace \
+              -scheme Runner \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.0' \
+              -quiet
+          # Fallback to iPhone 14 if available
+          elif xcrun xctrace list devices | grep -q "iPhone 14.*17\."; then
+            echo "Fallback: Using iPhone 14 with iOS 17.x"
             xcodebuild test \
               -workspace Runner.xcworkspace \
               -scheme Runner \
               -sdk iphonesimulator \
               -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.0' \
-              -quiet
-          # Fallback to iPhone 13 if iPhone 14 not available  
-          elif xcrun xctrace list devices | grep -q "iPhone 13.*16\."; then
-            echo "Fallback: Using iPhone 13 with iOS 16.x"
-            xcodebuild test \
-              -workspace Runner.xcworkspace \
-              -scheme Runner \
-              -sdk iphonesimulator \
-              -destination 'platform=iOS Simulator,name=iPhone 13,OS=16.0' \
               -quiet
           # Final fallback to any available iPhone simulator
           else
@@ -345,7 +345,7 @@ jobs:
               -workspace Runner.xcworkspace \
               -scheme Runner \
               -sdk iphonesimulator \
-              -destination 'platform=iOS Simulator,name=iPhone 14' \
+              -destination 'platform=iOS Simulator,name=iPhone 16' \
               -quiet
           fi
       
