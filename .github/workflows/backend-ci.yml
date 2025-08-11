@@ -331,9 +331,9 @@ jobs:
           echo "🚀 Starting Docker container with integration-test profile..."
           docker run -d --name test-backend \
             -e SPRING_PROFILES_ACTIVE=integration-test \
-            -e SPRING_DATASOURCE_URL=jdbc:h2:mem:docker_integration_testdb;MODE=MySQL;DB_CLOSE_DELAY=-1 \
+            -e SPRING_DATASOURCE_URL="jdbc:h2:mem:docker_integration_testdb;MODE=MySQL;DB_CLOSE_DELAY=-1" \
             -e SPRING_DATASOURCE_USERNAME=sa \
-            -e SPRING_DATASOURCE_PASSWORD="" \
+            -e SPRING_DATASOURCE_PASSWORD= \
             guardianes-de-gaia-backend:test
           
           # Wait for application startup with enhanced monitoring
@@ -448,39 +448,29 @@ jobs:
         run: |
           echo "🔍 Starting test environment with CI configuration..."
           
-          # Create CI-specific docker-compose override
-          cat > docker-compose.ci.yml << EOF
-          version: '3.9'
-          services:
-            backend:
-              environment:
-                - SPRING_PROFILES_ACTIVE=integration-test
-                - SPRING_DATASOURCE_URL=jdbc:h2:mem:smoke_test_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
-                - SPRING_DATASOURCE_USERNAME=sa
-                - SPRING_DATASOURCE_PASSWORD=
-                - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop
-                - SPRING_FLYWAY_ENABLED=false
-              depends_on: []
-            mysql:
-              profiles:
-                - disabled
-            redis:
-              profiles:
-                - disabled  
-            rabbitmq:
-              profiles:
-                - disabled
-          EOF
+          # Build the Docker image for testing
+          echo "🏗️ Building Docker image for smoke tests..."
+          cd backend
+          docker build -t guardianes-de-gaia-backend:smoke-test -f Dockerfile.dev .
+          cd ..
           
-          # Start only the backend service with overrides
+          # Start the backend container directly with H2 configuration
           echo "🚀 Starting backend with H2 in-memory database..."
-          docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d backend
+          docker run -d --name guardianes-backend \
+            -p 8080:8080 \
+            -e SPRING_PROFILES_ACTIVE=integration-test \
+            -e SPRING_DATASOURCE_URL="jdbc:h2:mem:smoke_test_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE" \
+            -e SPRING_DATASOURCE_USERNAME=sa \
+            -e SPRING_DATASOURCE_PASSWORD= \
+            -e SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop \
+            -e SPRING_FLYWAY_ENABLED=false \
+            guardianes-de-gaia-backend:smoke-test
           
           echo "⏳ Waiting for backend to initialize..."
           sleep 20
           
-          echo "🔍 Checking backend service status:"
-          docker-compose ps backend
+          echo "🔍 Checking backend container status:"
+          docker ps | grep guardianes-backend || echo "Backend container not found"
       
       - name: 💨 Run Basic Smoke Tests
         run: |
@@ -557,11 +547,10 @@ jobs:
         if: always()
         run: |
           echo "🛑 Stopping test environment..."
-          docker-compose -f docker-compose.yml -f docker-compose.ci.yml down || true
-          # Clean up any remaining containers
+          # Clean up backend container
           docker rm -f guardianes-backend || true
-          # Remove temporary CI configuration file
-          rm -f docker-compose.ci.yml || true
+          # Clean up any remaining containers from this test
+          docker rm -f $(docker ps -aq --filter "ancestor=guardianes-de-gaia-backend:smoke-test") || true
 
   # ============================================
   # Build Summary
