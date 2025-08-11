@@ -343,7 +343,7 @@ jobs:
           for i in {1..24}; do
             if docker ps | grep -q test-backend; then
               # Check if backend is responding to health checks
-              if docker exec test-backend curl -f -s http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              if docker exec test-backend curl -f -s -u integration:integration_test_password http://localhost:8080/actuator/health > /dev/null 2>&1; then
                 echo "✅ Docker backend started successfully after $((i*5)) seconds!"
                 SUCCESS=true
                 break
@@ -366,7 +366,7 @@ jobs:
           
           # Verify health endpoint response
           echo "🏥 Testing health endpoint..."
-          HEALTH_RESPONSE=$(docker exec test-backend curl -s http://localhost:8080/actuator/health)
+          HEALTH_RESPONSE=$(docker exec test-backend curl -s -u integration:integration_test_password http://localhost:8080/actuator/health)
           echo "Health response: $HEALTH_RESPONSE"
           
           if echo "$HEALTH_RESPONSE" | grep -q '"status":"UP"'; then
@@ -492,7 +492,7 @@ jobs:
             fi
             
             # Test health endpoint
-            if docker exec guardianes-backend curl -f -s http://localhost:8080/actuator/health > /dev/null 2>&1; then
+            if docker exec guardianes-backend curl -f -s -u integration:integration_test_password http://localhost:8080/actuator/health > /dev/null 2>&1; then
               echo "✅ Backend is ready after $((i*5)) seconds!"
               SUCCESS=true
               break
@@ -517,7 +517,7 @@ jobs:
           
           # Test health endpoint with detailed response
           echo "🏥 Testing health endpoint..."
-          HEALTH_RESPONSE=$(docker exec guardianes-backend curl -s http://localhost:8080/actuator/health)
+          HEALTH_RESPONSE=$(docker exec guardianes-backend curl -s -u integration:integration_test_password http://localhost:8080/actuator/health)
           echo "Health response: $HEALTH_RESPONSE"
           
           if echo "$HEALTH_RESPONSE" | grep -q '"status":"UP"'; then
@@ -529,7 +529,7 @@ jobs:
           
           # Test info endpoint (optional)
           echo "ℹ️ Testing info endpoint..."
-          if docker exec guardianes-backend curl -f -s http://localhost:8080/actuator/info > /dev/null 2>&1; then
+          if docker exec guardianes-backend curl -f -s -u integration:integration_test_password http://localhost:8080/actuator/info > /dev/null 2>&1; then
             echo "✅ Info endpoint: ACCESSIBLE"
           else
             echo "⚠️ Info endpoint: Not configured (acceptable for smoke tests)"
@@ -537,7 +537,7 @@ jobs:
           
           # Test metrics endpoint (optional)
           echo "📊 Testing metrics endpoint..."
-          if docker exec guardianes-backend curl -f -s http://localhost:8080/actuator/metrics > /dev/null 2>&1; then
+          if docker exec guardianes-backend curl -f -s -u integration:integration_test_password http://localhost:8080/actuator/metrics > /dev/null 2>&1; then
             echo "✅ Metrics endpoint: ACCESSIBLE"
           else
             echo "⚠️ Metrics endpoint: Not available (acceptable for smoke tests)"
