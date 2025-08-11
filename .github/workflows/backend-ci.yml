@@ -334,7 +334,7 @@ jobs:
             -e SPRING_DATASOURCE_URL="jdbc:h2:mem:docker_integration_testdb;MODE=MySQL;DB_CLOSE_DELAY=-1" \
             -e SPRING_DATASOURCE_USERNAME=sa \
             -e SPRING_DATASOURCE_PASSWORD= \
-            -e JAVA_TOOL_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djdk.internal.platform.cgroup.version=1 -XX:-UsePerfData -Djava.security.egd=file:/dev/./urandom" \
+            -e JAVA_TOOL_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djdk.internal.platform.cgroup.version=1 -XX:-UsePerfData -Djava.security.egd=file:/dev/./urandom -Dcom.sun.management.jmxremote=false" \
             guardianes-de-gaia-backend:test
           
           # Wait for application startup with enhanced monitoring
@@ -465,7 +465,7 @@ jobs:
             -e SPRING_DATASOURCE_PASSWORD= \
             -e SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop \
             -e SPRING_FLYWAY_ENABLED=false \
-            -e JAVA_TOOL_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djdk.internal.platform.cgroup.version=1 -XX:-UsePerfData -Djava.security.egd=file:/dev/./urandom" \
+            -e JAVA_TOOL_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djdk.internal.platform.cgroup.version=1 -XX:-UsePerfData -Djava.security.egd=file:/dev/./urandom -Dcom.sun.management.jmxremote=false" \
             guardianes-de-gaia-backend:smoke-test
           
           echo "⏳ Waiting for backend to initialize..."
