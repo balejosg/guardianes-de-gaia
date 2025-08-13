@@ -43,7 +43,7 @@ jobs:
   build-apk:
     name: 📱 Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     
     steps:
       - name: 📥 Checkout code
@@ -90,7 +90,7 @@ jobs:
         working-directory: ./mobile/guardianes_mobile
         run: |
           echo "🔧 Generating code with build_runner..."
-          dart run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs --verbose
           echo "✅ Code generation completed"
       
       - name: 🔧 Configure Android Signing
@@ -127,9 +127,9 @@ jobs:
           echo "🏗️ Building Android APK in $BUILD_MODE mode..."
           
           if [ "$BUILD_MODE" = "release" ]; then
-            flutter build apk --release --verbose
+            flutter build apk --release --target-platform android-arm64 --verbose
           else
-            flutter build apk --debug --verbose
+            flutter build apk --debug --target-platform android-arm64 --verbose
           fi
           
           # Verify APK was created
