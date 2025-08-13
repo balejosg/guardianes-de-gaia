@@ -60,7 +60,7 @@ void main() {
           () async {
         // arrange
         when(mockHttpClient.post(
-          Uri.parse('http://dev-guardianes.duckdns.org:8080/api/auth/register'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/register'),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -84,7 +84,7 @@ void main() {
 
         // assert
         verify(mockHttpClient.post(
-          Uri.parse('http://dev-guardianes.duckdns.org:8080/api/auth/register'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/register'),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -247,7 +247,7 @@ void main() {
           () async {
         // arrange
         when(mockHttpClient.post(
-          Uri.parse('http://dev-guardianes.duckdns.org:8080/api/auth/login'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/login'),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -265,7 +265,7 @@ void main() {
 
         // assert
         verify(mockHttpClient.post(
-          Uri.parse('http://dev-guardianes.duckdns.org:8080/api/auth/login'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/login'),
           headers: {
             'Content-Type': 'application/json',
           },
