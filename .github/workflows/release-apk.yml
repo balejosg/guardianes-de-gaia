@@ -98,12 +98,41 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           echo "🏗️ Building Android APK in $BUILD_MODE mode for release $VERSION..."
           
-          # Build APK
-          if [ "$BUILD_MODE" = "release" ]; then
-            flutter build apk --release --verbose --split-per-abi
-          else
-            flutter build apk --debug --verbose --split-per-abi
-          fi
+          # Clear any previous builds to avoid conflicts
+          flutter clean
+          flutter pub get
+          
+          # Verify gradle wrapper permissions
+          chmod +x android/gradlew
+          
+          # Build APK with retries for network issues
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "🔄 Build attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
+            
+            if [ "$BUILD_MODE" = "release" ]; then
+              if flutter build apk --release --verbose --split-per-abi; then
+                echo "✅ Release build successful!"
+                break
+              fi
+            else
+              if flutter build apk --debug --verbose --split-per-abi; then
+                echo "✅ Debug build successful!"
+                break
+              fi
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⚠️ Build failed, retrying in 10 seconds..."
+              sleep 10
+            else
+              echo "❌ Build failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+          done
           
           # Verify APK was created
           if [ ! -d "build/app/outputs/flutter-apk/" ]; then

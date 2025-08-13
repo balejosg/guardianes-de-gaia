@@ -144,8 +144,15 @@ jobs:
           exit 1
       
       - name: 📦 Install Node Dependencies (Robust)
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: |
           echo "🔧 Installing Node.js dependencies with clean install..."
+          
+          # Install Chrome browser via system package manager (faster and more reliable)
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
           
           # Clear npm cache to avoid corruption issues
           npm cache clean --force
@@ -182,6 +189,8 @@ jobs:
           BACKEND_URL: 'http://localhost:${{ env.BACKEND_PORT }}'
           SCREENSHOTS_ENABLED: 'true'
           LOG_LEVEL: 'info'
+          PUPPETEER_EXECUTABLE_PATH: '/usr/bin/google-chrome-stable'
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
         run: |
           echo "Running E2E test: ${{ matrix.test-file }}"
           
