@@ -20,6 +20,20 @@ on:
         options:
           - debug
           - release
+      version:
+        description: 'Version tag for release (e.g., v1.0.0-dev)'
+        required: false
+        default: ''
+      create_release:
+        description: 'Create GitHub Release'
+        required: false
+        default: false
+        type: boolean
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: true
+        type: boolean
 
 env:
   FLUTTER_VERSION: '3.19.6'
@@ -199,3 +213,121 @@ jobs:
           echo "1. Download the APK from the artifacts section above" >> $GITHUB_STEP_SUMMARY
           echo "2. Enable 'Unknown Sources' in your Android device settings" >> $GITHUB_STEP_SUMMARY
           echo "3. Install the APK on your device" >> $GITHUB_STEP_SUMMARY
+
+  create-release:
+    name: 🚀 Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-apk, test-apk]
+    if: github.event.inputs.create_release == 'true' && github.event.inputs.version != '' && needs.build-apk.result == 'success' && needs.test-apk.result == 'success'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📱 Download APK Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: guardianes-mobile-${{ github.event.inputs.build_mode || 'debug' }}-${{ github.sha }}
+          path: ./release-assets
+      
+      - name: 📝 Generate Release Notes
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BUILD_MODE="${{ github.event.inputs.build_mode || 'debug' }}"
+          
+          cat > release-notes.md << EOF
+          # Guardianes de Gaia Mobile App $VERSION
+          
+          ## 📱 Release Information
+          - **Version**: $VERSION
+          - **Build Mode**: $BUILD_MODE
+          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - **Flutter Version**: ${{ env.FLUTTER_VERSION }}
+          - **Minimum Android**: API 21 (Android 5.0)
+          
+          ## 🔗 Backend Configuration
+          This APK is configured to connect to:
+          - **API Base URL**: \`http://dev-guardianes.duckdns.org\`
+          - **Backend Port**: Automatically routed via nginx proxy (port 80 → 8090)
+          - **Authentication**: Development environment credentials
+          
+          ## 📥 Installation Instructions
+          1. Download the APK file from the assets below
+          2. Enable "Install from unknown sources" on your Android device
+          3. Install the APK file
+          4. Launch the Guardianes de Gaia app
+          
+          ## 🎮 App Features
+          - Guardian profile creation and management
+          - Step tracking with energy conversion (1 energy = 10 steps)
+          - QR code card scanning and collection
+          - Card battle mechanics
+          - Family group management (Pactos)
+          - Real-time synchronization with backend
+          
+          ## ⚠️ Development Build Notice
+          This is a development build connected to the development backend. 
+          For production use, a separate release targeting the production environment will be provided.
+          
+          ## 🔧 Technical Details
+          - **Target SDK**: Android API 34
+          - **Minimum SDK**: Android API 21
+          - **Architecture**: Universal APK
+          - **Permissions**: Internet, Camera (for QR scanning), Activity Recognition (for step counting)
+          
+          ---
+          
+          🤖 **Generated automatically by Flutter APK Build workflow**
+          EOF
+          
+          echo "📝 Release notes generated:"
+          cat release-notes.md
+      
+      - name: 📦 Prepare Release Assets
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BUILD_MODE="${{ github.event.inputs.build_mode || 'debug' }}"
+          
+          echo "📦 Preparing release assets for $VERSION ($BUILD_MODE mode)..."
+          
+          cd release-assets
+          
+          # Rename APK files with version
+          for apk in app-*.apk; do
+            if [ -f "$apk" ]; then
+              new_name=$(echo "$apk" | sed "s/app-/guardianes-de-gaia-$VERSION-/")
+              mv "$apk" "$new_name" 2>/dev/null || true
+              echo "Renamed: $apk → $new_name"
+            fi
+          done
+          
+          echo "📋 Release assets prepared:"
+          ls -la
+      
+      - name: 🚀 Create GitHub Release  
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: "Guardianes de Gaia ${{ github.event.inputs.version }}"
+          body_path: release-notes.md
+          files: release-assets/*
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📊 Release Summary
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BUILD_MODE="${{ github.event.inputs.build_mode || 'debug' }}"
+          
+          echo "🎉 GitHub Release created successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📱 **Version**: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "🔧 **Build Mode**: $BUILD_MODE" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Release URL**: https://github.com/${{ github.repository }}/releases/tag/$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 **Download URL**: https://github.com/${{ github.repository }}/releases/latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **APK is now available in GitHub Releases!**" >> $GITHUB_STEP_SUMMARY
