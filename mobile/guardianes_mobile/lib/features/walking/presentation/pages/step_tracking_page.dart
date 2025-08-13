@@ -411,13 +411,16 @@ class _StepTrackingPageState extends State<StepTrackingPage>
           // Show warnings if any
           if (validationResult.warnings.isNotEmpty) {
             Future.delayed(const Duration(milliseconds: 500), () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Warning: ${validationResult.warnings.first}'),
-                  backgroundColor: Colors.orange,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content:
+                        Text('Warning: ${validationResult.warnings.first}'),
+                    backgroundColor: Colors.orange,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
             });
           }
         } else {

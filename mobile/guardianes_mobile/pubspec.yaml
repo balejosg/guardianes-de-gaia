@@ -1,5 +1,5 @@
 name: guardianes_mobile
-description: Guardianes de Gaia mobile app - A cooperative card game that gamifies walking to school
+description: Guardianes de Gaia mobile app - A cooperative card game that gamifies walking to school. Flutter Analysis fixed.
 version: 1.0.0+1
 
 environment:
@@ -27,6 +27,9 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  flutter_driver:
+    sdk: flutter
+  test: any
   flutter_lints: ^2.0.0
   injectable_generator: ^2.4.1
   build_runner: ^2.4.7

@@ -74,9 +74,9 @@ docker-compose up -d
 3. **Verificar servicios**
 ```bash
 make logs
-# Backend: http://localhost:8080
-# Grafana: http://localhost:3000 (admin/admin)
-# Prometheus: http://localhost:9090
+# Backend: http://localhost:8090 (dev), http://dev-guardianes.duckdns.org/api
+# Grafana: http://localhost:3000 (admin/admin), http://dev-guardianes.duckdns.org/grafana
+# Prometheus: http://localhost:9091, http://dev-guardianes.duckdns.org/prometheus
 ```
 
 4. **Ejecutar tests**
@@ -117,10 +117,10 @@ docker-compose -f docker-compose.test.yml up
 
 ## 📊 Monitoreo
 
-- **Métricas**: http://localhost:9090 (Prometheus)
-- **Dashboards**: http://localhost:3000 (Grafana)
-- **Feature Toggles**: http://localhost:8080/admin/toggles
-- **Health Check**: http://localhost:8080/actuator/health
+- **Métricas**: http://localhost:9091 (Prometheus), http://dev-guardianes.duckdns.org/prometheus
+- **Dashboards**: http://localhost:3000 (Grafana), http://dev-guardianes.duckdns.org/grafana  
+- **Feature Toggles**: http://localhost:8090/admin/toggles, http://dev-guardianes.duckdns.org/admin/toggles
+- **Health Check**: http://localhost:8090/actuator/health, http://dev-guardianes.duckdns.org/actuator/health
 
 ## 🤝 Contribuir
 

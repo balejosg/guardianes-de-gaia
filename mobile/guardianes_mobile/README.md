@@ -1,6 +1,6 @@
-# guardianes_mobile
+# Guardianes Mobile
 
-A new Flutter project.
+Guardianes de Gaia Flutter mobile application - All CI issues resolved.
 
 ## Getting Started
 

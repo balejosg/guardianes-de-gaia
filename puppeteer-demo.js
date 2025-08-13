@@ -6,14 +6,14 @@ const puppeteerDemo = {
   async testBackendHealth() {
     console.log('Testing backend health...');
     // Navigate to health endpoint
-    // await page.goto('http://localhost:8080/actuator/health');
+    // await page.goto('http://localhost:8090/actuator/health');
     // Verify JSON response shows {"status":"UP"}
   },
 
   // Test API documentation
   async testSwaggerUI() {
     console.log('Testing Swagger UI...');
-    // await page.goto('http://localhost:8080/swagger-ui/index.html');
+    // await page.goto('http://localhost:8090/swagger-ui/index.html');
     // Take screenshot of API docs
     // Expand step tracking endpoints
     // Test sample API calls
@@ -31,7 +31,7 @@ const puppeteerDemo = {
   // Test feature toggles
   async testFeatureToggles() {
     console.log('Testing feature toggles...');
-    // await page.goto('http://localhost:8080/admin/toggles');
+    // await page.goto('http://localhost:8090/admin/toggles');
     // Verify toggle interface loads
     // Test toggle state changes
   },

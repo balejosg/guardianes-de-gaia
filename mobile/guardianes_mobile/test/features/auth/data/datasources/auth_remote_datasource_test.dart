@@ -60,9 +60,17 @@ void main() {
           () async {
         // arrange
         when(mockHttpClient.post(
-          any,
-          headers: anyNamed('headers'),
-          body: anyNamed('body'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/register'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'username': tUsername,
+            'email': tEmail,
+            'password': tPassword,
+            'name': tName,
+            'birthDate': '2015-01-01',
+          }),
         )).thenAnswer((_) async => tSuccessResponse);
 
         // act
@@ -76,7 +84,7 @@ void main() {
 
         // assert
         verify(mockHttpClient.post(
-          Uri.parse('https://my-guardianes.duckdns.org/api/auth/register'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/register'),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -239,9 +247,14 @@ void main() {
           () async {
         // arrange
         when(mockHttpClient.post(
-          any,
-          headers: anyNamed('headers'),
-          body: anyNamed('body'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/login'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'usernameOrEmail': tUsernameOrEmail,
+            'password': tPassword,
+          }),
         )).thenAnswer((_) async => tSuccessResponse);
 
         // act
@@ -252,7 +265,7 @@ void main() {
 
         // assert
         verify(mockHttpClient.post(
-          Uri.parse('https://my-guardianes.duckdns.org/api/auth/login'),
+          Uri.parse('http://dev-guardianes.duckdns.org/api/auth/login'),
           headers: {
             'Content-Type': 'application/json',
           },

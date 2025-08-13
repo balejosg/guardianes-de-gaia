@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('App smoke test - verifies app can be created', (WidgetTester tester) async {
+  testWidgets('App smoke test - verifies app can be created',
+      (WidgetTester tester) async {
     // Create a minimal MaterialApp for testing
     await tester.pumpWidget(
       MaterialApp(
@@ -18,7 +19,7 @@ void main() {
         ),
       ),
     );
-    
+
     // Wait for the app to settle
     await tester.pumpAndSettle();
 

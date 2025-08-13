@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Explicitly declare hardware features to support ChromeOS -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:label="Guardianes de Gaia"
         android:name="${applicationName}"

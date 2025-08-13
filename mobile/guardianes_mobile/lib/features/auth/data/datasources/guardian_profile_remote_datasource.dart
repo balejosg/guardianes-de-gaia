@@ -15,7 +15,7 @@ class GuardianProfileRemoteDataSourceImpl
 
   GuardianProfileRemoteDataSourceImpl({
     required this.client,
-    this.baseUrl = 'http://dev-guardianes.duckdns.org:8080',
+    this.baseUrl = 'http://dev-guardianes.duckdns.org',
   });
 
   @override

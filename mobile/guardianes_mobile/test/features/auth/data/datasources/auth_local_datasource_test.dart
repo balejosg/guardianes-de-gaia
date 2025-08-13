@@ -1,22 +1,17 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:guardianes_mobile/features/auth/data/datasources/auth_local_datasource.dart';
 import 'package:guardianes_mobile/features/auth/data/models/guardian_model.dart';
 
-import 'auth_local_datasource_test.mocks.dart';
-
-@GenerateMocks([SharedPreferences])
 void main() {
   late AuthLocalDataSourceImpl dataSource;
-  late MockSharedPreferences mockSharedPreferences;
+  late SharedPreferences sharedPreferences;
 
-  setUp(() {
-    mockSharedPreferences = MockSharedPreferences();
-    dataSource =
-        AuthLocalDataSourceImpl(sharedPreferences: mockSharedPreferences);
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    sharedPreferences = await SharedPreferences.getInstance();
+    dataSource = AuthLocalDataSourceImpl(sharedPreferences: sharedPreferences);
   });
 
   group('AuthLocalDataSource', () {
@@ -24,18 +19,13 @@ void main() {
       const tToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token';
 
       test('should call SharedPreferences to save the token', () async {
-        // arrange
-        when(mockSharedPreferences.setString(any, any))
-            .thenAnswer((_) async => true);
-
         // act
         await dataSource.saveToken(tToken);
 
         // assert
-        verify(mockSharedPreferences.setString(
-          AuthLocalDataSourceImpl.tokenKey,
-          tToken,
-        ));
+        final savedToken =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
+        expect(savedToken, equals(tToken));
       });
     });
 
@@ -44,41 +34,39 @@ void main() {
 
       test('should return token from SharedPreferences when present', () async {
         // arrange
-        when(mockSharedPreferences.getString(any)).thenReturn(tToken);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.tokenKey, tToken);
 
         // act
         final result = await dataSource.getToken();
 
         // assert
         expect(result, equals(tToken));
-        verify(
-            mockSharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey));
       });
 
       test('should return null when token is not present', () async {
-        // arrange
-        when(mockSharedPreferences.getString(any)).thenReturn(null);
-
         // act
         final result = await dataSource.getToken();
 
         // assert
         expect(result, isNull);
-        verify(
-            mockSharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey));
       });
     });
 
     group('removeToken', () {
       test('should call SharedPreferences to remove the token', () async {
         // arrange
-        when(mockSharedPreferences.remove(any)).thenAnswer((_) async => true);
+        const tToken = 'test_token';
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.tokenKey, tToken);
 
         // act
         await dataSource.removeToken();
 
         // assert
-        verify(mockSharedPreferences.remove(AuthLocalDataSourceImpl.tokenKey));
+        final token =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
+        expect(token, isNull);
       });
     });
 
@@ -102,19 +90,14 @@ void main() {
 
       test('should call SharedPreferences to save guardian as JSON string',
           () async {
-        // arrange
-        when(mockSharedPreferences.setString(any, any))
-            .thenAnswer((_) async => true);
-
         // act
         await dataSource.saveGuardian(tGuardianModel);
 
         // assert
+        final savedGuardianJson =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
         final expectedJsonString = jsonEncode(tGuardianModel.toJson());
-        verify(mockSharedPreferences.setString(
-          AuthLocalDataSourceImpl.guardianKey,
-          expectedJsonString,
-        ));
+        expect(savedGuardianJson, equals(expectedJsonString));
       });
     });
 
@@ -140,33 +123,28 @@ void main() {
           () async {
         // arrange
         final jsonString = jsonEncode(tGuardianModel.toJson());
-        when(mockSharedPreferences.getString(any)).thenReturn(jsonString);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, jsonString);
 
         // act
         final result = await dataSource.getGuardian();
 
         // assert
         expect(result, equals(tGuardianModel));
-        verify(mockSharedPreferences
-            .getString(AuthLocalDataSourceImpl.guardianKey));
       });
 
       test('should return null when guardian is not present', () async {
-        // arrange
-        when(mockSharedPreferences.getString(any)).thenReturn(null);
-
         // act
         final result = await dataSource.getGuardian();
 
         // assert
         expect(result, isNull);
-        verify(mockSharedPreferences
-            .getString(AuthLocalDataSourceImpl.guardianKey));
       });
 
       test('should handle invalid JSON gracefully', () async {
         // arrange
-        when(mockSharedPreferences.getString(any)).thenReturn('invalid_json');
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, 'invalid_json');
 
         // act & assert
         expect(
@@ -179,14 +157,17 @@ void main() {
     group('removeGuardian', () {
       test('should call SharedPreferences to remove the guardian', () async {
         // arrange
-        when(mockSharedPreferences.remove(any)).thenAnswer((_) async => true);
+        const guardianJson = '{"id": 1, "name": "Test"}';
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, guardianJson);
 
         // act
         await dataSource.removeGuardian();
 
         // assert
-        verify(
-            mockSharedPreferences.remove(AuthLocalDataSourceImpl.guardianKey));
+        final guardian =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
+        expect(guardian, isNull);
       });
     });
 
@@ -194,10 +175,6 @@ void main() {
       test('should save and retrieve token correctly', () async {
         // arrange
         const tToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token';
-        when(mockSharedPreferences.setString(any, any))
-            .thenAnswer((_) async => true);
-        when(mockSharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey))
-            .thenReturn(tToken);
 
         // act
         await dataSource.saveToken(tToken);
@@ -226,13 +203,6 @@ void main() {
           isChild: true,
         );
 
-        final jsonString = jsonEncode(tGuardianModel.toJson());
-        when(mockSharedPreferences.setString(any, any))
-            .thenAnswer((_) async => true);
-        when(mockSharedPreferences
-                .getString(AuthLocalDataSourceImpl.guardianKey))
-            .thenReturn(jsonString);
-
         // act
         await dataSource.saveGuardian(tGuardianModel);
         final result = await dataSource.getGuardian();
@@ -243,16 +213,24 @@ void main() {
 
       test('should clear all authentication data', () async {
         // arrange
-        when(mockSharedPreferences.remove(any)).thenAnswer((_) async => true);
+        const tToken = 'test_token';
+        const guardianJson = '{"id": 1, "name": "Test"}';
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.tokenKey, tToken);
+        await sharedPreferences.setString(
+            AuthLocalDataSourceImpl.guardianKey, guardianJson);
 
         // act
         await dataSource.removeToken();
         await dataSource.removeGuardian();
 
         // assert
-        verify(mockSharedPreferences.remove(AuthLocalDataSourceImpl.tokenKey));
-        verify(
-            mockSharedPreferences.remove(AuthLocalDataSourceImpl.guardianKey));
+        final token =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.tokenKey);
+        final guardian =
+            sharedPreferences.getString(AuthLocalDataSourceImpl.guardianKey);
+        expect(token, isNull);
+        expect(guardian, isNull);
       });
     });
   });
