@@ -1,5 +1,8 @@
 name: 🔨 Flutter APK Build
 
+permissions:
+  contents: write  # Required for creating releases
+  
 on:
   push:
     branches: [main, develop]
