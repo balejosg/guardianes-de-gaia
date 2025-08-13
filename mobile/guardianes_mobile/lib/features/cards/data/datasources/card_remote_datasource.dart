@@ -32,7 +32,7 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
 
   CardRemoteDataSourceImpl({
     required this.client,
-    this.baseUrl = 'http://dev-guardianes.duckdns.org:8080',
+    this.baseUrl = 'http://dev-guardianes.duckdns.org',
   });
 
   @override
