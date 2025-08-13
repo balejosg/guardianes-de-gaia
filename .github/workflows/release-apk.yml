@@ -214,7 +214,8 @@ jobs:
           
           ## 🔗 Backend Configuration
           This APK is configured to connect to:
-          - **API Base URL**: \`http://dev-guardianes.duckdns.org:8080\`
+          - **API Base URL**: \`http://dev-guardianes.duckdns.org\`
+          - **Backend Port**: Automatically routed via nginx proxy (port 80 → 8090)
           - **Authentication**: Development environment credentials
           
           ## 📥 Installation Instructions
