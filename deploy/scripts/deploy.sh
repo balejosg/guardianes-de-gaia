@@ -220,10 +220,10 @@ get_compose_file() {
             echo "${PROJECT_DIR}/docker-compose.yml"
             ;;
         staging)
-            echo "${DEPLOY_DIR}/docker-compose.staging.yml"
+            echo "-f ${PROJECT_DIR}/docker-compose.yml -f ${DEPLOY_DIR}/docker-compose.staging.yml"
             ;;
         production)
-            echo "${DEPLOY_DIR}/docker-compose.production.yml"
+            echo "-f ${PROJECT_DIR}/docker-compose.yml -f ${DEPLOY_DIR}/docker-compose.production.yml"
             ;;
         *)
             error "Unknown environment: ${env}"
@@ -238,23 +238,35 @@ execute_compose() {
     local cmd="$2"
     shift 2
     
-    local compose_file
-    compose_file="$(get_compose_file "${env}")"
+    local compose_files
+    compose_files="$(get_compose_file "${env}")"
     
-    if [[ ! -f "${compose_file}" ]]; then
-        error "Docker Compose file not found: ${compose_file}"
-        exit 1
+    # For development, check single file; for staging/production, validate all files
+    if [[ "${env}" == "development" ]]; then
+        if [[ ! -f "${compose_files}" ]]; then
+            error "Docker Compose file not found: ${compose_files}"
+            exit 1
+        fi
+        local compose_cmd="docker-compose -f ${compose_files}"
+    else
+        # For staging/production, we have multiple files
+        local compose_cmd="docker-compose ${compose_files}"
+        # Validate that base compose file exists
+        if [[ ! -f "${PROJECT_DIR}/docker-compose.yml" ]]; then
+            error "Base Docker Compose file not found: ${PROJECT_DIR}/docker-compose.yml"
+            exit 1
+        fi
     fi
     
-    log "Executing: docker-compose -f ${compose_file} ${cmd} $*"
+    log "Executing: ${compose_cmd} ${cmd} $*"
     
     if [[ -n "${DRY_RUN_FLAG}" ]]; then
-        info "DRY RUN: Would execute docker-compose -f ${compose_file} ${cmd} $*"
+        info "DRY RUN: Would execute ${compose_cmd} ${cmd} $*"
         return 0
     fi
     
     cd "${PROJECT_DIR}"
-    docker-compose -f "${compose_file}" ${cmd} "$@"
+    eval "${compose_cmd} ${cmd} $*"
 }
 
 # Deploy environment
@@ -392,18 +404,25 @@ check_health() {
     
     log "Checking health of ${env} environment..."
     
-    local port
+    local health_url
     case "${env}" in
-        development) port="8080" ;;
-        staging) port="8081" ;;
-        production) port="8082" ;;
+        development) health_url="http://dev-guardianes.duckdns.org/actuator/health" ;;
+        staging) health_url="http://stg-guardianes.duckdns.org/actuator/health" ;;
+        production) health_url="http://guardianes.duckdns.org/actuator/health" ;;
     esac
     
-    # Check backend health
-    if curl -f "http://localhost:${port}/actuator/health" >/dev/null 2>&1; then
+    # Check backend health via nginx proxy
+    log "Testing health endpoint: ${health_url}"
+    if curl -f "${health_url}" >/dev/null 2>&1; then
         success "Backend service is healthy"
     else
-        error "Backend service is not healthy"
+        warning "Backend service health check failed (may require authentication)"
+        # Try with basic auth if available
+        if curl -f -u admin:admin "${health_url}" >/dev/null 2>&1; then
+            success "Backend service is healthy (with authentication)"
+        else
+            error "Backend service is not healthy"
+        fi
     fi
     
     # Check container health
@@ -418,16 +437,23 @@ wait_for_health() {
     
     log "Waiting for ${env} services to be healthy..."
     
-    local port
+    local health_url
     case "${env}" in
-        development) port="8080" ;;
-        staging) port="8081" ;;
-        production) port="8082" ;;
+        development) health_url="http://dev-guardianes.duckdns.org/actuator/health" ;;
+        staging) health_url="http://stg-guardianes.duckdns.org/actuator/health" ;;
+        production) health_url="http://guardianes.duckdns.org/actuator/health" ;;
     esac
     
     while [[ ${attempt} -le ${max_attempts} ]]; do
-        if curl -f "http://localhost:${port}/actuator/health" >/dev/null 2>&1; then
+        # Check health endpoint via nginx proxy
+        if curl -f "${health_url}" >/dev/null 2>&1; then
             success "Services are healthy after ${attempt} attempts"
+            return 0
+        fi
+        
+        # Try with authentication if direct access fails
+        if curl -f -u admin:admin "${health_url}" >/dev/null 2>&1; then
+            success "Services are healthy (with authentication) after ${attempt} attempts"
             return 0
         fi
         
@@ -437,6 +463,7 @@ wait_for_health() {
     done
     
     warning "Services may not be fully healthy after ${max_attempts} attempts"
+    warning "Try checking manually: ${health_url}"
 }
 
 # Initialize environment (first-time setup)

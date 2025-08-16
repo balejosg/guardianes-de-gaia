@@ -12,9 +12,7 @@ services:
         - ENVIRONMENT=staging
     container_name: guardianes-backend-staging
     restart: unless-stopped
-    ports:
-      - "8081:8080"    # Staging API port
-      - "9092:9090"    # Staging metrics port
+    # No external ports - accessible only via nginx proxy
     environment:
       - SPRING_PROFILES_ACTIVE=staging,kubernetes
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-staging:3306/guardianes_staging?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true

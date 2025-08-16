@@ -12,9 +12,7 @@ services:
         - ENVIRONMENT=production
     container_name: guardianes-backend-production
     restart: always
-    ports:
-      - "8082:8080"    # Production API port
-      - "9094:9090"    # Production metrics port (internal only)
+    # No external ports - accessible only via nginx proxy for security
     environment:
       - SPRING_PROFILES_ACTIVE=production,kubernetes
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-production:3306/guardianes_production?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&createDatabaseIfNotExist=true

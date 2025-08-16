@@ -87,7 +87,8 @@
       "Bash(dart run build_runner build:*)",
       "Bash(gh workflow run:*)",
       "Bash(git stash:*)",
-      "Bash(echo)"
+      "Bash(echo)",
+      "Bash(ss:*)"
     ],
     "deny": []
   }
