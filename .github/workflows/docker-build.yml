@@ -95,158 +95,53 @@ jobs:
             VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
       
       - name: 🛡️ Run Trivy vulnerability scanner
-        if: false  # Disabled - no image to scan since push is disabled
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: guardianes-backend:latest
+          image-ref: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.meta.outputs.version }}
           format: 'sarif'
           output: 'trivy-results-backend.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
       
       - name: 📤 Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: false  # Disabled - no scan results since Trivy is disabled
+        if: always()
         with:
           sarif_file: 'trivy-results-backend.sarif'
           category: 'backend-container'
       
       - name: 🔍 Analyze image with Dive
-        if: github.event_name == 'pull_request'
         run: |
           # Install dive for image analysis
           wget -q https://github.com/wagoodman/dive/releases/download/v0.12.0/dive_0.12.0_linux_amd64.deb
           sudo dpkg -i dive_0.12.0_linux_amd64.deb
           
-          # Analyze the image (only on PR to provide feedback)
+          # Pull the image for analysis
+          IMAGE_REF="${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.meta.outputs.version }}"
+          docker pull "$IMAGE_REF"
+          
+          # Analyze the image
           echo "## 🔍 Docker Image Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image**: $IMAGE_REF" >> $GITHUB_STEP_SUMMARY
           
-          # Get image size
-          IMAGE_SIZE=$(docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | grep "${{ env.IMAGE_NAME_BACKEND }}" | head -1 | awk '{print $2}')
+          # Get image size and details
+          IMAGE_SIZE=$(docker image inspect "$IMAGE_REF" --format='{{.Size}}' | numfmt --to=iec)
+          LAYER_COUNT=$(docker image inspect "$IMAGE_REF" --format='{{len .RootFS.Layers}}')
           echo "- **Image Size**: $IMAGE_SIZE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Layers**: $LAYER_COUNT" >> $GITHUB_STEP_SUMMARY
           
-          # Run dive analysis
-          dive --ci guardianes-backend:latest || echo "Dive analysis completed with warnings"
+          # Run dive analysis with proper image reference
+          echo "Running Dive analysis..."
+          dive --ci "$IMAGE_REF" || echo "Dive analysis completed with warnings"
+          echo "- **Efficiency**: Analyzed with Dive" >> $GITHUB_STEP_SUMMARY
 
   # ============================================
   # Database Docker Image Build
   # ============================================
-  postgres-docker:
-    name: 🗄️ PostgreSQL Docker Build
-    runs-on: ubuntu-latest
-    if: false  # Disabled - using MySQL instead
-    permissions:
-      contents: read
-      packages: write
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-      
-      - name: 🔍 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          platforms: ${{ env.PLATFORMS }}
-      
-      - name: 🔐 Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY_GHCR }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: 🏷️ Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_POSTGRES }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-          labels: |
-            org.opencontainers.image.title=Guardianes de Gaia Database
-            org.opencontainers.image.description=PostgreSQL database with Guardianes de Gaia schema
-            org.opencontainers.image.vendor=Guardianes de Gaia Team
-      
-      - name: 📝 Create PostgreSQL Dockerfile
-        run: |
-          mkdir -p ./postgres
-          cat > ./postgres/Dockerfile << 'EOF'
-          FROM postgres:16-alpine
-          
-          # Install additional extensions
-          RUN apk add --no-cache postgresql-contrib
-          
-          # Copy initialization scripts
-          COPY docker-entrypoint-initdb.d/ /docker-entrypoint-initdb.d/
-          
-          # Set default database configuration
-          COPY postgresql.conf /usr/local/share/postgresql/postgresql.conf.sample
-          
-          # Health check
-          HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-            CMD pg_isready -U ${POSTGRES_USER:-postgres} || exit 1
-          
-          EXPOSE 5432
-          EOF
-      
-      - name: 📝 Create PostgreSQL configuration
-        run: |
-          mkdir -p ./postgres/docker-entrypoint-initdb.d
-          
-          # Create init script
-          cat > ./postgres/docker-entrypoint-initdb.d/01-init.sql << 'EOF'
-          -- Guardianes de Gaia Database Initialization
-          CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-          CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-          
-          -- Create application user
-          CREATE USER guardianes WITH PASSWORD 'guardianes_password';
-          GRANT ALL PRIVILEGES ON DATABASE guardianes TO guardianes;
-          EOF
-          
-          # Create PostgreSQL config
-          cat > ./postgres/postgresql.conf << 'EOF'
-          # Guardianes de Gaia PostgreSQL Configuration
-          shared_preload_libraries = 'pg_stat_statements'
-          
-          # Connection settings
-          max_connections = 100
-          shared_buffers = 256MB
-          effective_cache_size = 1GB
-          maintenance_work_mem = 64MB
-          checkpoint_completion_target = 0.9
-          wal_buffers = 16MB
-          default_statistics_target = 100
-          random_page_cost = 1.1
-          effective_io_concurrency = 200
-          work_mem = 4MB
-          min_wal_size = 1GB
-          max_wal_size = 4GB
-          
-          # Logging
-          log_statement = 'all'
-          log_duration = on
-          log_min_duration_statement = 1000
-          log_checkpoints = on
-          log_connections = on
-          log_disconnections = on
-          EOF
-      
-      - name: 🏗️ Build and push PostgreSQL image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./postgres
-          platforms: ${{ env.PLATFORMS }}
-          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_to_registry == 'true' || github.event.inputs.push_to_registry == '') }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  # NOTE: PostgreSQL Docker build is intentionally omitted.
+  # The project uses MySQL 8.0 as specified in docker-compose.yml.
+  # Custom database images are not needed as we use the official mysql:8.0 image
+  # with configuration and init scripts mounted as volumes.
 
   # ============================================
   # Multi-Architecture Build Summary
@@ -291,40 +186,63 @@ jobs:
           fi
       
       - name: 🚨 Notify on Failure
-        if: failure()
+        if: failure() && secrets.SLACK_WEBHOOK
         uses: 8398a7/action-slack@v3
         with:
           status: failure
           channel: '#guardianes-docker'
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          custom_payload: |
+            {
+              "text": "🚨 Docker Build Failed - Guardianes de Gaia",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "fields": [
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Workflow",
+                      "value": "Docker Build & Push",
+                      "short": true
+                    },
+                    {
+                      "title": "Run ID",
+                      "value": "${{ github.run_id }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 
   # ============================================
   # Image Promotion (Production Tags)
   # ============================================
-  promote-production:
-    name: 🚀 Promote to Production
-    runs-on: ubuntu-latest
-    needs: [backend-docker]
-    if: false  # Disabled - no registry access
-    environment: production
-    
-    steps:
-      - name: 🔐 Login to registries
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY_GHCR }} -u ${{ github.actor }} --password-stdin
-      
-      - name: 🏷️ Promote images to production tags
-        run: |
-          # Pull the main branch image
-          docker pull ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:main
-          
-          # Tag as stable
-          docker tag ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:main \
-                     ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:stable
-          
-          # Push stable tags
-          docker push ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:stable
-          
-          echo "✅ Images promoted to production (stable tag)" >> $GITHUB_STEP_SUMMARY
+  # ============================================
+  # Production Image Promotion
+  # ============================================
+  # NOTE: Production image promotion is handled by the dedicated deployment pipeline
+  # (deploy-environments.yml). This job is intentionally disabled to prevent
+  # duplicate promotion workflows and ensure proper production deployment controls.
+  # 
+  # To promote images to production:
+  # 1. Use the multi-environment deployment workflow for controlled releases
+  # 2. Create a GitHub release to trigger automatic production deployment
+  # 3. Use workflow_dispatch on deploy-environments.yml for manual promotion
+  #
+  # The deployment pipeline provides:
+  # - Proper environment protection rules
+  # - Blue-green deployment strategy  
+  # - Comprehensive validation and rollback capabilities
+  # - Approval workflows for production changes

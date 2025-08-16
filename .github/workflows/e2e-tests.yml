@@ -241,25 +241,43 @@ jobs:
           retention-days: 7
       
       - name: 📋 Collect Logs
-        if: failure()
+        if: always()
         run: |
-          echo "Collecting logs for debugging..."
+          echo "Collecting logs for debugging and analysis..."
           mkdir -p logs
           
-          # Backend logs and metrics
-          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/loggers > logs/backend-loggers.json || echo "Could not get backend loggers"
-          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/metrics > logs/backend-metrics.json || echo "Could not get backend metrics"
-          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health > logs/backend-health.json || echo "Could not get backend health"
+          # Always collect basic container status
+          docker ps -a > logs/docker-containers.txt || echo "Could not get docker containers"
+          docker logs $(docker compose -f docker-compose.ci.yml ps -q backend-test) > logs/backend-docker.log 2>&1 || echo "Could not get backend container logs"
           
-          # H2 database info (if accessible)
+          # Backend logs and metrics (try both with and without auth)
+          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/loggers > logs/backend-loggers.json 2>&1 || \
+          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/loggers > logs/backend-loggers.json 2>&1 || \
+          echo "Could not get backend loggers" > logs/backend-loggers.json
+          
+          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/metrics > logs/backend-metrics.json 2>&1 || \
+          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/metrics > logs/backend-metrics.json 2>&1 || \
+          echo "Could not get backend metrics" > logs/backend-metrics.json
+          
+          curl -s -u admin:e2e_test_password http://localhost:${{ env.BACKEND_PORT }}/actuator/health > logs/backend-health.json 2>&1 || \
+          curl -s http://localhost:${{ env.BACKEND_PORT }}/actuator/health > logs/backend-health.json 2>&1 || \
+          echo "Could not get backend health" > logs/backend-health.json
+          
+          # H2 database info (always document)
           echo "H2 Database URL: jdbc:h2:mem:e2e_testdb;MODE=MySQL" > logs/h2-info.txt
           echo "H2 Console: http://localhost:${{ env.BACKEND_PORT }}/h2-console" >> logs/h2-info.txt
+          echo "Test execution time: $(date)" >> logs/h2-info.txt
           
           # Process information
-          ps aux | grep java > logs/java-processes.txt || echo "Could not get java processes"
+          ps aux | grep java > logs/java-processes.txt 2>&1 || echo "Could not get java processes" > logs/java-processes.txt
+          
+          # Test result summary
+          echo "Test Status: ${{ job.status }}" > logs/test-summary.txt
+          echo "Test File: ${{ matrix.test-file }}" >> logs/test-summary.txt
+          echo "GitHub Run ID: ${{ github.run_id }}" >> logs/test-summary.txt
       
       - name: 📤 Upload Logs
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-logs-${{ matrix.test-file }}-${{ github.run_id }}
