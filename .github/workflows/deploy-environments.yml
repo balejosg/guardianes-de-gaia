@@ -232,7 +232,7 @@ jobs:
   deploy-development:
     name: 🏠 Deploy to Development (Local)
     runs-on: self-hosted
-    needs: [determine-strategy]
+    needs: [determine-strategy, pre-deployment-checks]
     if: |
       always() && 
       needs.determine-strategy.outputs.environment == 'development' &&
