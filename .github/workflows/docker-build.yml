@@ -186,8 +186,9 @@ jobs:
           fi
       
       - name: 🚨 Notify on Failure
-        if: ${{ failure() && secrets.SLACK_WEBHOOK != '' }}
+        if: failure()
         uses: 8398a7/action-slack@v3
+        continue-on-error: true
         with:
           status: failure
           channel: '#guardianes-docker'

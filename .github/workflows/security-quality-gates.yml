@@ -75,23 +75,21 @@ jobs:
           fi
       
       - name: 🔍 SonarQube Quality Gate
-        if: ${{ secrets.SONAR_TOKEN != '' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: ./backend
         run: |
-          echo "🔍 Running SonarQube analysis..."
-          mvn sonar:sonar \
-            -Dsonar.projectKey=guardianes-de-gaia-backend \
-            -Dsonar.organization=${{ github.repository_owner }} \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.qualitygate.wait=true
-      
-      - name: 📊 SonarQube Skip Message
-        if: ${{ secrets.SONAR_TOKEN == '' }}
-        run: |
-          echo "⚠️ SonarQube analysis skipped - no token provided"
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "🔍 Running SonarQube analysis..."
+            mvn sonar:sonar \
+              -Dsonar.projectKey=guardianes-de-gaia-backend \
+              -Dsonar.organization=${{ github.repository_owner }} \
+              -Dsonar.host.url=https://sonarcloud.io \
+              -Dsonar.qualitygate.wait=true
+          else
+            echo "⚠️ SonarQube analysis skipped - no SONAR_TOKEN provided"
+          fi
       
       - name: 📐 Check code formatting
         working-directory: ./backend
@@ -255,7 +253,6 @@ jobs:
           path: backend/target/dependency-check-report.html
       
       - name: 🔍 Snyk vulnerability scan
-        if: ${{ secrets.SNYK_TOKEN != '' }}
         uses: snyk/actions/maven@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -264,11 +261,12 @@ jobs:
         continue-on-error: true
       
       - name: 📤 Upload Snyk results
-        if: ${{ always() && secrets.SNYK_TOKEN != '' }}
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk.sarif
           category: 'snyk-dependencies'
+        continue-on-error: true
 
   # ============================================
   # License Compliance Scan
@@ -289,11 +287,11 @@ jobs:
           cache: maven
       
       - name: 🔍 License scan with FOSSA
-        if: ${{ secrets.FOSSA_API_KEY != '' }}
         uses: fossas/fossa-action@main
         with:
           api-key: ${{ secrets.FOSSA_API_KEY }}
           path: backend/
+        continue-on-error: true
       
       - name: 📋 Generate license report
         working-directory: ./backend
@@ -514,8 +512,9 @@ jobs:
             });
       
       - name: 🚨 Notify security team on critical issues
-        if: ${{ failure() && secrets.SLACK_WEBHOOK_SECURITY != '' && (github.ref == 'refs/heads/main' || github.event_name == 'schedule') }}
+        if: failure() && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
         uses: 8398a7/action-slack@v3
+        continue-on-error: true
         with:
           status: failure
           channel: '#guardianes-security'
