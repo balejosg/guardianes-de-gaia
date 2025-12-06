@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty(name = "guardianes.jwt.enabled", havingValue = "true", matchIfMissing = true)
 public class JwtService {
 
-  @Value("${guardianes.jwt.secret:myVerySecretJwtKeyForGuardianesDeGaiaApplication2024!}")
+  @Value("${guardianes.jwt.secret}")
   private String secretKey;
 
   @Value("${guardianes.jwt.expiration:86400}")

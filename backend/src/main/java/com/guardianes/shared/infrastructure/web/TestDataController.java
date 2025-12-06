@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +25,11 @@ public class TestDataController {
 
   private static final Logger logger = LoggerFactory.getLogger(TestDataController.class);
 
-  @Autowired private JdbcTemplate jdbcTemplate;
+  private final JdbcTemplate jdbcTemplate;
+
+  public TestDataController(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
+  }
 
   @PostMapping("/load-data")
   public ResponseEntity<String> loadTestData() {

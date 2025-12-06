@@ -186,7 +186,7 @@ jobs:
           fi
       
       - name: 🚨 Notify on Failure
-        if: failure() && secrets.SLACK_WEBHOOK
+        if: ${{ failure() && secrets.SLACK_WEBHOOK != '' }}
         uses: 8398a7/action-slack@v3
         with:
           status: failure
