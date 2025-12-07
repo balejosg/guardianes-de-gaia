@@ -1,9 +1,14 @@
 name: 🚀 Multi-Environment Deployment
 
 on:
+  # CI Gate: Deploy only after CI pipelines pass
+  workflow_run:
+    workflows: ["📱 Mobile CI Pipeline", "🔄 Backend CI Pipeline"]
+    types: [completed]
+    branches: [main]
   push:
     branches: 
-      - main      # Auto-deploy to development (using DuckDNS local setup)
+      - main      # Also triggers on push for backward compatibility (will check CI status)
   release:
     types: [published]  # Auto-deploy to production on release
   workflow_dispatch:
@@ -80,11 +85,28 @@ jobs:
           clean: false
           submodules: false
       
+      - name: 🔐 Verify CI Success
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ CI pipeline '${{ github.event.workflow_run.name }}' failed with conclusion: ${{ github.event.workflow_run.conclusion }}"
+            echo "🚫 Skipping deployment due to CI failure."
+            exit 1
+          fi
+          echo "✅ CI pipeline '${{ github.event.workflow_run.name }}' succeeded. Proceeding with deployment."
+      
       - name: 🧠 Determine deployment strategy
         id: strategy
         run: |
-          # Determine target environment
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # Handle workflow_run trigger - use the triggering workflow's head_sha
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            ENV="development"
+            DEPLOY_TYPE="auto"
+            # Use the head SHA from the workflow run that triggered this
+            WORKFLOW_SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "📌 Triggered by workflow_run, using SHA: $WORKFLOW_SHA"
+          # Determine target environment for other triggers
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENV="${{ github.event.inputs.environment }}"
             DEPLOY_TYPE="manual"
           elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
@@ -105,6 +127,9 @@ jobs:
           if [ -n "${{ github.event.inputs.rollback_version }}" ]; then
             IMAGE_TAG="${{ github.event.inputs.rollback_version }}"
             DEPLOY_TYPE="rollback"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # Use the head SHA from the workflow that triggered this deployment
+            IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
           elif [ "${{ github.event_name }}" = "release" ]; then
             IMAGE_TAG="${{ github.event.release.tag_name }}"
           else
@@ -324,6 +349,48 @@ jobs:
           fi
           
           echo "✅ Development environment deployment completed successfully!"
+
+      - name: 🔄 Auto-rollback on health failure
+        if: failure()
+        run: |
+          echo "❌ Health check failed. Initiating auto-rollback..."
+          
+          # Get the previous commit
+          PREVIOUS_SHA=$(git rev-parse HEAD~1)
+          echo "🔄 Rolling back to commit: $PREVIOUS_SHA"
+          
+          # Checkout previous version
+          git checkout $PREVIOUS_SHA
+          
+          # Rebuild and redeploy
+          echo "🏗️ Rebuilding with previous version..."
+          make down || true
+          make up
+          
+          # Wait for services to start
+          echo "⏳ Waiting for rollback services to start..."
+          sleep 45
+          
+          # Verify rollback succeeded
+          ATTEMPTS=0
+          MAX_ATTEMPTS=10
+          ROLLBACK_SUCCESS=false
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            if docker ps --filter "name=guardianes-backend" --format "{{.Status}}" | grep -q "healthy"; then
+              echo "✅ Rollback completed successfully - backend is healthy"
+              ROLLBACK_SUCCESS=true
+              break
+            fi
+            echo "⏳ Waiting for rollback to complete... (attempt $((ATTEMPTS + 1))/$MAX_ATTEMPTS)"
+            sleep 10
+            ATTEMPTS=$((ATTEMPTS + 1))
+          done
+          
+          if [ "$ROLLBACK_SUCCESS" = "false" ]; then
+            echo "⚠️ Rollback may not have fully succeeded - manual intervention required"
+            echo "📋 Container status after rollback:"
+            docker ps --format "table {{.Names}}\t{{.Status}}"
+          fi
 
   # ============================================
   # Staging Environment Deployment

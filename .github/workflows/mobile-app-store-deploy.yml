@@ -3,6 +3,11 @@ name: 📱 Mobile App Store Deployment
 on:
   release:
     types: [published]
+  # CI Gate: Only deploy to stores after Mobile CI passes
+  workflow_run:
+    workflows: ["📱 Mobile CI Pipeline"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       platform:
@@ -59,6 +64,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      
+      - name: 🔐 Verify Mobile CI Success
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ Mobile CI pipeline failed with conclusion: ${{ github.event.workflow_run.conclusion }}"
+            echo "🚫 Cannot proceed with app store deployment - CI must pass first."
+            exit 1
+          fi
+          echo "✅ Mobile CI pipeline succeeded. Proceeding with app store deployment."
       
       - name: 🎯 Setup Flutter
         uses: subosito/flutter-action@v2
