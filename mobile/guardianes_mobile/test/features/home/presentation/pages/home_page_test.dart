@@ -52,9 +52,10 @@ void main() {
     testWidgets('should display guardian name and username',
         (WidgetTester tester) async {
       // arrange
-      when(mockAuthBloc.state).thenReturn(AuthAuthenticated(guardian: testGuardian));
-      when(mockAuthBloc.stream)
-          .thenAnswer((_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
+      when(mockAuthBloc.state)
+          .thenReturn(AuthAuthenticated(guardian: testGuardian));
+      when(mockAuthBloc.stream).thenAnswer(
+          (_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
 
       // act
       await tester.pumpWidget(makeTestableWidget(const HomePage()));
@@ -68,9 +69,10 @@ void main() {
     testWidgets('should display XP and step statistics',
         (WidgetTester tester) async {
       // arrange
-      when(mockAuthBloc.state).thenReturn(AuthAuthenticated(guardian: testGuardian));
-      when(mockAuthBloc.stream)
-          .thenAnswer((_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
+      when(mockAuthBloc.state)
+          .thenReturn(AuthAuthenticated(guardian: testGuardian));
+      when(mockAuthBloc.stream).thenAnswer(
+          (_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
 
       // act
       await tester.pumpWidget(makeTestableWidget(const HomePage()));
@@ -84,9 +86,10 @@ void main() {
 
     testWidgets('should display feature cards', (WidgetTester tester) async {
       // arrange
-      when(mockAuthBloc.state).thenReturn(AuthAuthenticated(guardian: testGuardian));
-      when(mockAuthBloc.stream)
-          .thenAnswer((_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
+      when(mockAuthBloc.state)
+          .thenReturn(AuthAuthenticated(guardian: testGuardian));
+      when(mockAuthBloc.stream).thenAnswer(
+          (_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
 
       // act
       await tester.pumpWidget(makeTestableWidget(const HomePage()));
@@ -100,9 +103,10 @@ void main() {
     testWidgets('should navigate to step tracking when tapped',
         (WidgetTester tester) async {
       // arrange
-      when(mockAuthBloc.state).thenReturn(AuthAuthenticated(guardian: testGuardian));
-      when(mockAuthBloc.stream)
-          .thenAnswer((_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
+      when(mockAuthBloc.state)
+          .thenReturn(AuthAuthenticated(guardian: testGuardian));
+      when(mockAuthBloc.stream).thenAnswer(
+          (_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
 
       // act
       await tester.pumpWidget(makeTestableWidget(const HomePage()));
@@ -116,9 +120,10 @@ void main() {
     testWidgets('should dispatch logout when logout button is tapped',
         (WidgetTester tester) async {
       // arrange
-      when(mockAuthBloc.state).thenReturn(AuthAuthenticated(guardian: testGuardian));
-      when(mockAuthBloc.stream)
-          .thenAnswer((_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
+      when(mockAuthBloc.state)
+          .thenReturn(AuthAuthenticated(guardian: testGuardian));
+      when(mockAuthBloc.stream).thenAnswer(
+          (_) => Stream.value(AuthAuthenticated(guardian: testGuardian)));
 
       // act
       await tester.pumpWidget(makeTestableWidget(const HomePage()));
