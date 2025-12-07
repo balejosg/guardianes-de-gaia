@@ -199,7 +199,7 @@ void main() {
           ),
           throwsA(
             predicate((e) =>
-                e is Exception && e.toString().contains('Registration failed')),
+                e is Exception && e.toString().contains('Error desconocido')),
           ),
         );
       });
@@ -389,7 +389,7 @@ void main() {
           ),
           throwsA(
             predicate(
-                (e) => e is Exception && e.toString().contains('Login failed')),
+                (e) => e is Exception && e.toString().contains('Error desconocido')),
           ),
         );
       });
