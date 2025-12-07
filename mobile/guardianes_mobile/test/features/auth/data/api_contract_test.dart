@@ -92,7 +92,14 @@ void main() {
       });
 
       test('should handle guardian with all level types', () {
-        final levels = ['INITIATE', 'APPRENTICE', 'PROTECTOR', 'GUARDIAN', 'MASTER', 'LEGEND'];
+        final levels = [
+          'INITIATE',
+          'APPRENTICE',
+          'PROTECTOR',
+          'GUARDIAN',
+          'MASTER',
+          'LEGEND'
+        ];
 
         for (final level in levels) {
           final response = '''
@@ -163,8 +170,8 @@ void main() {
       test('should handle different date formats', () {
         // Backend might return dates in different formats
         final dateFormats = [
-          '2015-01-15',           // ISO date only
-          '2015-01-15T00:00:00',  // ISO datetime without Z
+          '2015-01-15', // ISO date only
+          '2015-01-15T00:00:00', // ISO datetime without Z
           '2015-01-15T00:00:00Z', // ISO datetime with Z
         ];
 
@@ -231,7 +238,8 @@ void main() {
         expect(error, equals('Invalid credentials'));
       });
 
-      test('should handle error response with both message and error fields', () {
+      test('should handle error response with both message and error fields',
+          () {
         // Some error responses might have both
         const errorResponse = '''
         {
@@ -273,7 +281,7 @@ void main() {
         ''';
 
         final json = jsonDecode(response) as Map<String, dynamic>;
-        
+
         expect(json['token'], isA<String>());
         expect(json['guardian'], isA<Map<String, dynamic>>());
       });

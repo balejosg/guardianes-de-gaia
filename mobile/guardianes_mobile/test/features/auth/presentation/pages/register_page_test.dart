@@ -55,14 +55,15 @@ void main() {
 
       // act
       await tester.pumpWidget(makeTestableWidget(const RegisterPage()));
-      
+
       // Find and tap the register button without filling fields
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
       await tester.tap(registerButton);
       await tester.pump();
 
       // assert
-      expect(find.text('Por favor ingresa un nombre de usuario'), findsOneWidget);
+      expect(
+          find.text('Por favor ingresa un nombre de usuario'), findsOneWidget);
     });
 
     testWidgets('should show validation error for invalid email',
@@ -73,7 +74,7 @@ void main() {
 
       // act
       await tester.pumpWidget(makeTestableWidget(const RegisterPage()));
-      
+
       // Enter username but invalid email
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Nombre de Usuario'), 'testuser');
@@ -84,8 +85,9 @@ void main() {
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Contraseña'), 'password123');
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Confirmar Contraseña'), 'password123');
-      
+          find.widgetWithText(TextFormField, 'Confirmar Contraseña'),
+          'password123');
+
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
       await tester.tap(registerButton);
       await tester.pump();
@@ -102,7 +104,7 @@ void main() {
 
       // act
       await tester.pumpWidget(makeTestableWidget(const RegisterPage()));
-      
+
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Nombre de Usuario'), 'testuser');
       await tester.enterText(
@@ -112,8 +114,9 @@ void main() {
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Contraseña'), 'password123');
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Confirmar Contraseña'), 'different123');
-      
+          find.widgetWithText(TextFormField, 'Confirmar Contraseña'),
+          'different123');
+
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
       await tester.tap(registerButton);
       await tester.pump();
@@ -136,7 +139,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // assert
-      expect(find.text('El nombre de usuario ya está registrado'), findsOneWidget);
+      expect(
+          find.text('El nombre de usuario ya está registrado'), findsOneWidget);
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
@@ -163,8 +167,8 @@ void main() {
       await tester.pumpWidget(makeTestableWidget(const RegisterPage()));
 
       // assert
-      final button = tester.widget<ElevatedButton>(
-          find.byType(ElevatedButton).first);
+      final button =
+          tester.widget<ElevatedButton>(find.byType(ElevatedButton).first);
       expect(button.onPressed, isNull);
     });
 
@@ -191,7 +195,7 @@ void main() {
 
       // act
       await tester.pumpWidget(makeTestableWidget(const RegisterPage()));
-      
+
       // Fill all fields except birth date
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Nombre de Usuario'), 'testuser');
@@ -202,18 +206,19 @@ void main() {
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Contraseña'), 'password123');
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Confirmar Contraseña'), 'password123');
-      
+          find.widgetWithText(TextFormField, 'Confirmar Contraseña'),
+          'password123');
+
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
       await tester.tap(registerButton);
       await tester.pump();
 
       // assert
-      expect(find.text('Por favor selecciona tu fecha de nacimiento'), findsOneWidget);
+      expect(find.text('Por favor selecciona tu fecha de nacimiento'),
+          findsOneWidget);
     });
 
-    testWidgets('should have link to login page',
-        (WidgetTester tester) async {
+    testWidgets('should have link to login page', (WidgetTester tester) async {
       // arrange
       when(mockAuthBloc.state).thenReturn(AuthInitial());
       when(mockAuthBloc.stream).thenAnswer((_) => Stream.value(AuthInitial()));

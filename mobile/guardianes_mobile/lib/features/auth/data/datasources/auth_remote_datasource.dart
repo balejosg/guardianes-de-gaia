@@ -51,19 +51,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required DateTime birthDate,
   }) async {
     try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/auth/register'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'username': username,
-          'email': email,
-          'password': password,
-          'name': name,
-          'birthDate': birthDate.toIso8601String().split('T')[0],
-        }),
-      ).timeout(timeout);
+      final response = await client
+          .post(
+            Uri.parse('$baseUrl/auth/register'),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'username': username,
+              'email': email,
+              'password': password,
+              'name': name,
+              'birthDate': birthDate.toIso8601String().split('T')[0],
+            }),
+          )
+          .timeout(timeout);
 
       if (response.statusCode == 201) {
         try {
@@ -104,16 +106,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
   }) async {
     try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'usernameOrEmail': usernameOrEmail,
-          'password': password,
-        }),
-      ).timeout(timeout);
+      final response = await client
+          .post(
+            Uri.parse('$baseUrl/auth/login'),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'usernameOrEmail': usernameOrEmail,
+              'password': password,
+            }),
+          )
+          .timeout(timeout);
 
       if (response.statusCode == 200) {
         try {
@@ -166,7 +170,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   /// Returns user-friendly error messages based on HTTP status codes
-  AuthException _getErrorMessageForStatusCode(int statusCode, String operation) {
+  AuthException _getErrorMessageForStatusCode(
+      int statusCode, String operation) {
     switch (statusCode) {
       case 400:
         return AuthException(

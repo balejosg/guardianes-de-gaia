@@ -52,7 +52,7 @@ void main() {
 
       // act
       await tester.pumpWidget(makeTestableWidget(const LoginPage()));
-      
+
       // Find and tap the login button without filling fields
       final loginButton = find.widgetWithText(ElevatedButton, 'Iniciar Sesión');
       await tester.tap(loginButton);
@@ -103,8 +103,8 @@ void main() {
       await tester.pumpWidget(makeTestableWidget(const LoginPage()));
 
       // assert
-      final button = tester.widget<ElevatedButton>(
-          find.byType(ElevatedButton).first);
+      final button =
+          tester.widget<ElevatedButton>(find.byType(ElevatedButton).first);
       expect(button.onPressed, isNull);
     });
 
@@ -116,12 +116,12 @@ void main() {
 
       // act
       await tester.pumpWidget(makeTestableWidget(const LoginPage()));
-      
+
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Usuario o Email'), 'testuser');
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Contraseña'), 'password123');
-      
+
       final loginButton = find.widgetWithText(ElevatedButton, 'Iniciar Sesión');
       await tester.tap(loginButton);
       await tester.pump();
@@ -151,7 +151,7 @@ void main() {
 
       // act
       await tester.pumpWidget(makeTestableWidget(const LoginPage()));
-      
+
       // Password visibility toggle should start with visibility icon
       expect(find.byIcon(Icons.visibility), findsOneWidget);
 

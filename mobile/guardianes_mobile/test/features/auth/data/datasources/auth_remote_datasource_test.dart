@@ -388,8 +388,8 @@ void main() {
             password: tPassword,
           ),
           throwsA(
-            predicate(
-                (e) => e is Exception && e.toString().contains('Error desconocido')),
+            predicate((e) =>
+                e is Exception && e.toString().contains('Error desconocido')),
           ),
         );
       });
