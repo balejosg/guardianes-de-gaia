@@ -58,6 +58,8 @@ void main() {
 
       // Find and tap the register button without filling fields
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
+      await tester.ensureVisible(registerButton);
+      await tester.pumpAndSettle();
       await tester.tap(registerButton);
       await tester.pump();
 
@@ -89,6 +91,8 @@ void main() {
           'password123');
 
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
+      await tester.ensureVisible(registerButton);
+      await tester.pumpAndSettle();
       await tester.tap(registerButton);
       await tester.pump();
 
@@ -118,6 +122,8 @@ void main() {
           'different123');
 
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
+      await tester.ensureVisible(registerButton);
+      await tester.pumpAndSettle();
       await tester.tap(registerButton);
       await tester.pump();
 
@@ -210,6 +216,8 @@ void main() {
           'password123');
 
       final registerButton = find.widgetWithText(ElevatedButton, 'Registrarse');
+      await tester.ensureVisible(registerButton);
+      await tester.pumpAndSettle();
       await tester.tap(registerButton);
       await tester.pump();
 
