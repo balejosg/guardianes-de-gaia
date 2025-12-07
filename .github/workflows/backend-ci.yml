@@ -79,9 +79,21 @@ jobs:
           sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target || true
       
       - name: 🛡️ OWASP Dependency Check
+        continue-on-error: true
         run: |
-          echo "⚠️ OWASP Dependency Check temporarily disabled due to network issues"
-          echo "Will re-enable once other core issues are resolved"
+          echo "🔍 Running OWASP Dependency Check..."
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/workspace \
+            -w /workspace \
+            -u $(id -u):$(id -g) \
+            maven:3-openjdk-17 \
+            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=11 -Dformat=HTML || {
+              echo "⚠️ OWASP check completed with findings - review report for details"
+            }
+          
+          if [ -f "${{ github.workspace }}/backend/target/dependency-check-report.html" ]; then
+            echo "📋 OWASP report generated at backend/target/dependency-check-report.html"
+          fi
       
       - name: 📊 Code Quality Summary
         run: |
@@ -174,6 +186,45 @@ jobs:
           name: Backend Coverage
           fail_ci_if_error: false
       
+      - name: 📊 Check Coverage Threshold
+        run: |
+          echo "📊 Checking coverage threshold..."
+          JACOCO_XML="${{ github.workspace }}/backend/target/site/jacoco/jacoco.xml"
+          
+          if [ -f "$JACOCO_XML" ]; then
+            # Extract instruction coverage from JaCoCo XML
+            COVERED=$(grep -oP 'type="INSTRUCTION"[^/]*COVERED="\K[0-9]+' "$JACOCO_XML" | head -1 || echo "0")
+            MISSED=$(grep -oP 'type="INSTRUCTION"[^/]*MISSED="\K[0-9]+' "$JACOCO_XML" | head -1 || echo "0")
+            
+            if [ -n "$COVERED" ] && [ -n "$MISSED" ]; then
+              TOTAL=$((COVERED + MISSED))
+              if [ "$TOTAL" -gt 0 ]; then
+                PERCENT=$((COVERED * 100 / TOTAL))
+                echo "📈 Coverage: ${PERCENT}% (${COVERED}/${TOTAL} instructions)"
+                
+                echo "## 📊 Backend Coverage Summary" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "**Instruction Coverage:** ${PERCENT}%" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                
+                if [ "$PERCENT" -lt 70 ]; then
+                  echo "❌ Coverage ${PERCENT}% is below 70% threshold" >> $GITHUB_STEP_SUMMARY
+                  echo "❌ FAILED: Coverage ${PERCENT}% is below 70% threshold"
+                  exit 1
+                else
+                  echo "✅ Coverage ${PERCENT}% meets 70% threshold" >> $GITHUB_STEP_SUMMARY
+                  echo "✅ Coverage ${PERCENT}% meets 70% threshold"
+                fi
+              else
+                echo "⚠️ No coverage data found - skipping threshold check"
+              fi
+            else
+              echo "⚠️ Could not parse coverage from JaCoCo report - skipping threshold check"
+            fi
+          else
+            echo "⚠️ JaCoCo report not found at $JACOCO_XML - skipping threshold check"
+          fi
+      
       - name: 💾 Archive Test Results
         uses: actions/upload-artifact@v4
         if: always()
@@ -182,6 +233,7 @@ jobs:
           path: |
             backend/target/surefire-reports/
             backend/target/site/jacoco/
+
 
   # ============================================
   # Integration Tests (Simplified)

@@ -165,6 +165,30 @@ jobs:
             echo "**Functions Coverage:** No coverage data available" >> $GITHUB_STEP_SUMMARY
           fi
       
+      - name: 📊 Check Coverage Threshold
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          echo "📊 Checking coverage threshold..."
+          if [ -f "coverage/lcov_filtered.info" ] && [ -s "coverage/lcov_filtered.info" ]; then
+            COVERAGE=$(lcov --summary coverage/lcov_filtered.info 2>/dev/null | grep lines | awk '{print $2}' | tr -d '%')
+            if [ -n "$COVERAGE" ]; then
+              COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
+              echo "" >> $GITHUB_STEP_SUMMARY
+              if [ "$COVERAGE_INT" -lt 70 ]; then
+                echo "❌ **Coverage ${COVERAGE}% is below 70% threshold**" >> $GITHUB_STEP_SUMMARY
+                echo "❌ FAILED: Coverage ${COVERAGE}% is below 70% threshold"
+                exit 1
+              else
+                echo "✅ **Coverage ${COVERAGE}% meets 70% threshold**" >> $GITHUB_STEP_SUMMARY
+                echo "✅ Coverage ${COVERAGE}% meets 70% threshold"
+              fi
+            else
+              echo "⚠️ Could not parse coverage - skipping threshold check"
+            fi
+          else
+            echo "⚠️ Coverage file not found - skipping threshold check"
+          fi
+      
       - name: 💾 Archive Test Results
         uses: actions/upload-artifact@v4
         if: always()
@@ -173,6 +197,7 @@ jobs:
           path: |
             mobile/guardianes_mobile/coverage/
             mobile/guardianes_mobile/test_results/
+
 
   # ============================================
   # Android Build & Test
@@ -875,12 +900,95 @@ jobs:
           echo "- **Binary Analysis**: ✅ Completed" >> $GITHUB_STEP_SUMMARY
 
   # ============================================
+  # Android Emulator Integration Tests
+  # ============================================
+  android-emulator-integration-tests:
+    name: 🤖 Android Emulator Integration Tests
+    runs-on: ubuntu-latest
+    needs: [flutter-tests, android-build]
+    timeout-minutes: 45
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: 🎯 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      
+      - name: 🔓 Enable KVM for Emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      
+      - name: 📦 Get Dependencies
+        working-directory: ./mobile/guardianes_mobile
+        run: flutter pub get
+      
+      - name: 🔧 Generate Code
+        working-directory: ./mobile/guardianes_mobile
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+      
+      - name: 🤖 Run Integration Tests on Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          profile: pixel_5
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            echo "🔍 Checking emulator status..."
+            adb devices
+            
+            echo "📱 Running Flutter integration tests..."
+            cd mobile/guardianes_mobile
+            
+            # Run all integration tests
+            flutter test integration_test/ --reporter expanded
+            
+            echo "✅ Integration tests completed"
+      
+      - name: 📊 Integration Test Summary
+        if: always()
+        run: |
+          echo "## 📱 Android Emulator Integration Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Files Executed:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`guardian_auth_integration_test.dart\` - Authentication flows" >> $GITHUB_STEP_SUMMARY
+          echo "- \`step_tracking_integration_test.dart\` - Step tracking features" >> $GITHUB_STEP_SUMMARY
+          echo "- \`app_flow_integration_test.dart\` - Complete app navigation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Environment:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Emulator**: Pixel 5 (API 30)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Flutter**: ${{ env.FLUTTER_VERSION }}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 💾 Archive Integration Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-integration-test-results
+          path: |
+            mobile/guardianes_mobile/build/integration_test/
+            mobile/guardianes_mobile/integration_test/screenshots/
+
+  # ============================================
   # Build Summary
   # ============================================
   mobile-summary:
     name: 📋 Mobile Build Summary
     runs-on: ubuntu-latest
-    needs: [code-analysis, flutter-tests, android-build, ios-build, mobile-integration, mobile-performance, mobile-security]
+    needs: [code-analysis, flutter-tests, android-build, ios-build, mobile-integration, mobile-performance, mobile-security, android-emulator-integration-tests]
     if: always()
     
     steps:
@@ -893,14 +1001,16 @@ jobs:
           echo "- Flutter Tests: ${{ needs.flutter-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Android Build: ${{ needs.android-build.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- iOS Build: ${{ needs.ios-build.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Integration Tests: ${{ needs.mobile-integration.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend Integration Tests: ${{ needs.mobile-integration.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Emulator Integration Tests: ${{ needs.android-emulator-integration-tests.result }}**" >> $GITHUB_STEP_SUMMARY
           echo "- Performance Tests: ${{ needs.mobile-performance.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security Scan: ${{ needs.mobile-security.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.code-analysis.result }}" == "success" && 
                 "${{ needs.flutter-tests.result }}" == "success" && 
-                "${{ needs.android-build.result }}" == "success" ]]; then
+                "${{ needs.android-build.result }}" == "success" &&
+                "${{ needs.android-emulator-integration-tests.result }}" == "success" ]]; then
             echo "✅ **Mobile build successful!** Ready for deployment." >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Mobile build failed.** Please review errors." >> $GITHUB_STEP_SUMMARY
