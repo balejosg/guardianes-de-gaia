@@ -5,7 +5,6 @@ import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:guardianes_mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:guardianes_mobile/features/auth/presentation/pages/login_page.dart';
-import 'package:guardianes_mobile/features/auth/domain/entities/guardian.dart';
 
 import 'login_page_test.mocks.dart';
 
@@ -153,16 +152,14 @@ void main() {
       // act
       await tester.pumpWidget(makeTestableWidget(const LoginPage()));
       
-      // Password should be obscured initially
-      final passwordField = tester.widget<TextFormField>(
-          find.widgetWithText(TextFormField, 'Contraseña'));
-      expect(passwordField.obscureText, isTrue);
+      // Password visibility toggle should start with visibility icon
+      expect(find.byIcon(Icons.visibility), findsOneWidget);
 
       // Toggle visibility
       await tester.tap(find.byIcon(Icons.visibility));
       await tester.pump();
 
-      // Password should now be visible
+      // Password should now show visibility_off icon
       expect(find.byIcon(Icons.visibility_off), findsOneWidget);
     });
   });

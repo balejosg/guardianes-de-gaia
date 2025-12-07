@@ -5,7 +5,6 @@ import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:guardianes_mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:guardianes_mobile/features/auth/presentation/pages/register_page.dart';
-import 'package:guardianes_mobile/features/auth/domain/entities/guardian.dart';
 
 import 'register_page_test.mocks.dart';
 
