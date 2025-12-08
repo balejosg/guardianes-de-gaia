@@ -74,8 +74,8 @@ class _StepTrackingPageState extends State<StepTrackingPage>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(text: 'Today', icon: Icon(Icons.today)),
-            Tab(text: 'History', icon: Icon(Icons.history)),
+            Tab(key: Key('step_today_tab'), text: 'Today', icon: Icon(Icons.today)),
+            Tab(key: Key('step_history_tab'), text: 'History', icon: Icon(Icons.history)),
           ],
         ),
       ),

@@ -18,7 +18,7 @@ class GuardianesUserJourney {
 
     async init() {
         console.log('🚀 Starting Guardianes User Journey Test...');
-        
+
         // Ensure screenshots directory exists
         if (CONFIG.screenshots.enabled) {
             fs.mkdirSync(CONFIG.screenshots.directory, { recursive: true });
@@ -32,34 +32,34 @@ class GuardianesUserJourney {
         });
 
         this.page = await this.browser.newPage();
-        
+
         // Set user agent and extra headers
         await this.page.setUserAgent('Guardianes-TestBot/1.0 (Puppeteer)');
-        
+
         console.log('✅ Browser initialized');
     }
 
     async takeScreenshot(stepName) {
         if (!CONFIG.screenshots.enabled) return;
-        
+
         this.stepCount++;
         const filename = `${this.stepCount.toString().padStart(2, '0')}-${stepName}.png`;
         const filepath = path.join(CONFIG.screenshots.directory, filename);
-        
-        await this.page.screenshot({ 
+
+        await this.page.screenshot({
             path: filepath,
             fullPage: true
         });
-        
+
         console.log(`📸 Screenshot saved: ${filename}`);
     }
 
     async authenticateUser() {
         console.log('\n🔐 Step 1: User Authentication');
-        
-        // Navigate to login endpoint
-        const loginUrl = `${CONFIG.baseUrl}/api/v1/auth/login`;
-        
+
+        // Navigate to login endpoint (using correct API path without v1)
+        const loginUrl = `${CONFIG.baseUrl}/api/auth/login`;
+
         try {
             const response = await this.page.evaluate(async (url, credentials) => {
                 const result = await fetch(url, {
@@ -79,7 +79,7 @@ class GuardianesUserJourney {
                 this.authToken = response.data.token;
                 console.log(`✅ Authentication successful for user: ${CONFIG.testUser.username}`);
                 console.log(`🎫 Token received: ${this.authToken.substring(0, 20)}...`);
-                
+
                 await this.takeScreenshot('authentication-success');
                 return true;
             } else {
@@ -94,9 +94,9 @@ class GuardianesUserJourney {
 
     async validateToken() {
         console.log('\n🔍 Step 2: Token Validation');
-        
-        const validateUrl = `${CONFIG.baseUrl}/api/v1/auth/validate`;
-        
+
+        const validateUrl = `${CONFIG.baseUrl}/api/auth/validate`;
+
         try {
             const response = await this.page.evaluate(async (url, token) => {
                 const result = await fetch(url, {
@@ -115,7 +115,7 @@ class GuardianesUserJourney {
             if (response.status === 200 && response.data.valid) {
                 console.log(`✅ Token is valid for user: ${response.data.username}`);
                 console.log(`⏰ Expires at: ${response.data.expiresAt}`);
-                
+
                 await this.takeScreenshot('token-validation');
                 return true;
             } else {
@@ -130,9 +130,9 @@ class GuardianesUserJourney {
 
     async getCurrentStepCount() {
         console.log('\n👣 Step 3: Check Current Step Count');
-        
+
         const stepUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/steps/current`;
-        
+
         try {
             const response = await this.page.evaluate(async (url, token) => {
                 const result = await fetch(url, {
@@ -153,7 +153,7 @@ class GuardianesUserJourney {
                 console.log(`   📊 Steps today: ${response.data.stepCount}`);
                 console.log(`   ⚡ Energy available: ${response.data.energyGenerated}`);
                 console.log(`   📅 Date: ${response.data.date}`);
-                
+
                 await this.takeScreenshot('current-step-count');
                 return response.data;
             } else {
@@ -168,14 +168,14 @@ class GuardianesUserJourney {
 
     async submitSteps(stepCount = 2500) {
         console.log(`\n🚶 Step 4: Submit Daily Steps (${stepCount} steps)`);
-        
+
         const submitUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/steps`;
         const stepData = {
             stepCount: stepCount,
             source: 'MOBILE_APP',
             deviceInfo: 'Puppeteer Test Device'
         };
-        
+
         try {
             const response = await this.page.evaluate(async (url, token, data) => {
                 const result = await fetch(url, {
@@ -198,7 +198,7 @@ class GuardianesUserJourney {
                 console.log(`   ⚡ Energy generated: ${response.data.energyGenerated}`);
                 console.log(`   📈 Total daily steps: ${response.data.totalDailySteps}`);
                 console.log(`   💪 Energy conversion: ${stepCount} steps → ${response.data.energyGenerated} energy`);
-                
+
                 await this.takeScreenshot('step-submission-success');
                 return response.data;
             } else {
@@ -213,9 +213,9 @@ class GuardianesUserJourney {
 
     async getEnergyBalance() {
         console.log('\n⚡ Step 5: Check Energy Balance');
-        
+
         const energyUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/energy/balance`;
-        
+
         try {
             const response = await this.page.evaluate(async (url, token) => {
                 const result = await fetch(url, {
@@ -237,7 +237,7 @@ class GuardianesUserJourney {
                 console.log(`   📊 Today's earned: ${response.data.todaysEarned} energy`);
                 console.log(`   💸 Today's spent: ${response.data.todaysSpent} energy`);
                 console.log(`   📈 Recent transactions: ${response.data.recentTransactions?.length || 0}`);
-                
+
                 await this.takeScreenshot('energy-balance');
                 return response.data;
             } else {
@@ -252,14 +252,14 @@ class GuardianesUserJourney {
 
     async spendEnergy(amount = 50, source = 'CARD_BATTLE') {
         console.log(`\n💸 Step 6: Spend Energy (${amount} energy for ${source})`);
-        
+
         const spendUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/energy/spend`;
         const spendData = {
             amount: amount,
             source: source,
             description: `Puppeteer test spending for ${source}`
         };
-        
+
         try {
             const response = await this.page.evaluate(async (url, token, data) => {
                 const result = await fetch(url, {
@@ -282,7 +282,7 @@ class GuardianesUserJourney {
                 console.log(`   💰 Remaining balance: ${response.data.remainingBalance} energy`);
                 console.log(`   🎮 Source: ${response.data.source}`);
                 console.log(`   📝 Transaction ID: ${response.data.transactionId}`);
-                
+
                 await this.takeScreenshot('energy-spending-success');
                 return response.data;
             } else {
@@ -297,13 +297,13 @@ class GuardianesUserJourney {
 
     async getStepHistory() {
         console.log('\n📊 Step 7: Get Step History');
-        
+
         const today = new Date();
         const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        
+
         const historyUrl = `${CONFIG.baseUrl}/api/v1/guardians/${CONFIG.testGuardian.id}/steps/history` +
             `?from=${lastWeek.toISOString().split('T')[0]}&to=${today.toISOString().split('T')[0]}`;
-        
+
         try {
             const response = await this.page.evaluate(async (url, token) => {
                 const result = await fetch(url, {
@@ -325,13 +325,13 @@ class GuardianesUserJourney {
                 console.log(`   📊 Total days: ${response.data.dailyRecords?.length || 0}`);
                 console.log(`   👣 Total steps: ${response.data.totalSteps}`);
                 console.log(`   ⚡ Total energy: ${response.data.totalEnergyGenerated}`);
-                
+
                 if (response.data.dailyRecords) {
                     response.data.dailyRecords.forEach((record, index) => {
                         console.log(`      Day ${index + 1}: ${record.stepCount} steps → ${record.energyGenerated} energy`);
                     });
                 }
-                
+
                 await this.takeScreenshot('step-history');
                 return response.data;
             } else {
@@ -346,13 +346,13 @@ class GuardianesUserJourney {
 
     async checkHealthEndpoints() {
         console.log('\n🏥 Step 8: Health & Monitoring Check');
-        
+
         const endpoints = [
             { name: 'Application Health', url: `${CONFIG.baseUrl}/actuator/health` },
             { name: 'Application Info', url: `${CONFIG.baseUrl}/actuator/info` },
             { name: 'Prometheus Metrics', url: `${CONFIG.baseUrl}/actuator/prometheus` }
         ];
-        
+
         for (const endpoint of endpoints) {
             try {
                 const response = await this.page.evaluate(async (url) => {
@@ -376,20 +376,20 @@ class GuardianesUserJourney {
                 console.log(`❌ ${endpoint.name}: Error - ${error.message}`);
             }
         }
-        
+
         await this.takeScreenshot('health-endpoints');
     }
 
     async runCompleteJourney() {
         try {
             await this.init();
-            
+
             // Complete user journey simulation
             const authSuccess = await this.authenticateUser();
             if (!authSuccess) {
                 throw new Error('Authentication failed');
             }
-            
+
             await this.validateToken();
             await this.getCurrentStepCount();
             await this.submitSteps(2500); // Submit 2500 steps (250 energy)
@@ -399,7 +399,7 @@ class GuardianesUserJourney {
             await this.getEnergyBalance(); // Check balance after spending
             await this.getStepHistory();
             await this.checkHealthEndpoints();
-            
+
             console.log('\n🎉 User Journey Test Completed Successfully!');
             console.log('\n📋 Journey Summary:');
             console.log('   1. ✅ User authentication');
@@ -410,11 +410,11 @@ class GuardianesUserJourney {
             console.log('   6. ✅ Energy spending (card battles)');
             console.log('   7. ✅ Step history tracking');
             console.log('   8. ✅ Health monitoring');
-            
+
             if (CONFIG.screenshots.enabled) {
                 console.log(`\n📸 Screenshots saved to: ${CONFIG.screenshots.directory}`);
             }
-            
+
         } catch (error) {
             console.error('\n❌ User Journey Test Failed:', error.message);
             await this.takeScreenshot('error-state');

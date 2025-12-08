@@ -372,6 +372,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
 
   Widget _buildStepDisplay() {
     return Column(
+      key: const Key('current_step_count'),
       children: [
         Text(
           NumberFormat('#,###').format(_realtimeSteps),
@@ -394,6 +395,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
 
   Widget _buildEnergyDisplay(int energy) {
     return Container(
+      key: const Key('energy_display'),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.orange[50],
@@ -410,6 +412,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
           ),
           const SizedBox(width: 4),
           Text(
+            key: const Key('energy_balance'),
             '${NumberFormat('#,###').format(energy)} Energy',
             style: TextStyle(
               fontSize: 16,
@@ -492,6 +495,7 @@ class _RealtimeStepCounterWidgetState extends State<RealtimeStepCounterWidget> {
     final hasNewSteps = _realtimeSteps > _lastSyncedSteps;
 
     return ElevatedButton.icon(
+      key: const Key('submit_steps_button'),
       onPressed: hasNewSteps ? _manualSync : null,
       icon: Icon(
         hasNewSteps ? Icons.sync : Icons.sync_disabled,
