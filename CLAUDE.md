@@ -374,8 +374,4 @@ make test-all && make coverage
 
 ---
 
-## 📖 REFERENCE TO COMPREHENSIVE RULES
-
-For complete details on test compliance rules, see: `CLAUDE_TEST_RULES_BULLETPROOF.md`
-
-**These rules are IRONCLAD and CANNOT be circumvented under any circumstances.**
+**These test compliance rules are IRONCLAD and CANNOT be circumvented under any circumstances.**

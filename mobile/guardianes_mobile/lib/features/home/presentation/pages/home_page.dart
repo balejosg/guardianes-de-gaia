@@ -123,7 +123,6 @@ class HomePage extends StatelessWidget {
                       crossAxisCount: 2,
                       children: [
                         _FeatureCard(
-                          widgetKey: const Key('step_tracking_nav'),
                           title: 'Seguimiento de Pasos',
                           icon: Icons.directions_walk,
                           onTap: () {
@@ -230,19 +229,16 @@ class _FeatureCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final VoidCallback onTap;
-  final Key? widgetKey;
 
   const _FeatureCard({
     required this.title,
     required this.icon,
     required this.onTap,
-    this.widgetKey,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      key: widgetKey,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),

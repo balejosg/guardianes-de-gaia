@@ -36,7 +36,6 @@ class StepHistoryWidget extends StatelessWidget {
         const SizedBox(height: 16),
         Expanded(
           child: ListView.builder(
-            key: const Key('step_history_list'),
             itemCount: stepHistory.length,
             itemBuilder: (context, index) {
               final dayData = stepHistory[index];

@@ -432,6 +432,6 @@ git tag v1.0.0 → Manual approve → Auto-deploy to http://guardianes.duckdns.o
 
 ---
 
-**Document Version:** 2.0  
-**Last Updated:** 2025-08-15 (Fixed - AWS dependencies removed)  
+**Document Version:** 2.1  
+**Last Updated:** 2025-12-08 (Reviewed - documentation cleanup)  
 **Status:** ✅ COMPLETE - Automatic deployment fully functional

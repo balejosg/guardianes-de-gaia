@@ -232,7 +232,8 @@ public class BattleEngine {
   }
 
   private Card convertGuardianToCard(Guardian guardian) {
-    // For battle calculations, we create a temporary card representation of the Guardian
+    // For battle calculations, we create a temporary card representation of the
+    // Guardian
     // This is used when Guardians battle without specific cards
     int levelOrdinal = guardian.getLevel().ordinal(); // Get numeric level (0-based)
     return Card.create(
@@ -244,7 +245,7 @@ public class BattleEngine {
         (levelOrdinal + 1) * 8, // Defense based on level (1-based)
         5, // Standard energy cost
         null,
-        "GUARDIAN_" + guardian.getId(),
+        String.format("GUARDIAN%08d", guardian.getId()),
         null);
   }
 

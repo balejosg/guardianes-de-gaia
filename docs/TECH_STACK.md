@@ -42,35 +42,29 @@
 ### Core
 - **Flutter 3.x** - Framework
 - **Dart** - Lenguaje
-- **BLoC Pattern** - State management
+- **BLoC Pattern** - State management (flutter_bloc)
 - **Clean Architecture** - Estructura
 
 ### Networking
-- **Dio** - Cliente HTTP
-- **Retrofit** - Type-safe API calls
-- **Pretty Dio Logger** - Debug de requests
+- **http** - Cliente HTTP
 
 ### Storage
-- **Hive** - NoSQL local database
-- **Flutter Secure Storage** - Datos sensibles
-- **Shared Preferences** - Configuración simple
-
-### UI/UX
-- **Flutter Animate** - Animaciones
-- **Lottie** - Animaciones complejas
-- **Cached Network Image** - Cache de imágenes
-
-### Tracking/Analytics
-- **Firebase Analytics** - Eventos de usuario
-- **Firebase Crashlytics** - Crash reporting
-- **Firebase Performance** - Monitoreo de performance
-- **Firebase Remote Config** - Feature flags
+- **Shared Preferences** - Almacenamiento local simple
 
 ### Device Features
-- **Geolocator** - GPS tracking
-- **Background Location** - Tracking en background
 - **Mobile Scanner** - Lectura de QR
-- **Flutter Local Notifications** - Notificaciones
+- **Pedometer** - Conteo de pasos
+- **Permission Handler** - Gestión de permisos
+
+### State & DI
+- **Equatable** - Comparación de objetos
+- **get_it + injectable** - Inyección de dependencias
+
+### Future Additions (Planned)
+- **Dio** - Cliente HTTP avanzado (planned)
+- **Hive** - NoSQL local database (planned)
+- **Geolocator** - GPS tracking (planned)
+- **Firebase Analytics/Crashlytics** - Analytics (planned)
 
 ## DevOps & CI/CD
 

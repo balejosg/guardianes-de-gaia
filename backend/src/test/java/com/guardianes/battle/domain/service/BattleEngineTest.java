@@ -13,11 +13,13 @@ import com.guardianes.guardian.domain.model.GuardianLevel;
 import com.guardianes.walking.domain.EnergyCalculationService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -73,22 +75,38 @@ class BattleEngineTest {
             true);
 
     // Create test battle
+    // Create test battle with simulated ID
     testBattle =
-        Battle.createChallenge(challenger.getId(), defender.getId(), BattleType.PVP_DUEL).start();
+        new Battle(
+            100L, // Simulated ID
+            challenger.getId(),
+            defender.getId(),
+            BattleType.PVP_DUEL,
+            BattleStatus.IN_PROGRESS,
+            new ArrayList<>(),
+            0,
+            null,
+            null,
+            LocalDateTime.now(),
+            null,
+            LocalDateTime.now());
 
     // Create test card
     testCard =
-        Card.create(
+        new Card(
+            50L, // Simulated ID
             "Fire Strike",
             "A powerful fire attack",
             CardElement.FIRE,
             CardRarity.COMMON,
             50, // attack power
             30, // defense power
-            15, // energy cost
+            5, // energy cost (max 10)
             null,
-            "FIRE_STRIKE_001",
-            null);
+            "FIRESTRIKE000001", // 16 chars
+            null,
+            LocalDateTime.now(),
+            true);
 
     // Create test move
     testMove =
@@ -97,11 +115,12 @@ class BattleEngineTest {
             challenger.getId(),
             testCard.getId(),
             defender.getId(),
-            15,
+            5, // energy cost matches card
             50,
             "Fire strike attack");
   }
 
+  @Nested
   @DisplayName("BattleEngine Constructor Tests")
   class BattleEngineConstructorTests {
 
@@ -417,7 +436,8 @@ class BattleEngineTest {
       // Given
       when(energyService.getCurrentEnergyBalance(challenger.getId())).thenReturn(50);
       Card cheapCard =
-          Card.create(
+          new Card(
+              51L, // Simulated ID
               "Cheap Strike",
               "Low cost attack",
               CardElement.EARTH,
@@ -426,8 +446,10 @@ class BattleEngineTest {
               15,
               5,
               null,
-              "CHEAP_001",
-              null);
+              "CHEAPSTRIKE00001", // 16 chars (Alphanumeric)
+              null,
+              LocalDateTime.now(),
+              true);
       List<Card> availableCards = Arrays.asList(testCard, cheapCard);
 
       // When
@@ -444,17 +466,20 @@ class BattleEngineTest {
       // Given
       when(energyService.getCurrentEnergyBalance(challenger.getId())).thenReturn(5);
       Card expensiveCard =
-          Card.create(
+          new Card(
+              52L, // Simulated ID
               "Expensive Strike",
               "High cost attack",
               CardElement.FIRE,
               CardRarity.LEGENDARY,
               100,
               80,
-              50,
+              10, // Max allowed energy
               null,
-              "EXP_001",
-              null);
+              "EXPENSIVESTRIK01", // 16 chars
+              null,
+              LocalDateTime.now(),
+              true);
       List<Card> availableCards = Collections.singletonList(expensiveCard);
 
       // When
@@ -591,6 +616,7 @@ class BattleEngineTest {
     }
   }
 
+  @Nested
   @DisplayName("Battle Completion Logic Tests")
   class BattleCompletionLogicTests {
 
@@ -602,18 +628,21 @@ class BattleEngineTest {
       Battle highEnergyBattle = testBattle;
 
       // Simulate adding enough moves to reach energy threshold
-      for (int i = 0; i < 7; i++) { // 7 * 15 = 105 energy (exceeds 100 threshold)
+      for (int i = 0; i < 21; i++) { // 21 * 5 = 105 energy (exceeds 100 threshold)
         BattleMove move =
             BattleMove.createAttack(
                 testBattle.getId(),
                 challenger.getId(),
                 testCard.getId(),
                 defender.getId(),
-                15,
+                5,
                 50,
                 "Energy threshold move " + i);
         highEnergyBattle =
             battleEngine.executeMove(highEnergyBattle, move, testCard, challenger, defender);
+        if (highEnergyBattle.isCompleted()) {
+          break;
+        }
       }
 
       // Then
@@ -717,6 +746,7 @@ class BattleEngineTest {
     }
   }
 
+  @Nested
   @DisplayName("Battle Statistics Tests")
   class BattleStatisticsTests {
 
@@ -735,7 +765,7 @@ class BattleEngineTest {
                 challenger.getId(),
                 testCard.getId(),
                 defender.getId(),
-                15,
+                5,
                 50,
                 "Test move " + i);
         evolvedBattle =
@@ -750,7 +780,7 @@ class BattleEngineTest {
 
       // Then
       assertEquals(3, result.totalMoves());
-      assertEquals(45, result.totalEnergySpent()); // 3 moves * 15 energy each
+      assertEquals(15, result.totalEnergySpent()); // 3 moves * 5 energy each
       assertNotNull(result.startedAt());
       assertNotNull(result.completedAt());
     }

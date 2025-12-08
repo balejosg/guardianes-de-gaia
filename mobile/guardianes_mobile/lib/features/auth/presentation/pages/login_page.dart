@@ -66,7 +66,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 32),
                 TextFormField(
-                  key: const Key('login_email_field'),
                   controller: _usernameController,
                   decoration: const InputDecoration(
                     labelText: 'Usuario o Email',
@@ -82,7 +81,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  key: const Key('login_password_field'),
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
@@ -115,7 +113,6 @@ class _LoginPageState extends State<LoginPage> {
                     return SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        key: const Key('login_submit_button'),
                         onPressed: state is AuthLoading ? null : _login,
                         child: state is AuthLoading
                             ? const CircularProgressIndicator()

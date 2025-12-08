@@ -111,10 +111,10 @@
 - ❌ Detección automática de zonas
 
 ### **Stack Tecnológico MVP**
-- **Frontend**: React Native
-- **Base de Datos**: SQLite local
-- **Cámara**: react-native-camera
-- **GPS**: react-native-background-job
+- **Frontend**: Flutter 3.x con BLoC pattern
+- **Base de Datos**: Hive (local) + MySQL (backend)
+- **Cámara**: Mobile Scanner (QR)
+- **GPS**: Geolocator + Background Location
 - **Cartas**: PDF imprimible (sin costes de producción)
 
 ## **📊 Métricas de Éxito**

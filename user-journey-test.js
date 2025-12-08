@@ -57,8 +57,8 @@ class GuardianesUserJourney {
     async authenticateUser() {
         console.log('\n🔐 Step 1: User Authentication');
 
-        // Navigate to login endpoint (using correct API path without v1)
-        const loginUrl = `${CONFIG.baseUrl}/api/auth/login`;
+        // Navigate to login endpoint
+        const loginUrl = `${CONFIG.baseUrl}/api/v1/auth/login`;
 
         try {
             const response = await this.page.evaluate(async (url, credentials) => {
@@ -95,7 +95,7 @@ class GuardianesUserJourney {
     async validateToken() {
         console.log('\n🔍 Step 2: Token Validation');
 
-        const validateUrl = `${CONFIG.baseUrl}/api/auth/validate`;
+        const validateUrl = `${CONFIG.baseUrl}/api/v1/auth/validate`;
 
         try {
             const response = await this.page.evaluate(async (url, token) => {
