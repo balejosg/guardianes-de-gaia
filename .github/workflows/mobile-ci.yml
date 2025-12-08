@@ -952,10 +952,7 @@ jobs:
             adb devices
             
             echo "📱 Running Flutter integration tests..."
-            cd mobile/guardianes_mobile
-            
-            # Run all integration tests
-            flutter test integration_test/ --reporter expanded
+            cd mobile/guardianes_mobile && flutter test integration_test/ --reporter expanded
             
             echo "✅ Integration tests completed"
       
