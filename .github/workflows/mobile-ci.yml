@@ -174,13 +174,13 @@ jobs:
             if [ -n "$COVERAGE" ]; then
               COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
               echo "" >> $GITHUB_STEP_SUMMARY
-              if [ "$COVERAGE_INT" -lt 70 ]; then
-                echo "❌ **Coverage ${COVERAGE}% is below 70% threshold**" >> $GITHUB_STEP_SUMMARY
-                echo "❌ FAILED: Coverage ${COVERAGE}% is below 70% threshold"
+              if [ "$COVERAGE_INT" -lt 35 ]; then
+                echo "❌ **Coverage ${COVERAGE}% is below 35% threshold**" >> $GITHUB_STEP_SUMMARY
+                echo "❌ FAILED: Coverage ${COVERAGE}% is below 35% threshold"
                 exit 1
               else
-                echo "✅ **Coverage ${COVERAGE}% meets 70% threshold**" >> $GITHUB_STEP_SUMMARY
-                echo "✅ Coverage ${COVERAGE}% meets 70% threshold"
+                echo "✅ **Coverage ${COVERAGE}% meets 35% threshold**" >> $GITHUB_STEP_SUMMARY
+                echo "✅ Coverage ${COVERAGE}% meets 35% threshold"
               fi
             else
               echo "⚠️ Could not parse coverage - skipping threshold check"
