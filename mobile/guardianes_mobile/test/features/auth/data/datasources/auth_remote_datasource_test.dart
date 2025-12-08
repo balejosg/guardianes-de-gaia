@@ -427,5 +427,123 @@ void main() {
         ));
       });
     });
+
+    group('error handling', () {
+      test('should throw AuthException on HTML error response for register', () async {
+        // Arrange - non-JSON response (like nginx error page)
+        when(mockHttpClient.post(
+          any,
+          headers: anyNamed('headers'),
+          body: anyNamed('body'),
+        )).thenAnswer((_) async => http.Response('<html>502 Bad Gateway</html>', 502));
+
+        // Act & Assert
+        expect(
+          () => dataSource.register(
+            username: 'test',
+            email: 'test@test.com',
+            password: 'pass',
+            name: 'Test',
+            birthDate: DateTime(2000, 1, 1),
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should throw AuthException on HTML error response for login', () async {
+        // Arrange - non-JSON response (like nginx error page)
+        when(mockHttpClient.post(
+          any,
+          headers: anyNamed('headers'),
+          body: anyNamed('body'),
+        )).thenAnswer((_) async => http.Response('<html>503 Service Unavailable</html>', 503));
+
+        // Act & Assert
+        expect(
+          () => dataSource.login(
+            usernameOrEmail: 'test',
+            password: 'pass',
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle 409 conflict for register', () async {
+        when(mockHttpClient.post(
+          any,
+          headers: anyNamed('headers'),
+          body: anyNamed('body'),
+        )).thenAnswer((_) async => http.Response('already exists', 409));
+
+        expect(
+          () => dataSource.register(
+            username: 'test',
+            email: 'test@test.com',
+            password: 'pass',
+            name: 'Test',
+            birthDate: DateTime(2000, 1, 1),
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle 504 gateway timeout', () async {
+        when(mockHttpClient.post(
+          any,
+          headers: anyNamed('headers'),
+          body: anyNamed('body'),
+        )).thenAnswer((_) async => http.Response('timeout', 504));
+
+        expect(
+          () => dataSource.login(usernameOrEmail: 'test', password: 'pass'),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle 403 forbidden', () async {
+        when(mockHttpClient.post(
+          any,
+          headers: anyNamed('headers'),
+          body: anyNamed('body'),
+        )).thenAnswer((_) async => http.Response('forbidden', 403));
+
+        expect(
+          () => dataSource.login(usernameOrEmail: 'test', password: 'pass'),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle 422 unprocessable entity', () async {
+        when(mockHttpClient.post(
+          any,
+          headers: anyNamed('headers'),
+          body: anyNamed('body'),
+        )).thenAnswer((_) async => http.Response('invalid data', 422));
+
+        expect(
+          () => dataSource.register(
+            username: 'test',
+            email: 'test@test.com',
+            password: 'pass',
+            name: 'Test',
+            birthDate: DateTime(2000, 1, 1),
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle 429 too many requests', () async {
+        when(mockHttpClient.post(
+          any,
+          headers: anyNamed('headers'),
+          body: anyNamed('body'),
+        )).thenAnswer((_) async => http.Response('rate limit', 429));
+
+        expect(
+          () => dataSource.login(usernameOrEmail: 'test', password: 'pass'),
+          throwsA(isA<AuthException>()),
+        );
+      });
+    });
   });
 }
