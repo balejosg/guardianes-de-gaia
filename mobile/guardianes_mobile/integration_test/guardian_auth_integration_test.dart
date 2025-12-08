@@ -39,17 +39,17 @@ void main() {
         await tester.ensureVisible(nameField);
         await tester.enterText(nameField, 'TestGuardian$timestamp');
       }
-      
+
       if (emailField.evaluate().isNotEmpty) {
         await tester.ensureVisible(emailField);
         await tester.enterText(emailField, testEmail);
       }
-      
+
       if (passwordField.evaluate().isNotEmpty) {
         await tester.ensureVisible(passwordField);
         await tester.enterText(passwordField, 'TestPassword123!');
       }
-      
+
       if (confirmPasswordField.evaluate().isNotEmpty) {
         await tester.ensureVisible(confirmPasswordField);
         await tester.enterText(confirmPasswordField, 'TestPassword123!');
@@ -66,12 +66,14 @@ void main() {
 
       // Verify result - should show success message, home page, or remain on form with error
       // Accept any of these as valid outcomes for integration test
-      final hasSuccessMessage = find.textContaining('exitoso').evaluate().isNotEmpty;
+      final hasSuccessMessage =
+          find.textContaining('exitoso').evaluate().isNotEmpty;
       final hasHomePage = find.text('Guardianes de Gaia').evaluate().isNotEmpty;
       final hasHelloText = find.textContaining('Hola,').evaluate().isNotEmpty;
-      
+
       expect(hasSuccessMessage || hasHomePage || hasHelloText, isTrue,
-          reason: 'Should show success message, home page, or welcome text after registration');
+          reason:
+              'Should show success message, home page, or welcome text after registration');
     });
 
     testWidgets('should complete guardian login flow',
@@ -90,7 +92,7 @@ void main() {
       if (emailField.evaluate().isNotEmpty) {
         await tester.enterText(emailField, 'test.guardian@example.com');
       }
-      
+
       if (passwordField.evaluate().isNotEmpty) {
         await tester.enterText(passwordField, 'TestPassword123!');
       }
@@ -107,9 +109,10 @@ void main() {
       final hasHomePage = find.textContaining('Hola,').evaluate().isNotEmpty;
       final hasWelcome = find.text('Guardianes de Gaia').evaluate().isNotEmpty;
       final hasError = find.byType(SnackBar).evaluate().isNotEmpty;
-      
+
       expect(hasHomePage || hasWelcome || hasError, isTrue,
-          reason: 'Should show home page, app title, or error after login attempt');
+          reason:
+              'Should show home page, app title, or error after login attempt');
     });
 
     testWidgets('should handle authentication errors gracefully',
@@ -125,7 +128,7 @@ void main() {
       if (emailField.evaluate().isNotEmpty) {
         await tester.enterText(emailField, 'invalid@nonexistent.com');
       }
-      
+
       if (passwordField.evaluate().isNotEmpty) {
         await tester.enterText(passwordField, 'WrongPassword123');
       }

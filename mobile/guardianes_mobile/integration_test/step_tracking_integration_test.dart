@@ -26,18 +26,20 @@ void main() {
 
       // Attempt to navigate to step tracking if on home page
       final navigated = await navigateToStepTracking(tester);
-      
+
       if (navigated) {
         // Should see step tracking page elements
         await tester.pumpAndSettle(const Duration(seconds: 2));
-        
+
         // Look for step tracking page indicators
         final hasTabBar = find.byType(TabBar).evaluate().isNotEmpty;
-        final hasStepText = find.textContaining('Steps').evaluate().isNotEmpty ||
-                           find.textContaining('Step').evaluate().isNotEmpty;
-        
+        final hasStepText =
+            find.textContaining('Steps').evaluate().isNotEmpty ||
+                find.textContaining('Step').evaluate().isNotEmpty;
+
         expect(hasTabBar || hasStepText, isTrue,
-            reason: 'Step tracking page should have TabBar or step-related text');
+            reason:
+                'Step tracking page should have TabBar or step-related text');
       } else {
         // Not authenticated - verify we're still on login/home
         expect(find.text('Guardianes de Gaia'), findsOneWidget);
@@ -52,19 +54,19 @@ void main() {
 
       // Try to navigate to step tracking
       final navigated = await navigateToStepTracking(tester);
-      
+
       if (navigated) {
         await tester.pumpAndSettle(const Duration(seconds: 2));
-        
+
         // Look for step count display
         final currentStepCount = find.byKey(const Key('current_step_count'));
         final energyBalance = find.byKey(const Key('energy_balance'));
-        
+
         // Either step count or energy should be visible (depends on layout)
         final hasStepData = currentStepCount.evaluate().isNotEmpty ||
-                           energyBalance.evaluate().isNotEmpty ||
-                           find.textContaining('Steps').evaluate().isNotEmpty;
-        
+            energyBalance.evaluate().isNotEmpty ||
+            find.textContaining('Steps').evaluate().isNotEmpty;
+
         expect(hasStepData, isTrue,
             reason: 'Should display step count or energy data');
       } else {
@@ -73,31 +75,30 @@ void main() {
       }
     });
 
-    testWidgets('should display step history tab',
-        (WidgetTester tester) async {
+    testWidgets('should display step history tab', (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();
 
       // Try to navigate to step tracking
       final navigated = await navigateToStepTracking(tester);
-      
+
       if (navigated) {
         await tester.pumpAndSettle();
-        
+
         // Look for history tab
         final historyTab = find.byKey(const Key('step_history_tab'));
-        
+
         if (historyTab.evaluate().isNotEmpty) {
           await tester.tap(historyTab);
           await tester.pumpAndSettle();
-          
+
           // Should see history list or empty state
           final historyList = find.byKey(const Key('step_history_list'));
           final hasHistoryOrEmpty = historyList.evaluate().isNotEmpty ||
-                                   find.textContaining('history').evaluate().isNotEmpty ||
-                                   find.textContaining('No step').evaluate().isNotEmpty;
-          
+              find.textContaining('history').evaluate().isNotEmpty ||
+              find.textContaining('No step').evaluate().isNotEmpty;
+
           expect(hasHistoryOrEmpty, isTrue,
               reason: 'Should show history list or empty state');
         }
@@ -107,22 +108,22 @@ void main() {
       }
     });
 
-    testWidgets('should show energy display',
-        (WidgetTester tester) async {
+    testWidgets('should show energy display', (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();
 
       // Try to navigate to step tracking
       final navigated = await navigateToStepTracking(tester);
-      
+
       if (navigated) {
         await tester.pumpAndSettle(const Duration(seconds: 2));
-        
+
         // Look for energy display
         final energyDisplay = find.byKey(const Key('energy_display'));
-        final hasEnergyText = find.textContaining('Energy').evaluate().isNotEmpty;
-        
+        final hasEnergyText =
+            find.textContaining('Energy').evaluate().isNotEmpty;
+
         expect(energyDisplay.evaluate().isNotEmpty || hasEnergyText, isTrue,
             reason: 'Should display energy information');
       } else {
@@ -131,23 +132,22 @@ void main() {
       }
     });
 
-    testWidgets('should show sync button',
-        (WidgetTester tester) async {
+    testWidgets('should show sync button', (WidgetTester tester) async {
       // Launch the app
       app.main();
       await tester.pumpAndSettle();
 
       // Try to navigate to step tracking
       final navigated = await navigateToStepTracking(tester);
-      
+
       if (navigated) {
         await tester.pumpAndSettle(const Duration(seconds: 2));
-        
+
         // Look for sync/submit button
         final submitButton = find.byKey(const Key('submit_steps_button'));
         final hasSyncText = find.textContaining('Sync').evaluate().isNotEmpty ||
-                          find.textContaining('sync').evaluate().isNotEmpty;
-        
+            find.textContaining('sync').evaluate().isNotEmpty;
+
         expect(submitButton.evaluate().isNotEmpty || hasSyncText, isTrue,
             reason: 'Should display sync or submit button');
       } else {
