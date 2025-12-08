@@ -73,6 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
+                    key: const Key('guardian_name_field'),
                     controller: _usernameController,
                     decoration: const InputDecoration(
                       labelText: 'Nombre de Usuario',
@@ -94,6 +95,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
+                    key: const Key('guardian_email_field'),
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
@@ -150,6 +152,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
+                    key: const Key('guardian_password_field'),
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
@@ -181,6 +184,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
+                    key: const Key('guardian_confirm_password_field'),
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
@@ -216,6 +220,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       return SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
+                          key: const Key('register_submit_button'),
                           onPressed: state is AuthLoading ? null : _register,
                           child: state is AuthLoading
                               ? const CircularProgressIndicator()
