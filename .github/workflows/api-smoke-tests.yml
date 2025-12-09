@@ -58,6 +58,35 @@ jobs:
         with:
           clean: false
       
+      - name: 🐳 Ensure Backend is Running
+        run: |
+          echo "🐳 Checking if backend containers are running..."
+          
+          # Check if backend container is running
+          if docker ps --format '{{.Names}}' | grep -q 'guardianes-backend'; then
+            echo "✅ Backend container is already running"
+          else
+            echo "⚠️ Backend container not running, starting services..."
+            make up
+            
+            # Wait for backend to be healthy
+            echo "⏳ Waiting for backend to be healthy..."
+            ATTEMPTS=0
+            MAX_ATTEMPTS=30
+            while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+              if docker ps --filter "name=guardianes-backend" --format "{{.Status}}" | grep -q "healthy"; then
+                echo "✅ Backend is healthy"
+                break
+              fi
+              echo "⏳ Waiting for backend... (attempt $((ATTEMPTS + 1))/$MAX_ATTEMPTS)"
+              sleep 5
+              ATTEMPTS=$((ATTEMPTS + 1))
+            done
+          fi
+          
+          # Final status check
+          docker ps --format "table {{.Names}}\t{{.Status}}" | grep guardianes || true
+      
       - name: 🔍 Test Backend Health
         run: |
           echo "🔍 Testing development backend health..."
@@ -71,6 +100,9 @@ jobs:
             echo "✅ Health endpoint accessible (status: $HTTP_STATUS)"
           else
             echo "❌ Health endpoint failed (status: $HTTP_STATUS)"
+            echo "🔍 Checking container status..."
+            docker ps --format "table {{.Names}}\t{{.Status}}" || true
+            docker logs guardianes-backend --tail 20 || true
             exit 1
           fi
       
