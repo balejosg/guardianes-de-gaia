@@ -20,7 +20,8 @@ on:
           - production
 
 env:
-  DEV_URL: http://dev-guardianes.duckdns.org
+  # Use localhost for self-hosted runner (backend is available locally via nginx on port 8888)
+  DEV_URL: http://localhost:8888
   STAGING_URL: http://stg-guardianes.duckdns.org
   PROD_URL: http://guardianes.duckdns.org
 
