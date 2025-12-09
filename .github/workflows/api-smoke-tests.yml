@@ -20,8 +20,8 @@ on:
           - production
 
 env:
-  # External URLs for testing deployed environments
-  DEV_URL: http://dev-guardianes.duckdns.org
+  # Use localhost for self-hosted runner (hairpin NAT prevents external IP access from same machine)
+  DEV_URL: http://localhost:8888
   STAGING_URL: http://stg-guardianes.duckdns.org
   PROD_URL: http://guardianes.duckdns.org
 
