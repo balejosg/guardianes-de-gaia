@@ -32,21 +32,17 @@ jobs:
   smoke-test-development:
     name: 🧪 Smoke Test - Development
     runs-on: self-hosted
+    timeout-minutes: 10
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'development') ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     
     steps:
       - name: 🧹 Cleanup Workspace
-        run: |
-          # NOTE: Do NOT kill containers - we need the backend running for smoke tests!
-          
-          # Fix file permissions only
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
-          
-          # Reset git state if exists
-          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          workspace: ${{ github.workspace }}
+          skip-container-cleanup: 'true'
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4

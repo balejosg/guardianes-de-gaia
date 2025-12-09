@@ -1,0 +1,56 @@
+name: 'Cleanup Workspace'
+description: 'Clean up workspace for self-hosted runners - kills guardianes containers, fixes permissions, resets git'
+
+inputs:
+  workspace:
+    description: 'GitHub workspace path'
+    required: true
+    default: ${{ github.workspace }}
+  clean-backend-target:
+    description: 'Also clean backend/target directory'
+    required: false
+    default: 'false'
+  skip-container-cleanup:
+    description: 'Skip killing containers (use when backend needs to remain running for smoke tests)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🧹 Cleanup Workspace
+      shell: bash
+      run: |
+        echo "🧹 Starting workspace cleanup..."
+        
+        # Kill only guardianes containers (unless skip-container-cleanup is true)
+        if [ "${{ inputs.skip-container-cleanup }}" != "true" ]; then
+          echo "🐳 Stopping guardianes containers..."
+          docker ps -q --filter "name=guardianes" | xargs -r docker kill 2>/dev/null || true
+          docker ps -aq --filter "name=guardianes" | xargs -r docker rm -f 2>/dev/null || true
+        else
+          echo "⏭️ Skipping container cleanup (backend needs to remain running)"
+        fi
+        
+        # Fix file permissions using Alpine container
+        echo "🔐 Fixing file permissions..."
+        docker run --rm --user root -v "${{ inputs.workspace }}:/workspace" alpine:latest \
+          sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
+        
+        # Clean docker config directories
+        echo "📁 Cleaning docker config directories..."
+        docker run --rm --user root -v "${{ inputs.workspace }}:/workspace" alpine:latest \
+          sh -c "rm -rf /workspace/docker/redis /workspace/docker/grafana 2>/dev/null || true"
+        
+        # Optionally clean backend target directory
+        if [ "${{ inputs.clean-backend-target }}" = "true" ]; then
+          echo "🗑️ Cleaning backend/target directory..."
+          docker run --rm --user root -v "${{ inputs.workspace }}:/workspace" alpine:latest \
+            sh -c "rm -rf /workspace/backend/target 2>/dev/null || true"
+        fi
+        
+        # Reset git state if exists
+        echo "🔄 Resetting git state..."
+        cd "${{ inputs.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        
+        echo "✅ Workspace cleanup complete"

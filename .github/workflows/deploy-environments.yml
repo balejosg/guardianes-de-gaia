@@ -43,6 +43,7 @@ jobs:
   determine-strategy:
     name: 📋 Determine Deployment Strategy
     runs-on: self-hosted
+    timeout-minutes: 10
     
     outputs:
       environment: ${{ steps.strategy.outputs.environment }}
@@ -53,21 +54,9 @@ jobs:
     
     steps:
       - name: 🧹 Cleanup Workspace
-        run: |
-          # Kill only guardianes containers (not all containers)
-          docker ps -q --filter "name=guardianes" | xargs -r docker kill || true
-          docker ps -aq --filter "name=guardianes" | xargs -r docker rm -f || true
-          
-          # Fix file permissions
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
-          
-          # Clean docker config directories
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "rm -rf /workspace/docker/redis /workspace/docker/grafana 2>/dev/null || true"
-          
-          # Reset git state if exists
-          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          workspace: ${{ github.workspace }}
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -157,26 +146,15 @@ jobs:
   pre-deployment-checks:
     name: ✅ Pre-Deployment Validation
     runs-on: self-hosted
+    timeout-minutes: 10
     needs: [determine-strategy]
     if: needs.determine-strategy.outputs.skip-tests != 'true'
     
     steps:
       - name: 🧹 Cleanup Workspace
-        run: |
-          # Kill only guardianes containers (not all containers)
-          docker ps -q --filter "name=guardianes" | xargs -r docker kill || true
-          docker ps -aq --filter "name=guardianes" | xargs -r docker rm -f || true
-          
-          # Fix file permissions
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
-          
-          # Clean docker config directories
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "rm -rf /workspace/docker/redis /workspace/docker/grafana 2>/dev/null || true"
-          
-          # Reset git state if exists
-          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          workspace: ${{ github.workspace }}
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -237,6 +215,7 @@ jobs:
   deploy-development:
     name: 🏠 Deploy to Development (Local)
     runs-on: self-hosted
+    timeout-minutes: 15
     needs: [determine-strategy, pre-deployment-checks]
     if: |
       always() && 
@@ -248,21 +227,9 @@ jobs:
 
     steps:
       - name: 🧹 Cleanup Workspace
-        run: |
-          # Kill only guardianes containers (not all containers)
-          docker ps -q --filter "name=guardianes" | xargs -r docker kill || true
-          docker ps -aq --filter "name=guardianes" | xargs -r docker rm -f || true
-          
-          # Fix file permissions
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
-          
-          # Clean docker config directories
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "rm -rf /workspace/docker/redis /workspace/docker/grafana 2>/dev/null || true"
-          
-          # Reset git state if exists
-          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          workspace: ${{ github.workspace }}
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -368,6 +335,7 @@ jobs:
   deploy-staging:
     name: 🎭 Deploy to Staging (Local)
     runs-on: self-hosted
+    timeout-minutes: 15
     needs: [determine-strategy, pre-deployment-checks]
     if: |
       always() && 
@@ -379,21 +347,9 @@ jobs:
     
     steps:
       - name: 🧹 Cleanup Workspace
-        run: |
-          # Kill only guardianes containers (not all containers)
-          docker ps -q --filter "name=guardianes" | xargs -r docker kill || true
-          docker ps -aq --filter "name=guardianes" | xargs -r docker rm -f || true
-          
-          # Fix file permissions
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
-          
-          # Clean docker config directories
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "rm -rf /workspace/docker/redis /workspace/docker/grafana 2>/dev/null || true"
-          
-          # Reset git state if exists
-          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          workspace: ${{ github.workspace }}
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -475,6 +431,7 @@ jobs:
   deploy-production:
     name: 🌟 Deploy to Production (Local)
     runs-on: self-hosted
+    timeout-minutes: 20
     needs: [determine-strategy, pre-deployment-checks]
     if: |
       always() && 
@@ -486,21 +443,9 @@ jobs:
     
     steps:
       - name: 🧹 Cleanup Workspace
-        run: |
-          # Kill only guardianes containers (not all containers)
-          docker ps -q --filter "name=guardianes" | xargs -r docker kill || true
-          docker ps -aq --filter "name=guardianes" | xargs -r docker rm -f || true
-          
-          # Fix file permissions
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
-          
-          # Clean docker config directories
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "rm -rf /workspace/docker/redis /workspace/docker/grafana 2>/dev/null || true"
-          
-          # Reset git state if exists
-          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          workspace: ${{ github.workspace }}
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -631,27 +576,16 @@ jobs:
   rollback-deployment:
     name: ⏪ Rollback Deployment
     runs-on: self-hosted
+    timeout-minutes: 15
     needs: [determine-strategy]
     if: needs.determine-strategy.outputs.deploy-type == 'rollback'
     environment: ${{ needs.determine-strategy.outputs.environment }}
     
     steps:
       - name: 🧹 Cleanup Workspace
-        run: |
-          # Kill only guardianes containers (not all containers)
-          docker ps -q --filter "name=guardianes" | xargs -r docker kill || true
-          docker ps -aq --filter "name=guardianes" | xargs -r docker rm -f || true
-          
-          # Fix file permissions
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
-          
-          # Clean docker config directories
-          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
-            sh -c "rm -rf /workspace/docker/redis /workspace/docker/grafana 2>/dev/null || true"
-          
-          # Reset git state if exists
-          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          workspace: ${{ github.workspace }}
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
