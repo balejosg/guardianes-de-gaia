@@ -20,8 +20,8 @@ on:
           - production
 
 env:
-  # Use localhost for self-hosted runner (backend is available locally via nginx on port 8888)
-  DEV_URL: http://localhost:8888
+  # External URLs for testing deployed environments
+  DEV_URL: http://dev-guardianes.duckdns.org
   STAGING_URL: http://stg-guardianes.duckdns.org
   PROD_URL: http://guardianes.duckdns.org
 
@@ -37,55 +37,15 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     
     steps:
-      - name: 🧹 Workspace Cleanup (Preserve Containers)
-        run: |
-          # NOTE: Do NOT kill containers - we need the backend running for smoke tests!
-          
-          # Use Docker container with root privileges to fix file permissions only
-          echo "🧹 Fixing file permissions in workspace..."
-          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || chmod -R 777 /workspace 2>/dev/null || true"
-          
-          # Reset git repository state if it exists
-          cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
-          
-          # Ensure proper ownership of workspace
-          chown -R run0:run0 ${{ github.workspace }} 2>/dev/null || \
-          chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
+      - name: 🧹 Cleanup Workspace
+        uses: ./.github/actions/cleanup-workspace
+        with:
+          kill-containers: 'false'  # Preserve containers for smoke testing
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           clean: false
-      
-      - name: 🐳 Ensure Backend is Running
-        run: |
-          echo "🐳 Checking if backend containers are running..."
-          
-          # Check if backend container is running
-          if docker ps --format '{{.Names}}' | grep -q 'guardianes-backend'; then
-            echo "✅ Backend container is already running"
-          else
-            echo "⚠️ Backend container not running, starting services..."
-            make up
-            
-            # Wait for backend to be healthy
-            echo "⏳ Waiting for backend to be healthy..."
-            ATTEMPTS=0
-            MAX_ATTEMPTS=30
-            while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-              if docker ps --filter "name=guardianes-backend" --format "{{.Status}}" | grep -q "healthy"; then
-                echo "✅ Backend is healthy"
-                break
-              fi
-              echo "⏳ Waiting for backend... (attempt $((ATTEMPTS + 1))/$MAX_ATTEMPTS)"
-              sleep 5
-              ATTEMPTS=$((ATTEMPTS + 1))
-            done
-          fi
-          
-          # Final status check
-          docker ps --format "table {{.Names}}\t{{.Status}}" | grep guardianes || true
       
       - name: 🔍 Test Backend Health
         run: |
@@ -100,9 +60,7 @@ jobs:
             echo "✅ Health endpoint accessible (status: $HTTP_STATUS)"
           else
             echo "❌ Health endpoint failed (status: $HTTP_STATUS)"
-            echo "🔍 Checking container status..."
-            docker ps --format "table {{.Names}}\t{{.Status}}" || true
-            docker logs guardianes-backend --tail 20 || true
+            echo "⚠️ This means the deployment did not start the backend correctly!"
             exit 1
           fi
       
