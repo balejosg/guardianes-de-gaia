@@ -58,18 +58,35 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Use Docker container with root privileges to clean up root-owned files
-          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          # Use Docker container with root privileges to clean ALL root-owned files in the workspace
+          echo "🧹 Using Docker to clean all root-owned files in workspace..."
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
+            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || chmod -R 777 /workspace 2>/dev/null || true"
           
-          # Additional cleanup with direct sudo commands
+          # Clean specific directories known to have root-owned files
+          echo "🧹 Cleaning docker/ directory with root-owned configs..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/guardianes-de-gaia/docker 2>/dev/null || true; \
+                   find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'redis' -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'grafana' -exec rm -rf {} + 2>/dev/null || true"
+          
+          # Additional cleanup with direct commands
           if [ -d "${{ github.workspace }}/backend/target" ]; then
-            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            echo "🗑️ Removing Maven target directory..."
             rm -rf ${{ github.workspace }}/backend/target || \
             docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
               sh -c "rm -rf /workspace/backend/target" || true
           fi
+          
+          # Clean docker directories that cause permission errors
+          echo "🗑️ Removing problematic docker directories..."
+          rm -rf ${{ github.workspace }}/docker/redis 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/redis" || true
+          rm -rf ${{ github.workspace }}/docker/grafana 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/grafana" || true
           
           # Reset git repository state if it exists
           cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
@@ -177,18 +194,35 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Use Docker container with root privileges to clean up root-owned files
-          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          # Use Docker container with root privileges to clean ALL root-owned files in the workspace
+          echo "🧹 Using Docker to clean all root-owned files in workspace..."
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
+            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || chmod -R 777 /workspace 2>/dev/null || true"
           
-          # Additional cleanup with direct sudo commands
+          # Clean specific directories known to have root-owned files
+          echo "🧹 Cleaning docker/ directory with root-owned configs..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/guardianes-de-gaia/docker 2>/dev/null || true; \
+                   find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'redis' -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'grafana' -exec rm -rf {} + 2>/dev/null || true"
+          
+          # Additional cleanup with direct commands
           if [ -d "${{ github.workspace }}/backend/target" ]; then
-            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            echo "🗑️ Removing Maven target directory..."
             rm -rf ${{ github.workspace }}/backend/target || \
             docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
               sh -c "rm -rf /workspace/backend/target" || true
           fi
+          
+          # Clean docker directories that cause permission errors
+          echo "🗑️ Removing problematic docker directories..."
+          rm -rf ${{ github.workspace }}/docker/redis 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/redis" || true
+          rm -rf ${{ github.workspace }}/docker/grafana 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/grafana" || true
           
           # Reset git repository state if it exists
           cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
@@ -273,18 +307,35 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Use Docker container with root privileges to clean up root-owned files
-          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          # Use Docker container with root privileges to clean ALL root-owned files in the workspace
+          echo "🧹 Using Docker to clean all root-owned files in workspace..."
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
+            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || chmod -R 777 /workspace 2>/dev/null || true"
           
-          # Additional cleanup with direct sudo commands
+          # Clean specific directories known to have root-owned files
+          echo "🧹 Cleaning docker/ directory with root-owned configs..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/guardianes-de-gaia/docker 2>/dev/null || true; \
+                   find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'redis' -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'grafana' -exec rm -rf {} + 2>/dev/null || true"
+          
+          # Additional cleanup with direct commands
           if [ -d "${{ github.workspace }}/backend/target" ]; then
-            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            echo "🗑️ Removing Maven target directory..."
             rm -rf ${{ github.workspace }}/backend/target || \
             docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
               sh -c "rm -rf /workspace/backend/target" || true
           fi
+          
+          # Clean docker directories that cause permission errors
+          echo "🗑️ Removing problematic docker directories..."
+          rm -rf ${{ github.workspace }}/docker/redis 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/redis" || true
+          rm -rf ${{ github.workspace }}/docker/grafana 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/grafana" || true
           
           # Reset git repository state if it exists
           cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
@@ -414,18 +465,35 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Use Docker container with root privileges to clean up root-owned files
-          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          # Use Docker container with root privileges to clean ALL root-owned files in the workspace
+          echo "🧹 Using Docker to clean all root-owned files in workspace..."
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
+            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || chmod -R 777 /workspace 2>/dev/null || true"
           
-          # Additional cleanup with direct sudo commands
+          # Clean specific directories known to have root-owned files
+          echo "🧹 Cleaning docker/ directory with root-owned configs..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/guardianes-de-gaia/docker 2>/dev/null || true; \
+                   find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'redis' -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'grafana' -exec rm -rf {} + 2>/dev/null || true"
+          
+          # Additional cleanup with direct commands
           if [ -d "${{ github.workspace }}/backend/target" ]; then
-            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            echo "🗑️ Removing Maven target directory..."
             rm -rf ${{ github.workspace }}/backend/target || \
             docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
               sh -c "rm -rf /workspace/backend/target" || true
           fi
+          
+          # Clean docker directories that cause permission errors
+          echo "🗑️ Removing problematic docker directories..."
+          rm -rf ${{ github.workspace }}/docker/redis 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/redis" || true
+          rm -rf ${{ github.workspace }}/docker/grafana 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/grafana" || true
           
           # Reset git repository state if it exists
           cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
@@ -531,18 +599,35 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Use Docker container with root privileges to clean up root-owned files
-          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          # Use Docker container with root privileges to clean ALL root-owned files in the workspace
+          echo "🧹 Using Docker to clean all root-owned files in workspace..."
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
+            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || chmod -R 777 /workspace 2>/dev/null || true"
           
-          # Additional cleanup with direct sudo commands
+          # Clean specific directories known to have root-owned files
+          echo "🧹 Cleaning docker/ directory with root-owned configs..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/guardianes-de-gaia/docker 2>/dev/null || true; \
+                   find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'redis' -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'grafana' -exec rm -rf {} + 2>/dev/null || true"
+          
+          # Additional cleanup with direct commands
           if [ -d "${{ github.workspace }}/backend/target" ]; then
-            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            echo "🗑️ Removing Maven target directory..."
             rm -rf ${{ github.workspace }}/backend/target || \
             docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
               sh -c "rm -rf /workspace/backend/target" || true
           fi
+          
+          # Clean docker directories that cause permission errors
+          echo "🗑️ Removing problematic docker directories..."
+          rm -rf ${{ github.workspace }}/docker/redis 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/redis" || true
+          rm -rf ${{ github.workspace }}/docker/grafana 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/grafana" || true
           
           # Reset git repository state if it exists
           cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
@@ -692,18 +777,35 @@ jobs:
           docker ps -q | xargs -r docker kill || true
           docker ps -aq | xargs -r docker rm -f || true
           
-          # Use Docker container with root privileges to clean up root-owned files
-          echo "🧹 Using Docker to clean root-owned Maven target directories..."
+          # Use Docker container with root privileges to clean ALL root-owned files in the workspace
+          echo "🧹 Using Docker to clean all root-owned files in workspace..."
           docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
-            sh -c "find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true"
+            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || chmod -R 777 /workspace 2>/dev/null || true"
           
-          # Additional cleanup with direct sudo commands
+          # Clean specific directories known to have root-owned files
+          echo "🧹 Cleaning docker/ directory with root-owned configs..."
+          docker run --rm -v /datos_nvme/run0/actions-runner/_work/guardianes-de-gaia:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/guardianes-de-gaia/docker 2>/dev/null || true; \
+                   find /workspace -name 'target' -type d -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'redis' -exec rm -rf {} + 2>/dev/null || true; \
+                   find /workspace -type d -name 'grafana' -exec rm -rf {} + 2>/dev/null || true"
+          
+          # Additional cleanup with direct commands
           if [ -d "${{ github.workspace }}/backend/target" ]; then
-            echo "🗑️ Removing Maven target directory with elevated privileges..."
+            echo "🗑️ Removing Maven target directory..."
             rm -rf ${{ github.workspace }}/backend/target || \
             docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
               sh -c "rm -rf /workspace/backend/target" || true
           fi
+          
+          # Clean docker directories that cause permission errors
+          echo "🗑️ Removing problematic docker directories..."
+          rm -rf ${{ github.workspace }}/docker/redis 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/redis" || true
+          rm -rf ${{ github.workspace }}/docker/grafana 2>/dev/null || \
+          docker run --rm -v ${{ github.workspace }}:/workspace alpine:latest \
+            sh -c "rm -rf /workspace/docker/grafana" || true
           
           # Reset git repository state if it exists
           cd ${{ github.workspace }} 2>/dev/null && git reset --hard HEAD 2>/dev/null || true
