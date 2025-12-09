@@ -38,9 +38,15 @@ jobs:
     
     steps:
       - name: 🧹 Cleanup Workspace
-        uses: ./.github/actions/cleanup-workspace
-        with:
-          kill-containers: 'false'  # Preserve containers for smoke testing
+        run: |
+          # NOTE: Do NOT kill containers - we need the backend running for smoke tests!
+          
+          # Fix file permissions only
+          docker run --rm --user root -v "${{ github.workspace }}:/workspace" alpine:latest \
+            sh -c "chown -R $(id -u):$(id -g) /workspace 2>/dev/null || true"
+          
+          # Reset git state if exists
+          cd "${{ github.workspace }}" && git reset --hard HEAD 2>/dev/null || true
       
       - name: 📥 Checkout code
         uses: actions/checkout@v4
